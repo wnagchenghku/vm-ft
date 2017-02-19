@@ -59,3 +59,5 @@ LD_DEBUG=all ./app
 extern bsymbolic functions
 
 5. make verbose
+
+6. explanation about how buffering works from QEMU MC wiki, two simultaneous buffers
