@@ -53,4 +53,6 @@ Each and every callback receives the event loop pointer as first, the registered
 
 LD_DEBUG=all ./app
 
+extern bsymbolic functions
+
 5. make verbose
