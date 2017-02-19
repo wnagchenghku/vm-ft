@@ -49,6 +49,9 @@ Each and every callback receives the event loop pointer as first, the registered
 
 3. portno is hard coded.
 
+util/qemu-option.c:
+opts_do_parse
+
 4. add explanations about ./configure, no as needed, LD_LIBRARY_PATH (shared library)
 
 LD_DEBUG=all ./app
