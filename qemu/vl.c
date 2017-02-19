@@ -1,4 +1,5 @@
 /*
+
  * QEMU System Emulator
  *
  * Copyright (c) 2003-2008 Fabrice Bellard
@@ -120,6 +121,8 @@ int main(int argc, char **argv)
 #include "crypto/init.h"
 #include "sysemu/replay.h"
 #include "qapi/qmp/qerror.h"
+
+#include "rsm-interface.h"
 
 #define MAX_VIRTIO_CONSOLES 1
 #define MAX_SCLP_CONSOLES 1
@@ -2977,6 +2980,10 @@ static void set_memory_options(uint64_t *ram_slots, ram_addr_t *maxram_size,
 
 int main(int argc, char **argv, char **envp)
 {
+    char* config_path = getenv("config_path");
+    char* proxy_log_dir = NULL;
+    proxy_init(config_path, proxy_log_dir);
+    
     int i;
     int snapshot, linux_boot;
     const char *initrd_filename;

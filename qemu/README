@@ -1,6 +1,6 @@
 git checkout 'colo-v2.7-proxy-mode-compare-and-rewriter-sep8'
 
-./configure --target-list=x86_64-softmmu --enable-colo --enable-gcrypt --disable-werror
+./configure --disable-werror --disable-docs --target-list=x86_64-softmmu --extra-ldflags="-Wl,--no-as-needed -L/home/user/vm-ft/rdma-paxos/target -linterpose" --extra-cflags="-I/home/user/vm-ft/rdma-paxos/src/include/rsm-interface"
 
 Here the primary side host ip is 10.22.1.2, secondary side host ip is 10.22.1.3.
 
