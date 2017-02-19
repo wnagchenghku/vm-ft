@@ -1,0 +1,23 @@
+DARE -- Direct Access REplication
+=================================
+
+Brief: A wait-free direct access protocol that uses RDMA features such as QP disconnect and QP timeouts, to ensure highest performance and reliability. This is an RoCE version.
+
+Build DARE
+----------
+Prerequisites
+ - libev
+ - libconfig
+ - libdb
+ - libibverbs
+
+0. Commands to checkout a brand-new project:
+ > git clone https://github.com/wangchenghku/RDMA-PAXOS.git
+ > cd $PAXOS_ROOT
+ 
+1. Set env vars in ~/.bashrc.
+ > export PAXOS_ROOT=<absolute path of RDMA-PAXOS>
+
+2. Compile.
+ > cd target
+ > make clean; make

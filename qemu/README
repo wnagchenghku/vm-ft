@@ -1,0 +1,31 @@
+git checkout 'colo-v2.7-proxy-mode-compare-and-rewriter-sep8'
+
+./configure --target-list=x86_64-softmmu --enable-colo --enable-gcrypt --disable-werror
+
+Here the primary side host ip is 10.22.1.2, secondary side host ip is 10.22.1.3.
+
+Primary side:
+x86_64-softmmu/qemu-system-x86_64 -enable-kvm -boot c -m 2048 -smp 2 -qmp stdio -vnc :7 -name primary -cpu qemu64,+kvmclock -device piix3-usb-uhci -drive if=virtio,id=colo-disk0,driver=quorum,read-pattern=fifo,vote-threshold=1,children.0.file.filename=/local/ubuntu/ubuntu-singa.img,children.0.driver=raw -S -netdev tap,id=hn0,vhost=off,script=/etc/qemu-ifup,downscript=/etc/qemu-ifdown -device e1000,id=e0,netdev=hn0,mac=52:a4:00:12:78:66
+
+Secondary side:
+x86_64-softmmu/qemu-system-x86_64 -boot c -m 2048 -smp 2 -qmp stdio -vnc :7 -name secondary -enable-kvm -cpu qemu64,+kvmclock -device piix3-usb-uhci -drive if=none,id=colo-disk0,file.filename=/local/ubuntu/ubuntu-singa.img,driver=raw,node-name=node0 -drive if=virtio,id=active-disk0,driver=replication,mode=secondary,file.driver=qcow2,top-id=active-disk0,file.file.filename=/local/ubuntu/active_disk.img,file.backing.driver=qcow2,file.backing.file.filename=/local/ubuntu/hidden_disk.img,file.backing.backing=colo-disk0 -netdev tap,id=hn0,vhost=off,script=/etc/qemu-ifup,downscript=/etc/qemu-ifdown -device e1000,netdev=hn0,mac=52:a4:00:12:78:66 -chardev socket,id=red0,host=127.0.0.1,port=9003 -chardev socket,id=red1,host=127.0.0.1,port=9004 -object filter-redirector,id=f1,netdev=hn0,queue=tx,indev=red0 -object filter-redirector,id=f2,netdev=hn0,queue=rx,outdev=red1 -incoming tcp:0:8888
+
+On Secondary VM's monitor, issue command
+{'execute':'qmp_capabilities'}
+{ 'execute': 'nbd-server-start',
+  'arguments': {'addr': {'type': 'inet', 'data': {'host': '10.22.1.3', 'port': '8889'} } }
+}
+{'execute': 'nbd-server-add', 'arguments': {'device': 'colo-disk0', 'writable': true } }
+
+On Primary VM's monitor, issue command:
+{'execute':'qmp_capabilities'}
+{ 'execute': 'human-monitor-command',
+  'arguments': {'command-line': 'drive_add -n buddy driver=replication,mode=primary,file.driver=nbd,file.host=10.22.1.3,file.port=8889,file.export=colo-disk0,node-name=node0'}}
+{ 'execute':'x-blockdev-change', 'arguments':{'parent': 'colo-disk0', 'node': 'node0' } }
+{ 'execute': 'migrate-set-capabilities',
+      'arguments': {'capabilities': [ {'capability': 'x-colo', 'state': true } ] } }
+{ 'execute': 'migrate', 'arguments': {'uri': 'tcp:10.22.1.3:8888' } }
+
+
+Normal startup (without COLO):
+server_type=start server_idx=0 group_size=3 config_path=RDMA-PAXOS/target/nodes.local.cfg LD_PRELOAD=RDMA-PAXOS/target/interpose.so x86_64-softmmu/qemu-system-x86_64 /local/ubuntu/ubuntu-singa.img -m 2048 -smp 2 -enable-kvm -cpu qemu64,+kvmclock -netdev tap,id=hn0,script=/etc/qemu-ifup,downscript=/etc/qemu-ifown -device e1000,id=e0,netdev=hn0,mac=52:a4:00:12:78:66 -vnc :7
