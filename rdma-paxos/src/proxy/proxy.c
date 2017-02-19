@@ -11,6 +11,7 @@ static void stablestorage_dump_records(void*buf,void*arg);
 static uint32_t stablestorage_get_records_len(void*arg);
 static int stablestorage_load_records(void*buf,uint32_t size,void*arg);
 static void update_highest_rec(void*arg);
+static void set_filter_mirror_fd(void*arg,int fd);
 static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,void* data,void *arg);
 static void do_action_send(uint16_t clt_id,size_t data_size,void* data,void* arg);
 static void do_action_connect(uint16_t clt_id,void* arg);
@@ -46,6 +47,7 @@ int dare_main(proxy_node* proxy, const char* config_path)
     input->create_db_snapshot = stablestorage_dump_records;
     input->apply_db_snapshot = stablestorage_load_records;
     input->update_state = update_highest_rec;
+    input->set_qemu_chardev = set_filter_mirror_fd;
     memcpy(input->config_path, config_path, strlen(config_path));
     input->up_para = proxy;
     static int srv_type = SRV_TYPE_START;
@@ -233,6 +235,12 @@ static void update_highest_rec(void*arg)
 {
     proxy_node* proxy = arg;
     proxy->highest_rec++;   
+}
+
+static void set_filter_mirror_fd(void*arg, int fd)
+{
+    proxy_node* proxy = arg;
+    proxy->filter_mirror_fd = fd;
 }
 
 static void stablestorage_save_request(void* data,void*arg)

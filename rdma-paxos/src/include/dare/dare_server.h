@@ -154,6 +154,7 @@ struct dare_server_input_t {
     proxy_get_db_size_cb_t get_db_size;
     proxy_apply_db_snapshot_cb_t apply_db_snapshot;
     proxy_update_state_cb_t update_state;
+    proxy_set_qemu_chardev_cb_t set_qemu_chardev;
     char config_path[128];
     void* up_para;
 };

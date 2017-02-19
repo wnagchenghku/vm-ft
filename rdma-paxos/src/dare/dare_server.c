@@ -92,6 +92,10 @@ ev_timer to_adjust_event;
 /* A timer event for log pruning */
 ev_timer prune_event;
 
+ev_io mirror_accept_watcher;
+ev_io redirector_accept_watcher;
+ev_io redirector_read_watcher;
+
 /* ================================================================== */
 /* local function - prototypes */
 
@@ -165,9 +169,11 @@ to_adjust_cb( EV_P_ ev_timer *w, int revents );
 static void
 poll_cb( EV_P_ ev_idle *w, int revents );
 static void
-mirror_chardev_cb(EV_P_ ev_io *w, int revents);
+mirror_accept_cb(EV_P_ ev_io *w, int revents);
 static void
-redirector_chardev_cb(EV_P_ ev_io *w, int revents);
+redirector_accept_cb(EV_P_ ev_io *w, int revents);
+static void
+redirector_read_cb(EV_P_ ev_io *w, int revents);
 
 /* ================================================================== */
 /* Init and cleaning up */
@@ -260,9 +266,8 @@ void *dare_server_init(void *arg)
         //error_return(1, log_fp, "ERROR on listen\n");
     }
 
-    ev_io mirror_chardev_watcher;
-    ev_io_init(&mirror_chardev_watcher, mirror_chardev_cb, mirror_fd, EV_READ);
-    ev_io_start (data.loop, &mirror_chardev_watcher);
+    ev_io_init(&mirror_accept_watcher, mirror_accept_cb, mirror_fd, EV_READ);
+    ev_io_start (data.loop, &mirror_accept_watcher);
 
     /* Init the redirector chardev event */
     struct sockaddr_in redirector_serveraddr;
@@ -284,10 +289,8 @@ void *dare_server_init(void *arg)
         //error_return(1, log_fp, "ERROR on listen\n");
     }
 
-    ev_io redirector_chardev_watcher;
-    ev_io_init(&redirector_chardev_watcher, redirector_chardev_cb, redirector_fd, EV_READ);
-    ev_io_start (data.loop, &redirector_chardev_watcher);
-
+    ev_io_init(&redirector_accept_watcher, redirector_accept_cb, redirector_fd, EV_READ);
+    ev_io_start (data.loop, &redirector_accept_watcher);
 
     /* Now wait for events to arrive */
     ev_run(data.loop, 0);
@@ -334,6 +337,8 @@ init_server_data()
     data.sm->proxy_apply_db_snapshot = data.input->apply_db_snapshot;
     data.sm->proxy_update_state = data.input->update_state;
     data.sm->up_para = data.input->up_para;
+
+    data.sm->proxy_set_qemu_chardev = data.input->set_qemu_chardev;
 
     /* Set up the configuration */
     dare_read_config(data.input->config_path);
@@ -2264,26 +2269,36 @@ update_cid( dare_cid_t cid )
 
 /* ================================================================== */
 /* Chardev */
+
 static void
-mirror_chardev_cb(EV_P_ ev_io *w, int revents)
+mirror_accept_cb(EV_P_ ev_io *w, int revents)
 {
     struct sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
-    int client_sd;
-    client_sd = accept(w->fd, (struct sockaddr *)&client_addr, &client_len);
-    fprintf(stderr, "accept mirror_chardev_cb\n");
+    int mirror_fd = accept(w->fd, (struct sockaddr *)&client_addr, &client_len);
+    data.sm->proxy_set_qemu_chardev(data.sm->up_para, mirror_fd);
     ev_io_stop (EV_A_ w);
 }
 
 static void
-redirector_chardev_cb(EV_P_ ev_io *w, int revents)
+redirector_read_cb(EV_P_ ev_io *w, int revents)
+{
+    char buffer[256];
+    int n = read(w->fd, buffer, 255);
+    printf("Here is the message: %s\n",buffer);
+    ev_io_start(data.loop, &redirector_read_watcher);
+}
+
+static void
+redirector_accept_cb(EV_P_ ev_io *w, int revents)
 {
     struct sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
-    int client_sd;
-    client_sd = accept(w->fd, (struct sockaddr *)&client_addr, &client_len);
-    fprintf(stderr, "accept redirector_chardev_cb\n");
-    ev_io_stop (EV_A_ w);
+    int redirector_fd = accept(w->fd, (struct sockaddr *)&client_addr, &client_len);
+    //ev_io_stop (EV_A_ w);
+
+    ev_io_init(&redirector_read_watcher, redirector_read_cb, redirector_fd, EV_READ);
+    ev_io_start(data.loop, &redirector_read_watcher);
 }
 
 /* ================================================================== */

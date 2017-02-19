@@ -45,6 +45,7 @@ typedef void (*proxy_create_db_snapshot_cb_t)(void *snapshot,void *arg);
 typedef uint32_t (*proxy_get_db_size_cb_t)(void *arg);
 typedef int (*proxy_apply_db_snapshot_cb_t)(void *snapshot,uint32_t size,void *arg);
 typedef void (*proxy_update_state_cb_t)(void *arg);
+typedef void (*proxy_set_qemu_chardev_cb_t)(void *arg,int fd);
 
 struct dare_sm_t {
     destroy_cb_t   destroy;
@@ -56,6 +57,7 @@ struct dare_sm_t {
     proxy_create_db_snapshot_cb_t proxy_create_db_snapshot;
     proxy_apply_db_snapshot_cb_t proxy_apply_db_snapshot;
     proxy_update_state_cb_t proxy_update_state;
+    proxy_set_qemu_chardev_cb_t proxy_set_qemu_chardev;
     void* up_para;
 };
 

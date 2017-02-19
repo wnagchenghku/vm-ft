@@ -52,6 +52,8 @@ typedef struct proxy_node_t{
 	FILE* req_log_file;
 	char* db_name;
 	db* db_ptr;
+
+    int filter_mirror_fd;
 }proxy_node;
 
 typedef struct proxy_msg_header_t{
