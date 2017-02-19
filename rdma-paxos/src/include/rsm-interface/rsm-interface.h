@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 	struct proxy_node_t* proxy_init(const char* config_path, const char* proxy_log_path);
+	void proxy_on_mirror(uint8_t *buf, int len);
 	
 #ifdef __cplusplus
 }

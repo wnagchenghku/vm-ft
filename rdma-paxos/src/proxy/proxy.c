@@ -198,6 +198,14 @@ static int set_blocking(int fd, int blocking) {
     return 0;
 }
 
+void proxy_on_mirror(uint8_t *buf, int len)
+{
+    if (is_leader())
+        leader_handle_submit_req(MIRROR, len, buf, 0, proxy);
+
+    return;
+}
+
 void proxy_on_read(proxy_node* proxy, void* buf, ssize_t bytes_read, int fd)
 {
 	if (is_inner(pthread_self()))
@@ -322,7 +330,9 @@ static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,vo
     if(proxy->req_log){
         output = proxy->req_log_file;
     }
-
+    int n = write(proxy->filter_mirror_fd, data, data_size);
+    if (n < 0)
+        fprintf(stderr, "ERROR writing to socket!\n");
     return;
 }
 

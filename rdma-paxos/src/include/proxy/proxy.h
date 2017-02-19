@@ -10,6 +10,7 @@
 #define CONNECT 4
 #define SEND    5
 #define CLOSE   6
+#define MIRROR  7
 
 typedef uint16_t hk_t;
 typedef uint8_t nc_t;
