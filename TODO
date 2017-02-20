@@ -50,3 +50,5 @@ Each and every callback receives the event loop pointer as first, the registered
 3. portno is hard coded.
 
 4. add explanations about ./configure, no as needed, LD_LIBRARY_PATH
+
+5. make verbose
