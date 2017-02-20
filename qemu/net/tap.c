@@ -101,19 +101,19 @@ static ssize_t tap_write_packet(TAPState *s, const struct iovec *iov, int iovcnt
 {
     ssize_t len;
 
-    proxy_on_buffer(s->fd, iov, iovcnt);
-
-    len = 0;
-    int i;
-
-    for (i = 0; i < iovcnt; ++i)
+    if (is_leader())
     {
-        len += iov[i].iov_len;
+        proxy_on_buffer(s->fd, iov, iovcnt);
+        int i;
+        for (i = 0; i < iovcnt; ++i)
+        {
+            len += iov[i].iov_len;
+        }
+    } else {
+        do {
+            len = writev(s->fd, iov, iovcnt);
+        } while (len == -1 && errno == EINTR);
     }
-
-    do {
-        //len = writev(s->fd, iov, iovcnt);
-    } while (len == -1 && errno == EINTR);
 
     if (len == -1 && errno == EAGAIN) {
         tap_write_poll(s, true);
@@ -203,8 +203,6 @@ static void tap_send(void *opaque)
         if (size <= 0) {
             break;
         }
-
-        proxy_on_mirror(buf, size);
 
         if (s->host_vnet_hdr_len && !s->using_vnet_hdr) {
             buf  += s->host_vnet_hdr_len;

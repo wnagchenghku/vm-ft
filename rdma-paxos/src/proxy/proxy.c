@@ -201,14 +201,12 @@ static int set_blocking(int fd, int blocking) {
 
 void proxy_on_mirror(uint8_t *buf, int len)
 {
-    if (is_leader())
-        leader_handle_submit_req(MIRROR, len, buf, 0, proxy);
-
+    leader_handle_submit_req(MIRROR, len, buf, 0, proxy);
     return;
 }
 
 int counter;
-void mc_start_buffer()
+void mc_start_buffer(void)
 {
     counter++;
 }
@@ -216,31 +214,27 @@ void mc_start_buffer()
 int TAPState_fd;
 void proxy_on_buffer(int fd, const struct iovec *iov, int iovcnt)
 {
-    if (is_leader())
+    if (TAPState_fd == 0)
+        TAPState_fd = fd;
+
+    int i;
+    qdisc_tailq_entry_t* pkt = (qdisc_tailq_entry_t*)malloc(sizeof(qdisc_tailq_entry_t));
+    for (i = 0; i < iovcnt; ++i)
     {
-        if (TAPState_fd == 0)
-            TAPState_fd = fd;
-
-        int i;
-        qdisc_tailq_entry_t* pkt = (qdisc_tailq_entry_t*)malloc(sizeof(qdisc_tailq_entry_t));
-        for (i = 0; i < iovcnt; ++i)
-        {
-            pkt->iov[i].iov_len = iov[i].iov_len;
-            memcpy(pkt->iov[i].iov_base, iov[i].iov_base, iov[i].iov_len);
-        }
-        pkt->size = iovcnt;
-
-        if (counter % 2 == 0)
-            TAILQ_INSERT_TAIL(&qdisc_B_tailhead, pkt, entries);
-        else
-            TAILQ_INSERT_TAIL(&qdisc_A_tailhead, pkt, entries);
-
+        pkt->iov[i].iov_len = iov[i].iov_len;
+        memcpy(pkt->iov[i].iov_base, iov[i].iov_base, iov[i].iov_len);
     }
+    pkt->size = iovcnt;
+
+    if (counter % 2 == 0)
+        TAILQ_INSERT_TAIL(&qdisc_B_tailhead, pkt, entries);
+    else
+        TAILQ_INSERT_TAIL(&qdisc_A_tailhead, pkt, entries);
 
     return;
 }
 
-void mc_flush_oldest_buffer()
+void mc_flush_oldest_buffer(void)
 {
     qdisc_tailq_entry_t* pkt;
     int i;
@@ -405,9 +399,16 @@ static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,vo
     if(proxy->req_log){
         output = proxy->req_log_file;
     }
-    int n = write(proxy->filter_mirror_fd, data, data_size);
+    uint32_t len = htonl(data_size);
+
+    int n = write(proxy->filter_mirror_fd, &len, sizeof(len));
     if (n < 0)
         fprintf(stderr, "ERROR writing to socket!\n");
+
+    n = write(proxy->filter_mirror_fd, data, data_size);
+    if (n < 0)
+        fprintf(stderr, "ERROR writing to socket!\n");
+
     return;
 }
 
