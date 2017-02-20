@@ -2286,7 +2286,6 @@ redirector_read_cb(EV_P_ ev_io *w, int revents)
     char buffer[256];
     int n = read(w->fd, buffer, 255);
     printf("Here is the message: %s\n",buffer);
-    ev_io_start(data.loop, &redirector_read_watcher);
 }
 
 static void
@@ -2295,7 +2294,7 @@ redirector_accept_cb(EV_P_ ev_io *w, int revents)
     struct sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
     int redirector_fd = accept(w->fd, (struct sockaddr *)&client_addr, &client_len);
-    //ev_io_stop (EV_A_ w);
+    ev_io_stop (EV_A_ w);
 
     ev_io_init(&redirector_read_watcher, redirector_read_cb, redirector_fd, EV_READ);
     ev_io_start(data.loop, &redirector_read_watcher);

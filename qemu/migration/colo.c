@@ -39,7 +39,6 @@
 #include "qmp-commands.h"
 #include "net/tap-linux.h"
 #include "trace/simple.h"
-#include "block/block.h"
 #include "sysemu/block-backend.h"
 #include <sys/ioctl.h>
 
@@ -761,13 +760,16 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     }
 
     ret = 0;
+
+    mc_flush_oldest_buffer();
+
     /* Resume primary guest */
     qemu_mutex_lock_iothread();
     vm_start();
     qemu_mutex_unlock_iothread();
     trace_colo_vm_state_change("stop", "run");
 
-    colo_compare_do_checkpoint();
+    //colo_compare_do_checkpoint();
 
 out:
     if (local_err) {
