@@ -38,77 +38,6 @@ arg[6] = "duck?"
 #include <stdio.h>
 #include <stdlib.h>
 
-/* ================================================================== */
-/* Helper function */
-
-#include <string.h>
-
-const char *get_opt_name(char *buf, int buf_size, const char *p, char delim)
-{
-    char *q;
-
-    q = buf;
-    while (*p != '\0' && *p != delim) {
-        if (q && (q - buf) < buf_size - 1)
-            *q++ = *p;
-        p++;
-    }
-    if (q)
-        *q = '\0';
-
-    return p;
-}
-
-const char *get_opt_value(char *buf, int buf_size, const char *p)
-{
-    char *q;
-
-    q = buf;
-    while (*p != '\0') {
-        if (*p == ',') {
-            if (*(p + 1) != ',')
-                break;
-            p++;
-        }
-        if (q && (q - buf) < buf_size - 1)
-            *q++ = *p;
-        p++;
-    }
-    if (q)
-        *q = '\0';
-
-    return p;
-}
-
-static void opts_do_parse(const char *params)
-{
-    char option[128], value[1024];
-    const char *p,*pe,*pc;
-
-    for (p = params; *p != '\0'; p++) {
-        pe = strchr(p, '=');
-        pc = strchr(p, ',');
-        if (!pe || (pc && pc < pe)) {
-            /* found "foo,more" */
-            p = get_opt_name(option, sizeof(option), p, ',');
-        } else {
-            /* found "foo=bar,more" */
-            p = get_opt_name(option, sizeof(option), p, '=');
-            if (*p != '=') {
-                break;
-            }
-            p++;
-            p = get_opt_value(value, sizeof(value), p);
-        }
-
-        if (*p != ',') {
-            break;
-        }
-    }
-}
-
-/* ================================================================== */
-
 int debug = 0;
 
 int
@@ -190,6 +119,138 @@ if (fflag == 0) {
 	fprintf(stderr, "%s: missing -f option\n", argv[0]);
 	fprintf(stderr, usage, argv[0]);
 	exit(1)
+}
+```
+
+```
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+const char *get_opt_name(char *buf, int buf_size, const char *p, char delim)
+{
+    char *q;
+
+    q = buf;
+    while (*p != '\0' && *p != delim) {
+        if (q && (q - buf) < buf_size - 1)
+            *q++ = *p;
+        p++;
+    }
+    if (q)
+        *q = '\0';
+
+    return p;
+}
+
+const char *get_opt_value(char *buf, int buf_size, const char *p)
+{
+    char *q;
+
+    q = buf;
+    while (*p != '\0') {
+        if (*p == ',') {
+            if (*(p + 1) != ',')
+                break;
+            p++;
+        }
+        if (q && (q - buf) < buf_size - 1)
+            *q++ = *p;
+        p++;
+    }
+    if (q)
+        *q = '\0';
+
+    return p;
+}
+
+static void opts_do_parse(const char *params)
+{
+    char option[128], value[1024];
+    const char *p,*pe,*pc;
+
+    for (p = params; *p != '\0'; p++) {
+        pe = strchr(p, '=');
+        pc = strchr(p, ',');
+        if (!pe || (pc && pc < pe)) {
+            /* found "foo,more" */
+            p = get_opt_name(option, sizeof(option), p, ',');
+        } else {
+            /* found "foo=bar,more" */
+            p = get_opt_name(option, sizeof(option), p, '=');
+            if (*p != '=') {
+                break;
+            }
+            p++;
+            p = get_opt_value(value, sizeof(value), p);
+        }
+
+        if (*p != ',') {
+            break;
+        }
+    }
+}
+
+typedef struct QEMUOption {
+    const char *name;
+} QEMUOption;
+
+static const QEMUOption qemu_options[] = {
+    { "netdev" },
+    { "chardev" },
+    { NULL },
+};
+
+static const QEMUOption *lookup_opt(int argc, char **argv,
+                                    const char **poptarg, int *poptind)
+{
+    const QEMUOption *popt;
+    int optind = *poptind;
+    char *r = argv[optind];
+    const char *optarg;
+
+    optind++;
+    /* Treat --foo the same as -foo.  */
+    if (r[1] == '-')
+        r++;
+    popt = qemu_options;
+    for(;;) {
+        if (!popt->name) {
+            fprintf(stderr, "invalid option");
+            exit(1);
+        }
+        if (!strcmp(popt->name, r + 1))
+            break;
+        popt++;
+    }
+
+    optarg = argv[optind++];
+
+    *poptarg = optarg;
+    *poptind = optind;
+
+    return popt;
+}
+
+int main(int argc, char **argv)
+{
+    const char *optarg;
+    int optind;
+
+    optind = 1;
+    while (optind < argc) {
+        if (argv[optind][0] != '-') {
+            optind++;
+        } else {
+            const QEMUOption *popt;
+
+            popt = lookup_opt(argc, argv, &optarg, &optind);
+            // switch () {
+            // }
+        }
+    }
+
+    return 0;
 }
 ```
 
