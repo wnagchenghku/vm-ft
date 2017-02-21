@@ -295,8 +295,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     qemu_mutex_unlock_iothread();
     trace_colo_vm_state_change("run", "stop");
 
-    mc_start_buffer();
-
     /*
      * failover request bh could be called after
      * vm_stop_force_state so we check failover_request_is_active() again.
@@ -378,13 +376,15 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
     ret = 0;
 
-    mc_flush_oldest_buffer();
+    mc_start_buffer();
 
     /* Resume primary guest */
     qemu_mutex_lock_iothread();
     vm_start();
     qemu_mutex_unlock_iothread();
     trace_colo_vm_state_change("stop", "run");
+
+    mc_flush_oldest_buffer();
 
     colo_compare_do_checkpoint();
 
