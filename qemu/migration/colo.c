@@ -25,6 +25,136 @@
 
 #include "rsm-interface.h"
 
+/* ================================================================== */
+/* QEMU MC */
+
+#define MC_SLAB_BUFFER_SIZE     (5UL * 1024UL * 1024UL) /* empirical */
+
+#define MC_MAX_SLAB_COPY_DESCRIPTORS (MC_SLAB_BUFFER_SIZE / 4096)
+
+#ifdef DEBUG_MC_VERBOSE
+#define DDPRINTF(fmt, ...) \
+    do { printf("mc: " fmt, ## __VA_ARGS__); } while (0)
+#else
+#define DDPRINTF(fmt, ...) \
+    do { } while (0)
+#endif
+
+typedef struct QEMU_PACKED MCCopy {
+    uint64_t ramblock_offset;
+    uint64_t host_addr;
+    uint64_t offset;
+    uint64_t size;
+} MCCopy;
+
+typedef struct QEMU_PACKED MCCopyset {
+    QTAILQ_ENTRY(MCCopyset) node;
+    MCCopy copies[MC_MAX_SLAB_COPY_DESCRIPTORS];
+    uint64_t nb_copies;
+    int idx;
+} MCCopyset;
+
+typedef struct MCParams {
+    QTAILQ_HEAD(chead, MCCopyset) copy_head;
+    int nb_copysets;
+    uint64_t total_copies;
+    QEMUFile *staging;
+    MCCopyset *curr_copyset;
+} MCParams;
+
+QEMUFile *qemu_fopen_mc(void *opaque, const char *mode)
+{
+    MCParams *mc = opaque;
+    MCCopyset *copyset;
+
+    if (qemu_file_mode_is_not_valid(mode)) {
+        return NULL;
+    }
+
+    QTAILQ_INIT(&mc->copy_head);
+
+    copyset = g_malloc(sizeof(MCCopyset));
+    copyset->idx = 0;
+    QTAILQ_INSERT_HEAD(&mc->copy_head, copyset, node);
+    mc->total_copies = 0;
+    mc->curr_copyset = copyset;
+    mc->nb_copysets = 1;
+
+    if (mode[0] == 'w') {
+        return qemu_fopen_ops(mc, &mc_write_ops);
+    }
+
+    return qemu_fopen_ops(mc, &mc_read_ops);
+}
+
+/*
+ * Get the next copyset in the list. If there is none, then make one.
+ */
+static MCCopyset *mc_copy_next(MCParams *mc, MCCopyset *copyset)
+{
+    if (!QTAILQ_NEXT(copyset, node)) {
+        int idx = mc->nb_copysets++;
+        DDPRINTF("Extending copysets by one: %d sets total, "
+                 "%" PRIu64 " MB\n", mc->nb_copysets,
+                 mc->nb_copysets * sizeof(MCCopyset) / 1024UL / 1024UL);
+        mc->curr_copyset = g_malloc(sizeof(MCCopyset));
+        mc->curr_copyset->idx = idx;
+        QTAILQ_INSERT_TAIL(&mc->copy_head, mc->curr_copyset, node);
+        copyset = mc->curr_copyset;
+    } else {
+        DDPRINTF("Adding to existing copyset: %d sets total, "
+                 "%" PRIu64 " MB\n", mc->nb_copysets,
+                 mc->nb_copysets * sizeof(MCCopyset) / 1024UL / 1024UL);
+        copyset = QTAILQ_NEXT(copyset, node);
+    }
+
+    mc->curr_copyset = copyset;
+    copyset->nb_copies = 0;
+
+    return copyset;
+}
+
+static int mc_save_page(QEMUFile *f, void *opaque,
+                           ram_addr_t block_offset,
+                           uint8_t *host_addr,
+                           ram_addr_t offset,
+                           long size, uint64_t *bytes_sent)
+{
+    MCParams *mc = opaque;
+    MCCopyset *copyset = mc->curr_copyset;
+    MCCopy *c;
+
+    if (copyset->nb_copies >= MC_MAX_SLAB_COPY_DESCRIPTORS) {
+        copyset = mc_copy_next(mc, copyset);
+    }
+
+    c = &copyset->copies[copyset->nb_copies++];
+    c->ramblock_offset = (uint64_t) block_offset;
+    c->host_addr = (uint64_t) (uintptr_t) host_addr;
+    c->offset = (uint64_t) offset;
+    c->size = (uint64_t) size;
+    mc->total_copies++;
+
+    return RAM_SAVE_CONTROL_DELAYED;
+}
+
+static const QEMUFileOps mc_write_ops = {
+    .writev_buffer = mc_writev_buffer,
+    .put_buffer = mc_put_buffer,
+    .get_fd = mc_get_fd,
+    .close = mc_close,
+    .save_page = mc_save_page,
+};
+
+static const QEMUFileOps mc_read_ops = {
+    .get_buffer = mc_get_buffer,
+    .get_fd = mc_get_fd,
+    .close = mc_close,
+    .load_page = mc_load_page,
+};
+
+/* ================================================================== */
+
 static bool vmstate_loading;
 
 /* colo buffer */
@@ -456,6 +586,14 @@ static void colo_process_checkpoint(MigrationState *s)
         qemu_mutex_unlock_iothread();
         goto out;
     }
+
+    MCParams mc;
+    QEMUFile *mc_staging = NULL;
+    if (!(mc_staging = qemu_fopen_mc(&mc, "wb"))) {
+        fprintf(stderr, "Failed to setup MC staging area\n");
+        goto err;
+    }
+    mc.staging = mc_staging;
 
     mc_start_buffer();
 
