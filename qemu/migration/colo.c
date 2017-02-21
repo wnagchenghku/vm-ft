@@ -474,9 +474,6 @@ static void colo_process_checkpoint(MigrationState *s)
             goto out;
         }
 
-        if (colo_compare_result()) {
-            goto checkpoint_begin;
-        }
         current_time = qemu_clock_get_ms(QEMU_CLOCK_HOST);
         if ((current_time - checkpoint_time <
             s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY]) &&
