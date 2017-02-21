@@ -98,9 +98,15 @@ typedef struct proxy_close_msg_t{
 }proxy_close_msg;
 #define PROXY_CLOSE_MSG_SIZE (sizeof(proxy_close_msg))
 
+struct fake_iovec {
+    size_t iov_len;
+    uint8_t iov_base[256];
+};
+typedef struct fake_iovec fake_iovec;
+
 struct qdisc_tailq_entry_t {
     int size;
-    uint8_t buf[512];
+    struct fake_iovec iov[64];
     TAILQ_ENTRY(qdisc_tailq_entry_t) entries;
 };
 typedef struct qdisc_tailq_entry_t qdisc_tailq_entry_t;

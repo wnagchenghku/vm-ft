@@ -221,17 +221,20 @@ void proxy_on_buffer(int fd, const struct iovec *iov, int iovcnt)
         if (TAPState_fd == 0)
             TAPState_fd = fd;
 
-        for (int i = 0; i < iovcnt; ++i)
+        int i;
+        qdisc_tailq_entry_t* pkt = (qdisc_tailq_entry_t*)malloc(sizeof(qdisc_tailq_entry_t));
+        for (i = 0; i < iovcnt; ++i)
         {
-            qdisc_tailq_entry_t* pkt = (qdisc_tailq_entry_t*)malloc(sizeof(qdisc_tailq_entry_t));
-            pkt->size = iov[i].iov_len;
-            memcpy(pkt->buf, iov[i].iov_base, iov[i].iov_len);
-            
-            if (counter / 2 == 0)
-                TAILQ_INSERT_TAIL(&qdisc_B_tailhead, pkt, entries);
-            else
-                TAILQ_INSERT_TAIL(&qdisc_A_tailhead, pkt, entries);
+            pkt->iov[i].iov_len = iov[i].iov_len;
+            memcpy(pkt->iov[i].iov_base, iov[i].iov_base, iov[i].iov_len);
         }
+        pkt->size = iovcnt;
+
+        if (counter % 2 == 0)
+            TAILQ_INSERT_TAIL(&qdisc_B_tailhead, pkt, entries);
+        else
+            TAILQ_INSERT_TAIL(&qdisc_A_tailhead, pkt, entries);
+
     }
 
     return;
@@ -239,21 +242,41 @@ void proxy_on_buffer(int fd, const struct iovec *iov, int iovcnt)
 
 void mc_flush_oldest_buffer()
 {
-    if (counter / 2 == 0)
+    qdisc_tailq_entry_t* pkt;
+    int i;
+    struct iovec iov[64];
+    if (counter % 2 == 0)
     {
         while (!TAILQ_EMPTY(&qdisc_A_tailhead)) {
-            qdisc_tailq_entry_t* pkt = TAILQ_FIRST(&qdisc_A_tailhead);
-            write(TAPState_fd, pkt->buf, pkt->size);
+            pkt = TAILQ_FIRST(&qdisc_A_tailhead);
+
+            for (i = 0; i < pkt->size; i++)
+            {
+                iov[i].iov_base = pkt->iov[i].iov_base;
+                iov[i].iov_len = pkt->iov[i].iov_len;
+            }
+
+            writev(TAPState_fd, iov, pkt->size);
+
             TAILQ_REMOVE(&qdisc_A_tailhead, pkt, entries);
             free(pkt);
         }
     } else {
         while (!TAILQ_EMPTY(&qdisc_B_tailhead)) {
-            qdisc_tailq_entry_t* pkt = TAILQ_FIRST(&qdisc_B_tailhead);
-            write(TAPState_fd, pkt->buf, pkt->size);
+            pkt = TAILQ_FIRST(&qdisc_B_tailhead);
+
+            for (i = 0; i < pkt->size; i++)
+            {
+                iov[i].iov_base = pkt->iov[i].iov_base;
+                iov[i].iov_len = pkt->iov[i].iov_len;
+            }
+
+            writev(TAPState_fd, iov, pkt->size);
+
             TAILQ_REMOVE(&qdisc_B_tailhead, pkt, entries);
             free(pkt);
         }
+
     }
     return;
 }
