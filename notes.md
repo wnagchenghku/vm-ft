@@ -216,7 +216,7 @@ static const QEMUOption *lookup_opt(int argc, char **argv,
     popt = qemu_options;
     for(;;) {
         if (!popt->name) {
-            fprintf(stderr, "invalid option");
+            fprintf(stderr, "invalid option\n");
             exit(1);
         }
         if (!strcmp(popt->name, r + 1))
@@ -253,6 +253,7 @@ int main(int argc, char **argv)
     return 0;
 }
 ```
+./a.out -netdev tap,id=hn0,vhost=off,script=/etc/qemu-ifup,downscript=/etc/qemu-ifdown -chardev socket,id=red0,host=127.0.0.1,port=9003
 
 ## Advanced I/O Function
 ### readv and writev Functions
