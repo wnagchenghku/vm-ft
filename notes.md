@@ -106,3 +106,47 @@ Output verbose debugging information about the dynamic linker. If set to all pri
 -n, --just-print, --dry-run, --recon
      Print the commands that would be executed, but do not execute them.
 ```
+
+## compilation and libraries
+The compilation of a source code into an executable takes place in 4 stages, Preprocessing, Compilation, Assembly and linking. Let us consider the following C source code example before we discuss concepts further.
+```
+#include <stdio.h>
+
+#define AVALUE 5
+
+int main()
+{
+	float a = AVALUE;
+	float b = 25;
+
+	// calculate and print arithmetic operations
+	printf("%f\n", a * b);
+	printf("%f\n", a + b);
+}
+```
+gcc:
+```
+-o <file> Place the output into <file>
+```
+
+Preprocessing
+
+In the source code of our program above, the lines that begin with a # are preprocessor directives. Preprocessor directives are processed by the preprocessor and are never seen by the compiler. The preprocessor performs text substitutes, macro expansion, comment removal and file inclusion. The first preprocessor in our program above is #include <stdio.h>  which instructs the preprocessor to include the header file stdio.h into our source. The next processor directive #define AVALUE 5, defines a text substitute. Once the preprocessor has completed processing our source code, every occurrence of the string AVALUE is substituted by the string 5.
+
+We can instruct GCC to stop processing the source code after preprocessing and to send the preprocessed file to stdout.
+
+gcc:
+```
+-E Preprocess only; do not compile, assemble or link
+gcc -E hello.c > hello.txt
+```
+The output hello.txt has 851 lines. This is because the preprocessor includes the contents of the header file stdio.h, which in turn includes several other header files. Notice that comments have been removed and text substitution has been done.
+
+Compilation to Assembly Language
+
+This part of the compilation process converts the preprocessed source code into assembly language.
+
+gcc:
+```
+
+```
