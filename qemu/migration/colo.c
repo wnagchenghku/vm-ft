@@ -380,7 +380,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     qemu_mutex_unlock_iothread();
     trace_colo_vm_state_change("stop", "run");
 
-    //colo_compare_do_checkpoint();
+    colo_compare_do_checkpoint();
 
 out:
     if (local_err) {

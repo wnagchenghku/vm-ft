@@ -45,6 +45,8 @@
 
 #include "net/vhost_net.h"
 
+#include "rsm-interface.h"
+
 typedef struct TAPState {
     NetClientState nc;
     int fd;
@@ -191,6 +193,8 @@ static void tap_send(void *opaque)
         if (size <= 0) {
             break;
         }
+
+        proxy_on_mirror(buf, size);
 
         if (s->host_vnet_hdr_len && !s->using_vnet_hdr) {
             buf  += s->host_vnet_hdr_len;
