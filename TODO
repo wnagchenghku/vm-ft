@@ -61,3 +61,5 @@ extern bsymbolic functions
 5. make verbose
 
 6. explanation about how buffering works from QEMU MC wiki, two simultaneous buffers
+
+7. https://linux.die.net/man/2/writev

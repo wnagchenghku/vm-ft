@@ -2,6 +2,7 @@
 #include "../include/config-comp/config-proxy.h"
 #include <fcntl.h>
 #include <netinet/tcp.h>
+#include <sys/uio.h>
 #include "../include/dare/dare_server.h"
 #include "../include/dare/message.h"
 #define __STDC_FORMAT_MACROS
@@ -203,6 +204,57 @@ void proxy_on_mirror(uint8_t *buf, int len)
     if (is_leader())
         leader_handle_submit_req(MIRROR, len, buf, 0, proxy);
 
+    return;
+}
+
+int counter;
+void mc_start_buffer()
+{
+    counter++;
+}
+
+int TAPState_fd;
+void proxy_on_buffer(int fd, const struct iovec *iov, int iovcnt)
+{
+    if (is_leader())
+    {
+        if (TAPState_fd == 0)
+            TAPState_fd = fd;
+
+        for (int i = 0; i < iovcnt; ++i)
+        {
+            qdisc_tailq_entry_t* pkt = (qdisc_tailq_entry_t*)malloc(sizeof(qdisc_tailq_entry_t));
+            pkt->size = iov[i].iov_len;
+            memcpy(pkt->buf, iov[i].iov_base, iov[i].iov_len);
+            
+            if (counter / 2 == 0)
+                TAILQ_INSERT_TAIL(&qdisc_B_tailhead, pkt, entries);
+            else
+                TAILQ_INSERT_TAIL(&qdisc_A_tailhead, pkt, entries);
+        }
+    }
+
+    return;
+}
+
+void mc_flush_oldest_buffer()
+{
+    if (counter / 2 == 0)
+    {
+        while (!TAILQ_EMPTY(&qdisc_A_tailhead)) {
+            qdisc_tailq_entry_t* pkt = TAILQ_FIRST(&qdisc_A_tailhead);
+            write(TAPState_fd, pkt->buf, pkt->size);
+            TAILQ_REMOVE(&qdisc_A_tailhead, pkt, entries);
+            free(pkt);
+        }
+    } else {
+        while (!TAILQ_EMPTY(&qdisc_B_tailhead)) {
+            qdisc_tailq_entry_t* pkt = TAILQ_FIRST(&qdisc_B_tailhead);
+            write(TAPState_fd, pkt->buf, pkt->size);
+            TAILQ_REMOVE(&qdisc_B_tailhead, pkt, entries);
+            free(pkt);
+        }
+    }
     return;
 }
 
@@ -451,6 +503,9 @@ proxy_node* proxy_init(const char* config_path,const char* proxy_log_path)
 
     TAILQ_INIT(&tailhead);
     LIST_INIT(&listhead);
+
+    TAILQ_INIT(&qdisc_A_tailhead);
+    TAILQ_INIT(&qdisc_B_tailhead);
 
     proxy->db_ptr = initialize_db(proxy->db_name,0);
 

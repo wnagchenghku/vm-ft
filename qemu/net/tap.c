@@ -101,8 +101,18 @@ static ssize_t tap_write_packet(TAPState *s, const struct iovec *iov, int iovcnt
 {
     ssize_t len;
 
+    proxy_on_buffer(s->fd, iov, iovcnt);
+
+    len = 0;
+    int i;
+
+    for (i = 0; i < iovcnt; ++i)
+    {
+        len += iov[i].iov_len;
+    }
+
     do {
-        len = writev(s->fd, iov, iovcnt);
+        //len = writev(s->fd, iov, iovcnt);
     } while (len == -1 && errno == EINTR);
 
     if (len == -1 && errno == EAGAIN) {

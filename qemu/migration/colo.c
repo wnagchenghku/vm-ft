@@ -23,6 +23,8 @@
 #include "replication.h"
 #include "net/colo-compare.h"
 
+#include "rsm-interface.h"
+
 static bool vmstate_loading;
 
 /* colo buffer */
@@ -293,6 +295,8 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     qemu_mutex_unlock_iothread();
     trace_colo_vm_state_change("run", "stop");
 
+    mc_start_buffer();
+
     /*
      * failover request bh could be called after
      * vm_stop_force_state so we check failover_request_is_active() again.
@@ -374,6 +378,8 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
     ret = 0;
 
+    mc_flush_oldest_buffer();
+
     /* Resume primary guest */
     qemu_mutex_lock_iothread();
     vm_start();
@@ -450,6 +456,8 @@ static void colo_process_checkpoint(MigrationState *s)
         qemu_mutex_unlock_iothread();
         goto out;
     }
+
+    mc_start_buffer();
 
     vm_start();
     qemu_mutex_unlock_iothread();
