@@ -208,8 +208,8 @@ int mc_ram_control_save_page(QEMUFile *f, ram_addr_t block_offset,
                              ram_addr_t offset, long size,
                              uint64_t *bytes_sent)
 {
-    if (f->ops->save_page) {
-        int ret = f->ops->save_page(f, f->opaque, block_offset,
+    if (f->ops->mc_save_page) {
+        int ret = f->ops->mc_save_page(f, f->opaque, block_offset,
                                     host_addr,
                                     offset, size, bytes_sent);
 
