@@ -62,31 +62,6 @@ typedef struct MCParams {
     MCCopyset *curr_copyset;
 } MCParams;
 
-QEMUFile *qemu_fopen_mc(void *opaque, const char *mode)
-{
-    MCParams *mc = opaque;
-    MCCopyset *copyset;
-
-    if (qemu_file_mode_is_not_valid(mode)) {
-        return NULL;
-    }
-
-    QTAILQ_INIT(&mc->copy_head);
-
-    copyset = g_malloc(sizeof(MCCopyset));
-    copyset->idx = 0;
-    QTAILQ_INSERT_HEAD(&mc->copy_head, copyset, node);
-    mc->total_copies = 0;
-    mc->curr_copyset = copyset;
-    mc->nb_copysets = 1;
-
-    if (mode[0] == 'w') {
-        return qemu_fopen_ops(mc, &mc_write_ops);
-    }
-
-    return qemu_fopen_ops(mc, &mc_read_ops);
-}
-
 /*
  * Get the next copyset in the list. If there is none, then make one.
  */
@@ -139,19 +114,36 @@ static int mc_save_page(QEMUFile *f, void *opaque,
 }
 
 static const QEMUFileOps mc_write_ops = {
-    .writev_buffer = mc_writev_buffer,
-    .put_buffer = mc_put_buffer,
-    .get_fd = mc_get_fd,
-    .close = mc_close,
     .save_page = mc_save_page,
 };
 
 static const QEMUFileOps mc_read_ops = {
-    .get_buffer = mc_get_buffer,
-    .get_fd = mc_get_fd,
-    .close = mc_close,
-    .load_page = mc_load_page,
 };
+
+QEMUFile *qemu_fopen_mc(void *opaque, const char *mode)
+{
+    MCParams *mc = opaque;
+    MCCopyset *copyset;
+
+    if (qemu_file_mode_is_not_valid(mode)) {
+        return NULL;
+    }
+
+    QTAILQ_INIT(&mc->copy_head);
+
+    copyset = g_malloc(sizeof(MCCopyset));
+    copyset->idx = 0;
+    QTAILQ_INSERT_HEAD(&mc->copy_head, copyset, node);
+    mc->total_copies = 0;
+    mc->curr_copyset = copyset;
+    mc->nb_copysets = 1;
+
+    if (mode[0] == 'w') {
+        return qemu_fopen_ops(mc, &mc_write_ops);
+    }
+
+    return qemu_fopen_ops(mc, &mc_read_ops);
+}
 
 /* ================================================================== */
 
@@ -591,7 +583,6 @@ static void colo_process_checkpoint(MigrationState *s)
     QEMUFile *mc_staging = NULL;
     if (!(mc_staging = qemu_fopen_mc(&mc, "wb"))) {
         fprintf(stderr, "Failed to setup MC staging area\n");
-        goto err;
     }
     mc.staging = mc_staging;
 

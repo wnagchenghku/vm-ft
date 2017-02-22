@@ -125,6 +125,7 @@ QEMUFile *qemu_fopen_ops(void *opaque, const QEMUFileOps *ops);
 QEMUFile *qemu_fopen(const char *filename, const char *mode);
 QEMUFile *qemu_fdopen(int fd, const char *mode);
 QEMUFile *qemu_fopen_socket(int fd, const char *mode);
+QEMUFile *qemu_fopen_mc(void *opaque, const char *mode);
 QEMUFile *qemu_popen_cmd(const char *command, const char *mode);
 QEMUFile *qemu_bufopen(const char *mode, QEMUSizedBuffer *input);
 int qemu_get_fd(QEMUFile *f);
