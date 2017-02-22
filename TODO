@@ -54,7 +54,7 @@ opts_do_parse
 
 4. add explanations about ./configure, no as needed, LD_LIBRARY_PATH (shared library)
 
-LD_DEBUG=all ./app
+To examine how symbols are resolved runtime: export LD_DEBUG=all.
 
 extern bsymbolic functions
 
