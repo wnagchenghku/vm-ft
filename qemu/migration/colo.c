@@ -114,7 +114,7 @@ static int mc_save_page(QEMUFile *f, void *opaque,
 }
 
 static const QEMUFileOps mc_write_ops = {
-    .save_page = mc_save_page,
+    .mc_save_page = mc_save_page,
 };
 
 static const QEMUFileOps mc_read_ops = {
