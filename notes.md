@@ -255,34 +255,6 @@ int main(int argc, char **argv)
 ```
 ./a.out -netdev tap,id=hn0,vhost=off,script=/etc/qemu-ifup,downscript=/etc/qemu-ifdown -chardev socket,id=red0,host=127.0.0.1,port=9003
 
-## Advanced I/O Function
-### readv and writev Functions
-
-```
-#include <sys/uio.h>
-
-ssize_t readv(int fd, const struct iovec *iov, int iovcnt);
-
-ssize_t writev(int fd, const struct iovec *iov, int iovcnt);
-```
-
-The `readv()` system call reads `iovcnt` buffers from the file associated with the file descriptor `fd` into the buffers described by `iov` ("scatter input").
-
-The `writev()` system call writes `iovcnt` buffers of data described by `iov` to the file associated with the file descriptor `fd` ("gather output").
-
-The  pointer  `iov`  points  to  an array of `iovec` structures, defined in `<sys/uio.h>` as:
-```
-struct iovec {
-    void  *iov_base;    /* Starting address */
-    size_t iov_len;     /* Number of bytes to transfer */
-};
-```
-The `readv()` system call works just like `read()`  except  that  multiple buffers are filled.
-
-The  `writev()` system call works just like `write()` except that multiple buffers are written out.
-
-Buffers are processed in array order.  This  means that `readv()` completely fills `iov[0]` before proceeding to `iov[1]`, and so on. Similarly, `writev()` writes out the entire contents of `iov[0]` before proceeding to `iov[1]`, and so on.
-
 ## libev
 ### WATCHER TYPES
 #### ev_timer - relative and optionally repeating timeouts
@@ -492,7 +464,27 @@ $ ./test_link
 ```
 Normally, the system’s dynamic loader looks for shared libraries in some system specified directories (/lib and /usr/lib). When we build a new shared library that is not part of the system, we can use the LD_LIBRARY_PATH environment variable to tell the dynamic loader to look in other directories.
 
-## Linking order
+## Linking
+
+### Static Linking
+*Static linkers* such as the Unix `ld` program take as input a collection of relocatable object files and command line arguments and generate as output a fully linked executable object file that can be loaded and run. The input relocatable object files consist of various code and data sections. Instructions are in one section, initialized global variables are in another section, and uninitialized variables are in yet another section.
+
+To build the executable, the linker must perform two main tasks:
+
+* *Symbol resolution*. Object files define and reference *symbols*. The purpose of symbol resolution is to associate each symbol reference with exactly one symbol definition.
+* *Relocation*. Compilers and assemblers generate code and data sections that start at address 0. The linker *relocates* these sections by associating a memory location with each symbol definition, and then modify all of the references to those symbols so that they point to this memory location.
+
+### Object Files
+Object files come in three forms:
+* *Relocatable object file.* Contains binary code and data in a form that can be combined with other relocatable object files at compile time to create an executable object file.
+* *Executable object file*. Contains binary code and data in a form that can be copied directly into memory and executed.
+* *Shared object file*. A special type of relocatable object file that can be loaded into memory and linked dynamically, at either load time or run time.
+
+Compilers and assemblers generate relocatable object files (including shared object files). Linkers generate executable object files.
+
+### Relocatable Object Files
+
+
 The linker checks each file in turn. If it is a library, the linker checks to see if any symbols referenced (i.e. used) in the previous object files but not defined (i.e. contained) in them, are in the library.
 ```
 $ gcc -o test_link test_link.c -L. libmymath.so
