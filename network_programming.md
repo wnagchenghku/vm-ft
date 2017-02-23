@@ -79,16 +79,16 @@ The maxfdp1 argument specifies the number of descriptors to be tested.
 The maxfdp1 argument forces us to calculate the largest descriptor that we are interested in and then tell the kernel this value. For example, given the previous code that turns on the indicators for descriptors 1, 4, and 5, the maxfdp1 value is 6. The reason it is 6 and not 5 is that we are specifying the number of descriptor, not the largest value, and descriptors start at 0.
 
 1. A socket is ready for reading if any of the following four conditions is true:
+  
+  a. The number of bytes of data in the socket receive buffer is greater than or equal to the current size of the low-water mark of the socket receive buffer. A read operation on the socket will not block and will return a value greater than 0 (i.e., the data that is ready to be read). We can set this low-water mark using the SO_RCVLOWAT socket option. It defaults to 1 for TCP and UDP sockets.
 
-a. The number of bytes of data in the socket receive buffer is greater than or equal to the current size of the low-water mark of the socket receive buffer. A read operation on the socket will not block and will return a value greater than 0 (i.e., the data that is ready to be read). We can set this low-water mark using the SO_RCVLOWAT socket option. It defaults to 1 for TCP and UDP sockets.
-
-b. The socket is a listening socket and the number of completed connections is nonzero.
+  b. The socket is a listening socket and the number of completed connections is nonzero.
 
 2. A socket is ready for writing if any of the following conditions is true:
 
-a. The number of bytes available space in the socket send buffer is greater than or equal to the current size of the low-water mark for the socket send buffer and either: (i) the socket is connected, or (ii) the socket does not require a connection (e.g., UDP).
+  a. The number of bytes available space in the socket send buffer is greater than or equal to the current size of the low-water mark for the socket send buffer and either: (i) the socket is connected, or (ii) the socket does not require a connection (e.g., UDP).
 
-b. A socket using a non-blocking `connect` has completed the connection, or the `connect` has failed.
+  b. A socket using a non-blocking `connect` has completed the connection, or the `connect` has failed.
 
 ### poll Function
 
@@ -118,3 +118,52 @@ If none of the events requested (and no error) has occurred for any of the file 
 The `timeout` argument specifies the number of milliseconds that `poll()` should block waiting for a file descriptor to become ready. Specifying a negative value in `timeout` means an infinite timeout. Specifying a timeout of zero causes `poll()` to return immediately, even if no file descriptors are ready.
 
 On success, a positive number is returned; this is the number of structures which have nonzero revents fields (in other words, those descriptors with events or errors reported).
+
+### epoll Function
+```
+#define MAX_EVENTS 10
+struct epoll_event ev, events[MAX_EVENTS];
+int listen_sock, conn_sock, nfds, epollfd;
+
+/* Code to set up listening socket, 'listen_sock', (socket(), bind(), listen()) omitted */
+
+epollfd = epoll_create1(0);
+if (epollfd == -1) {
+    perror("epoll_create1");
+    exit(EXIT_FAILURE);
+}
+
+ev.events = EPOLLIN;
+ev.data.fd = listen_sock;
+if (epoll_ctl(epollfd, EPOLL_CTL_ADD, listen_sock, &ev) == -1) {
+    perror("epoll_ctl: listen_sock");
+    exit(EXIT_FAILURE);
+}
+
+for (;;) {
+    nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
+    if (nfds == -1) {
+        perror("epoll_wait");
+        exit(EXIT_FAILURE);
+    }
+
+    for (n = 0; n < nfds; ++n) {
+        if (events[n].data.fd == listen_sock) {
+            conn_sock = accept(listen_sock, (struct sockaddr *) &addr, &addrlen);
+            if (conn_sock == -1) {
+                perror("accept");
+                exit(EXIT_FAILURE);
+            }
+            setnonblocking(conn_sock);
+            ev.events = EPOLLIN | EPOLLET;
+            ev.data.fd = conn_sock;
+            if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &ev) == -1) {
+                perror("epoll_ctl: conn_sock");
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            do_use_fd(events[n].data.fd);
+        }
+    }
+}
+```
