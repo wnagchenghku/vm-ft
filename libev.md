@@ -1,7 +1,6 @@
-## libev
-### WATCHER TYPES
-#### ev_timer - relative and optionally repeating timeouts
-##### Be smart about timeouts
+## WATCHER TYPES
+### ev_timer - relative and optionally repeating timeouts
+#### Be smart about timeouts
 1. Use a timer and stop, reinitialise and start it on activity. This is the most obvious, but not the most simple way: In the beginning, start the watcher:
 ```
 ev_timer_init (timer, callback, 60., 0.);
@@ -39,7 +38,7 @@ ev_timer_again (loop, timer);
 ```
 This is slightly more efficient then stopping/starting the timer each time you want to modify its timeout value, as libev does not have to completely remove and re-insert the timer from/into its internal data structure.
 
-### ANATOMY OF A WATCHER
+## ANATOMY OF A WATCHER
 
 In the following description, uppercase "TYPE" in names stands for the watcher type, e.g. "ev_TYPE_start" can mean "ev_timer_start" for timer watchers and "ev_io_start" for I/O watchers.
 
