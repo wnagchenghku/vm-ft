@@ -201,6 +201,5 @@ void dare_server_shutdown();
 void server_to_follower();
 int server_update_sid( uint64_t new_sid, uint64_t old_sid );
 int is_leader();
-uint8_t get_node_id();
 
 #endif /* DARE_SERVER_H */

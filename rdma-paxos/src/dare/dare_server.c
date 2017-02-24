@@ -2354,11 +2354,6 @@ int is_leader()
     return IS_LEADER;
 }
 
-uint8_t get_node_id() 
-{
-    return data.config.idx;
-}
-
 static void 
 int_handler(int dummy) 
 {

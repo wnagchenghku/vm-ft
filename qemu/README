@@ -1,5 +1,5 @@
 
-Tested using Ubuntu 16.04.2
+Tested using Ubuntu 16.04.2, MLNX_OFED_LINUX-3.4-2.0.0.0-ubuntu16.04-x86_64
 
 export VMFT_ROOT=<absolute path of vm-ft>
 
