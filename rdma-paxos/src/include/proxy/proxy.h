@@ -53,7 +53,7 @@ typedef struct proxy_node_t{
 	char* db_name;
 	db* db_ptr;
 
-    int filter_mirror_fd;
+    int mirror_clientfd;
 }proxy_node;
 
 typedef struct proxy_msg_header_t{

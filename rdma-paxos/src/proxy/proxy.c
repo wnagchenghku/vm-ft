@@ -178,7 +178,7 @@ static void update_highest_rec(void*arg)
 static void set_filter_mirror_fd(void*arg, int fd)
 {
     proxy_node* proxy = arg;
-    proxy->filter_mirror_fd = fd;
+    proxy->mirror_clientfd = fd;
 }
 
 static void stablestorage_save_request(void* data,void*arg)
@@ -234,11 +234,11 @@ static void do_action_send(size_t data_size,void* data,void* arg)
     proxy_node* proxy = arg;
     uint32_t len = htonl(data_size);
 
-    int n = write(proxy->filter_mirror_fd, &len, sizeof(len));
+    int n = write(proxy->mirror_clientfd, &len, sizeof(len));
     if (n < 0)
         fprintf(stderr, "ERROR writing to socket!\n");
 
-    n = write(proxy->filter_mirror_fd, data, data_size);
+    n = write(proxy->mirror_clientfd, data, data_size);
     if (n < 0)
         fprintf(stderr, "ERROR writing to socket!\n");
 

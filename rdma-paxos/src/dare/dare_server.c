@@ -20,7 +20,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
+#include <sys/un.h>
 
 #include "../include/dare/dare_ibv.h"
 #include "../include/dare/dare_server.h"
@@ -73,6 +73,9 @@ dare_server_data_t data;
 int prev_log_entry_head = 0;
 
 dare_log_entry_det_t last_applied_entry;
+
+const char *mirror_sockpath = "/dev/shm/mirror.sock";
+const char *redirector_sockpath = "/dev/shm/redirector.sock";
 
 /* ================================================================== */
 /* libEV events */
@@ -169,11 +172,11 @@ to_adjust_cb( EV_P_ ev_timer *w, int revents );
 static void
 poll_cb( EV_P_ ev_idle *w, int revents );
 static void
-mirror_accept_cb(EV_P_ ev_io *w, int revents);
+mirror_accept_handler(EV_P_ ev_io *w, int revents);
 static void
-redirector_accept_cb(EV_P_ ev_io *w, int revents);
+redirector_accept_handler(EV_P_ ev_io *w, int revents);
 static void
-redirector_read_cb(EV_P_ ev_io *w, int revents);
+redirector_read_handler(EV_P_ ev_io *w, int revents);
 
 /* ================================================================== */
 /* Init and cleaning up */
@@ -245,51 +248,33 @@ void *dare_server_init(void *arg)
     ev_set_priority(&to_adjust_event, EV_MAXPRI-1);
 
     /* Init the mirror chardev event */
-    struct sockaddr_in mirror_serveraddr;
-    int mirror_fd = socket(AF_INET, SOCK_STREAM, 0);
+    int mirror_serverfd;
+    struct sockaddr_un mirror_serveraddr;
 
-    int optval = 1;
-    setsockopt(mirror_fd, SOL_SOCKET, SO_REUSEADDR, 
-         (const void *)&optval , sizeof(int));
+    unlink(mirror_sockpath);
+    mirror_serverfd = socket(AF_UNIX, SOCK_STREAM, 0);
+    mirror_serveraddr.sun_family = AF_UNIX;
+    strcpy(mirror_serveraddr.sun_path, mirror_sockpath);
 
-    int mirror_portno = 9003;
-    bzero((char*)&mirror_serveraddr, sizeof(mirror_serveraddr));
-    mirror_serveraddr.sin_family = AF_INET;
-    mirror_serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    mirror_serveraddr.sin_port = htons((unsigned short)mirror_portno);
-    rc = bind(mirror_fd, (struct sockaddr *) &mirror_serveraddr, sizeof(mirror_serveraddr));
-    if (0 != rc) {
-        //error_return(1, log_fp, "Cannot bind server data\n");
-    }
-    rc = listen(mirror_fd, 5);
-    if (0 != rc) {
-        //error_return(1, log_fp, "ERROR on listen\n");
-    }
+    rc = bind(mirror_serverfd, (struct sockaddr*)&mirror_serveraddr, sizeof(mirror_serveraddr));
+    rc = listen(mirror_serverfd, 5);
 
-    ev_io_init(&mirror_accept_watcher, mirror_accept_cb, mirror_fd, EV_READ);
+    ev_io_init(&mirror_accept_watcher, mirror_accept_handler, mirror_serverfd, EV_READ);
     ev_io_start (data.loop, &mirror_accept_watcher);
 
     /* Init the redirector chardev event */
-    struct sockaddr_in redirector_serveraddr;
-    int redirector_fd = socket(AF_INET, SOCK_STREAM, 0);
-    setsockopt(redirector_fd, SOL_SOCKET, SO_REUSEADDR, 
-         (const void *)&optval , sizeof(int));
+    int redirector_serverfd;
+    struct sockaddr_un redirector_serveraddr;
 
-    int redirector_portno = 9004;
-    bzero((char*)&redirector_serveraddr, sizeof(redirector_serveraddr));
-    redirector_serveraddr.sin_family = AF_INET;
-    redirector_serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    redirector_serveraddr.sin_port = htons((unsigned short)redirector_portno);
-    rc = bind(redirector_fd, (struct sockaddr *) &redirector_serveraddr, sizeof(redirector_serveraddr));
-    if (0 != rc) {
-        //error_return(1, log_fp, "Cannot bind server data\n");
-    }
-    rc = listen(redirector_fd, 5);
-    if (0 != rc) {
-        //error_return(1, log_fp, "ERROR on listen\n");
-    }
+    unlink(redirector_sockpath);
+    redirector_serverfd = socket(AF_UNIX, SOCK_STREAM, 0);
+    redirector_serveraddr.sun_family = AF_UNIX;
+    strcpy(redirector_serveraddr.sun_path, redirector_sockpath);
 
-    ev_io_init(&redirector_accept_watcher, redirector_accept_cb, redirector_fd, EV_READ);
+    rc = bind(redirector_serverfd, (struct sockaddr*)&redirector_serveraddr, sizeof(redirector_serveraddr));
+    rc = listen(redirector_serverfd, 5);
+
+    ev_io_init(&redirector_accept_watcher, redirector_accept_handler, redirector_serverfd, EV_READ);
     ev_io_start (data.loop, &redirector_accept_watcher);
 
     /* Now wait for events to arrive */
@@ -2271,17 +2256,15 @@ update_cid( dare_cid_t cid )
 /* Chardev */
 
 static void
-mirror_accept_cb(EV_P_ ev_io *w, int revents)
+mirror_accept_handler(EV_P_ ev_io *w, int revents)
 {
-    struct sockaddr_in client_addr;
-    socklen_t client_len = sizeof(client_addr);
-    int mirror_fd = accept(w->fd, (struct sockaddr *)&client_addr, &client_len);
-    data.sm->proxy_set_qemu_chardev(data.sm->up_para, mirror_fd);
+    int mirror_clientfd = accept(w->fd, NULL, NULL);
+    data.sm->proxy_set_qemu_chardev(data.sm->up_para, mirror_clientfd);
     ev_io_stop (EV_A_ w);
 }
 
 static void
-redirector_read_cb(EV_P_ ev_io *w, int revents)
+redirector_read_handler(EV_P_ ev_io *w, int revents)
 {
     char buffer[256];
     int n = read(w->fd, buffer, 255);
@@ -2289,14 +2272,12 @@ redirector_read_cb(EV_P_ ev_io *w, int revents)
 }
 
 static void
-redirector_accept_cb(EV_P_ ev_io *w, int revents)
+redirector_accept_handler(EV_P_ ev_io *w, int revents)
 {
-    struct sockaddr_in client_addr;
-    socklen_t client_len = sizeof(client_addr);
-    int redirector_fd = accept(w->fd, (struct sockaddr *)&client_addr, &client_len);
+    int redirector_clientfd = accept(w->fd, NULL, NULL);
     ev_io_stop (EV_A_ w);
 
-    ev_io_init(&redirector_read_watcher, redirector_read_cb, redirector_fd, EV_READ);
+    ev_io_init(&redirector_read_watcher, redirector_read_handler, redirector_clientfd, EV_READ);
     ev_io_start(data.loop, &redirector_read_watcher);
 }
 
