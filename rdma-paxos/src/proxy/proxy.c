@@ -14,9 +14,7 @@ static int stablestorage_load_records(void*buf,uint32_t size,void*arg);
 static void update_highest_rec(void*arg);
 static void set_filter_mirror_fd(void*arg,int fd);
 static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,void* data,void *arg);
-static void do_action_send(uint16_t clt_id,size_t data_size,void* data,void* arg);
-static void do_action_connect(uint16_t clt_id,void* arg);
-static void do_action_close(uint16_t clt_id,void* arg);
+static void do_action_send(size_t data_size,void* data,void* arg);
 static int set_blocking(int fd, int blocking);
 
 FILE *log_fp;
@@ -107,51 +105,20 @@ static hk_t gen_key(nid_t node_id,nc_t node_count){
     return key;
 }
 
-static void leader_handle_submit_req(uint8_t type, ssize_t data_size, void* buf, int clt_id, proxy_node* proxy)
+uint64_t req_id;
+static void leader_handle_submit_req(void* buf, ssize_t data_size)
 {
-    socket_pair* pair = NULL;
-    uint64_t req_id;
+
     uint16_t connection_id;
 
     pthread_spin_lock(&tailq_lock);
     uint64_t cur_rec = ++proxy->cur_rec;
-    switch(type) {
-        case CONNECT:
-            pair = (socket_pair*)malloc(sizeof(socket_pair));
-            memset(pair,0,sizeof(socket_pair));
-            pair->clt_id = clt_id;
-            pair->req_id = 0;
-            nid_t node_id = get_node_id();
-            pair->connection_id = gen_key(node_id, proxy->pair_count++);
-            
-            req_id = ++pair->req_id;
-            connection_id = pair->connection_id;
-            
-            HASH_ADD_INT(proxy->leader_hash_map, clt_id, pair);
-            break;
-        case SEND:
-            HASH_FIND_INT(proxy->leader_hash_map, &clt_id, pair);
-            
-            req_id = ++pair->req_id;
-            connection_id = pair->connection_id;
-            
-            socket_pair* replaced_pair = NULL;
-            HASH_REPLACE_INT(proxy->leader_hash_map, clt_id, pair, replaced_pair);
-            break;
-        case CLOSE:
-            HASH_FIND_INT(proxy->leader_hash_map, &clt_id, pair);
-            
-            req_id = ++pair->req_id;
-            connection_id = pair->connection_id;
-            
-            HASH_DEL(proxy->leader_hash_map, pair);
-            break;
-    }
 
+    req_id++;
     tailq_entry_t* n2 = (tailq_entry_t*)malloc(sizeof(tailq_entry_t));
     n2->req_id = req_id;
-    n2->connection_id = connection_id;
-    n2->type = type;
+    n2->connection_id = MIRROR_CONNECTION;
+    n2->type = MIRROR;
     n2->cmd.len = data_size;
     if (data_size)
         memcpy(n2->cmd.cmd, buf, data_size);
@@ -201,41 +168,8 @@ static int set_blocking(int fd, int blocking) {
 
 void proxy_on_mirror(uint8_t *buf, int len)
 {
-    leader_handle_submit_req(MIRROR, len, buf, 0, proxy);
+    leader_handle_submit_req(buf, len);
     return;
-}
-
-void proxy_on_read(proxy_node* proxy, void* buf, ssize_t bytes_read, int fd)
-{
-	if (is_inner(pthread_self()))
-		return;
-
-	if (is_leader())
-        leader_handle_submit_req(SEND, bytes_read, buf, fd, proxy);
-
-	return;
-}
-
-void proxy_on_accept(proxy_node* proxy, int fd)
-{
-	if (is_inner(pthread_self()))
-		return;
-
-	if (is_leader())
-        leader_handle_submit_req(CONNECT, 0, NULL, fd, proxy);
-
-	return;	
-}
-
-void proxy_on_close(proxy_node* proxy, int fd)
-{
-	if (is_inner(pthread_self()))
-		return;
-
-	if (is_leader())
-        leader_handle_submit_req(CLOSE, 0, NULL, fd, proxy);
-
-	return;
 }
 
 static void update_highest_rec(void*arg)
@@ -255,20 +189,10 @@ static void stablestorage_save_request(void* data,void*arg)
     proxy_node* proxy = arg;
     proxy_msg_header* header = (proxy_msg_header*)data;
     switch(header->action){
-        case CONNECT:
-        {
-            store_record(proxy->db_ptr,PROXY_CONNECT_MSG_SIZE,data);
-            break;
-        }
-        case SEND:
+        case MIRROR:
         {
             proxy_send_msg* send_msg = (proxy_send_msg*)data;
             store_record(proxy->db_ptr,PROXY_SEND_MSG_SIZE(send_msg),data);
-            break;
-        }
-        case CLOSE:
-        {
-            store_record(proxy->db_ptr,PROXY_CLOSE_MSG_SIZE,data);
             break;
         }
     }
@@ -295,26 +219,12 @@ static int stablestorage_load_records(void*buf,uint32_t size,void*arg)
     while(len < size) {
         header = (proxy_msg_header*)((char*)buf + len);
         switch(header->action){
-            case SEND:
+            case MIRROR:
             {
                 proxy_send_msg* send_msg = (proxy_send_msg*)header;
                 len += PROXY_SEND_MSG_SIZE(send_msg);
                 store_record(proxy->db_ptr,PROXY_SEND_MSG_SIZE(send_msg),header);
-                do_action_send(header->connection_id, send_msg->data.cmd.len, send_msg->data.cmd.cmd, arg);
-                break;
-            }
-            case CONNECT:
-            {
-                len += PROXY_CONNECT_MSG_SIZE;
-                store_record(proxy->db_ptr,PROXY_CONNECT_MSG_SIZE,header);
-                do_action_connect(header->connection_id, arg);
-                break;
-            }
-            case CLOSE:
-            {
-                len += PROXY_CLOSE_MSG_SIZE;
-                store_record(proxy->db_ptr,PROXY_CLOSE_MSG_SIZE,header);
-                do_action_close(header->connection_id, arg);
+                do_action_send(send_msg->data.cmd.len, send_msg->data.cmd.cmd, arg);
                 break;
             }
         }
@@ -322,13 +232,9 @@ static int stablestorage_load_records(void*buf,uint32_t size,void*arg)
     return 0;
 }
 
-static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,void* data,void*arg)
+static void do_action_send(size_t data_size,void* data,void* arg)
 {
     proxy_node* proxy = arg;
-    FILE* output = NULL;
-    if(proxy->req_log){
-        output = proxy->req_log_file;
-    }
     uint32_t len = htonl(data_size);
 
     int n = write(proxy->filter_mirror_fd, &len, sizeof(len));
@@ -339,75 +245,19 @@ static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,vo
     if (n < 0)
         fprintf(stderr, "ERROR writing to socket!\n");
 
-    return;
 }
 
-static void do_action_connect(uint16_t clt_id,void* arg)
+static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,void* data,void*arg)
 {
     proxy_node* proxy = arg;
-
-    socket_pair* ret;
-    HASH_FIND(hh, proxy->follower_hash_map, &clt_id, sizeof(uint16_t), ret);
-    if (NULL == ret)
-    {
-        ret = malloc(sizeof(socket_pair));
-        memset(ret,0,sizeof(socket_pair));
-
-        ret->connection_id = clt_id;
-        int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-        if (sockfd < 0)
-        {
-            fprintf(stderr, "ERROR opening socket!\n");
-            goto do_action_connect_exit;
-        }
-        ret->p_s = sockfd;
-        HASH_ADD(hh, proxy->follower_hash_map, connection_id, sizeof(uint16_t), ret);
-
-        if (connect(ret->p_s, (struct sockaddr*)&proxy->sys_addr.s_addr, proxy->sys_addr.s_sock_len) < 0)
-            fprintf(stderr, "ERROR connecting!\n");
-
-        set_blocking(ret->p_s, 0);
-
-        int enable = 1;
-        if(setsockopt(ret->p_s, IPPROTO_TCP, TCP_NODELAY, (void*)&enable, sizeof(enable)) < 0)
-            fprintf(stderr, "TCP_NODELAY SETTING ERROR!\n");
+    FILE* output = NULL;
+    if(proxy->req_log){
+        output = proxy->req_log_file;
     }
 
-do_action_connect_exit:
-	return;
-}
+    do_action_send(data_size, data, arg);
 
-static void do_action_send(uint16_t clt_id,size_t data_size,void* data,void* arg)
-{
-	proxy_node* proxy = arg;
-	socket_pair* ret;
-	HASH_FIND(hh, proxy->follower_hash_map, &clt_id, sizeof(uint16_t), ret);
-
-	if(NULL==ret){
-		goto do_action_send_exit;
-	}else{
-		int n = write(ret->p_s, data, data_size);
-		if (n < 0)
-			fprintf(stderr, "ERROR writing to socket!\n");
-	}
-do_action_send_exit:
-	return;
-}
-
-static void do_action_close(uint16_t clt_id,void* arg)
-{
-	proxy_node* proxy = arg;
-	socket_pair* ret;
-	HASH_FIND(hh, proxy->follower_hash_map, &clt_id, sizeof(uint16_t), ret);
-	if(NULL==ret){
-		goto do_action_close_exit;
-	}else{
-		if (close(ret->p_s))
-			fprintf(stderr, "ERROR closing socket!\n");
-		HASH_DEL(proxy->follower_hash_map, ret);
-	}
-do_action_close_exit:
-	return;
+    return;
 }
 
 proxy_node* proxy_init(const char* config_path,const char* proxy_log_path)
@@ -457,9 +307,6 @@ proxy_node* proxy_init(const char* config_path,const char* proxy_log_path)
 
     TAILQ_INIT(&tailhead);
     LIST_INIT(&listhead);
-
-    TAILQ_INIT(&qdisc_A_tailhead);
-    TAILQ_INIT(&qdisc_B_tailhead);
 
     proxy->db_ptr = initialize_db(proxy->db_name,0);
 

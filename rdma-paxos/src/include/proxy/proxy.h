@@ -7,10 +7,9 @@
 #include "../db/db-interface.h"
 #include <sys/queue.h>
 
-#define CONNECT 4
-#define SEND    5
-#define CLOSE   6
 #define MIRROR  7
+
+#define MIRROR_CONNECTION 13
 
 typedef uint16_t hk_t;
 typedef uint8_t nc_t;
@@ -63,11 +62,6 @@ typedef struct proxy_msg_header_t{
 }proxy_msg_header;
 #define PROXY_MSG_HEADER_SIZE (sizeof(proxy_msg_header))
 
-typedef struct proxy_connect_msg_t{
-    proxy_msg_header header;
-}proxy_connect_msg;
-#define PROXY_CONNECT_MSG_SIZE (sizeof(proxy_connect_msg))
-
 struct fake_dare_cid_t {
     uint64_t epoch;
     uint8_t size[2];
@@ -92,26 +86,5 @@ typedef struct proxy_send_msg_t{
     } data;
 }proxy_send_msg;
 #define PROXY_SEND_MSG_SIZE(M) (M->data.cmd.len+sizeof(proxy_send_msg))
-
-typedef struct proxy_close_msg_t{
-    proxy_msg_header header;
-}proxy_close_msg;
-#define PROXY_CLOSE_MSG_SIZE (sizeof(proxy_close_msg))
-
-struct fake_iovec {
-    size_t iov_len;
-    uint8_t iov_base[256];
-};
-typedef struct fake_iovec fake_iovec;
-
-struct qdisc_tailq_entry_t {
-    int size;
-    struct fake_iovec iov[64];
-    TAILQ_ENTRY(qdisc_tailq_entry_t) entries;
-};
-typedef struct qdisc_tailq_entry_t qdisc_tailq_entry_t;
-
-TAILQ_HEAD(, qdisc_tailq_entry_t) qdisc_A_tailhead;
-TAILQ_HEAD(, qdisc_tailq_entry_t) qdisc_B_tailhead;
 
 #endif
