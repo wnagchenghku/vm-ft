@@ -17,6 +17,8 @@
 #include "sysemu/block-backend.h"
 #include <sys/ioctl.h>
 
+#include "checkpoint.h"
+
 #ifndef rtnl_tc_get_ops
 extern struct rtnl_tc_ops * rtnl_tc_get_ops(struct rtnl_tc *);
 #endif
