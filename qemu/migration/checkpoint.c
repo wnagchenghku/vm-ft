@@ -5,6 +5,18 @@
 #include <libnl3/netlink/cli/qdisc.h>
 #include <libnl3/netlink/cli/link.h>
 
+#include "qemu/osdep.h"
+#include "qemu/timer.h"
+#include "sysemu/sysemu.h"
+#include "migration/colo.h"
+#include "trace.h"
+#include "qemu/error-report.h"
+#include "qapi/error.h"
+#include "migration/failover.h"
+#include "qapi-event.h"
+#include "block/block.h"
+#include "replication.h"
+
 #include "qemu-common.h"
 #include "hw/virtio/virtio.h"
 #include "hw/virtio/virtio-net.h"
