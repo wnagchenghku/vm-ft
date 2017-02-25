@@ -45,8 +45,6 @@
 
 #include "net/vhost_net.h"
 
-#include "rsm-interface.h"
-
 typedef struct TAPState {
     NetClientState nc;
     int fd;

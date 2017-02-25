@@ -108,9 +108,6 @@ static hk_t gen_key(nid_t node_id,nc_t node_count){
 uint64_t req_id;
 static void leader_handle_submit_req(void* buf, ssize_t data_size)
 {
-
-    uint16_t connection_id;
-
     pthread_spin_lock(&tailq_lock);
     uint64_t cur_rec = ++proxy->cur_rec;
 
