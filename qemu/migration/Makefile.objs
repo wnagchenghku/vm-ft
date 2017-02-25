@@ -1,7 +1,4 @@
 common-obj-y += migration.o tcp.o
-common-obj-y += rdma_common.o
-common-obj-y += rdma_server.o
-common-obj-y += rdma_client.o
 common-obj-y += checkpoint.o
 common-obj-y += colo-comm.o
 common-obj-$(CONFIG_COLO) += colo.o colo-failover.o
