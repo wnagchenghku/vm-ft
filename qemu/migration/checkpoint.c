@@ -222,7 +222,7 @@ out:
  * Also, if there is no network device to begin with, then just
  * silently return with buffering_enabled = false.
  */
-static int mc_enable_buffering(void)
+int mc_enable_buffering(void)
 {
     char dev[MC_DEV_NAME_MAX_SIZE], buffer_dev[MC_DEV_NAME_MAX_SIZE];
     int prefix_len = 0;
@@ -331,7 +331,7 @@ failed:
     return -EINVAL;
 }
 
-static int mc_start_buffer(void)
+int mc_start_buffer(void)
 {
     int err;
 
@@ -356,7 +356,7 @@ static int mc_start_buffer(void)
     return mc_deliver(1);
 }
 
-static int mc_flush_oldest_buffer(void)
+int mc_flush_oldest_buffer(void)
 {
     int err;
 
