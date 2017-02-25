@@ -101,19 +101,9 @@ static ssize_t tap_write_packet(TAPState *s, const struct iovec *iov, int iovcnt
 {
     ssize_t len;
 
-    if (is_leader())
-    {
-        proxy_on_buffer(s->fd, iov, iovcnt);
-        int i;
-        for (i = 0; i < iovcnt; ++i)
-        {
-            len += iov[i].iov_len;
-        }
-    } else {
-        do {
-            len = writev(s->fd, iov, iovcnt);
-        } while (len == -1 && errno == EINTR);
-    }
+    do {
+        len = writev(s->fd, iov, iovcnt);
+    } while (len == -1 && errno == EINTR);
 
     if (len == -1 && errno == EAGAIN) {
         tap_write_poll(s, true);

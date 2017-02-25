@@ -23,8 +23,6 @@
 #include "replication.h"
 #include "net/colo-compare.h"
 
-#include "rsm-interface.h"
-
 /* ================================================================== */
 /* QEMU MC */
 
