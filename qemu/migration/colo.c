@@ -23,6 +23,8 @@
 #include "replication.h"
 #include "net/colo-compare.h"
 
+#include "checkpoint.h"
+
 /* ================================================================== */
 /* QEMU MC */
 
@@ -539,6 +541,13 @@ static void colo_process_checkpoint(MigrationState *s)
     int64_t current_time, checkpoint_time = qemu_clock_get_ms(QEMU_CLOCK_HOST);
     Error *local_err = NULL;
     int ret;
+
+    ret = mc_enable_buffering();
+    if (ret > 0) {
+    } else {
+        if (ret < 0 || mc_start_buffer() < 0) {
+        }
+    }
 
     failover_init_state();
 

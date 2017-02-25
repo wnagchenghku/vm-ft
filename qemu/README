@@ -2,10 +2,13 @@
 export VMFT_ROOT=<absolute path of vm-ft>
 
 cd $VMFT_ROOT/rdma-paxos/target
+apt-get install libconfig-dev libdb5.3-dev libev-dev 
 make clean
 make
 
 cd $VMFT_ROOT/qemu
+apt-get install libglib2.0-dev zlib1g-dev libpixman-1-dev
+
 ./configure --disable-werror --target-list=x86_64-softmmu --extra-ldflags="-Wl,--no-as-needed -L$VMFT_ROOT/rdma-paxos/target -linterpose -lnl-3 -lnl-cli-3 -lnl-route-3 -lnl-3 -lnl-cli-3 -lnl-route-3" --extra-cflags="-I$VMFT_ROOT/rdma-paxos/src/include/rsm-interface -I/usr/include/libnl3 -I/usr/include/libnl3"
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$VMFT_ROOT/rdma-paxos/target
