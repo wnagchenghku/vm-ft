@@ -862,7 +862,7 @@ connect_qp_exit:
 int mc_rdma_init(int is_client)
 {
     struct resources res;
-    if (!is_client)
+    if (is_client)
         config.server_name = "10.22.1.3";
 
     config.gid_idx = 0;
