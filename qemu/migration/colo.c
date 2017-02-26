@@ -24,6 +24,7 @@
 #include "net/colo-compare.h"
 
 #include "checkpoint.h"
+#include "rdma_common.h"
 
 /* ================================================================== */
 /* QEMU MC */
@@ -541,6 +542,7 @@ static void colo_process_checkpoint(MigrationState *s)
     int64_t current_time, checkpoint_time = qemu_clock_get_ms(QEMU_CLOCK_HOST);
     Error *local_err = NULL;
     int ret;
+    ret = mc_start_outgoing_migration();
 
     ret = mc_enable_buffering();
     if (ret > 0) {
@@ -723,6 +725,7 @@ void *colo_process_incoming_thread(void *opaque)
     uint64_t value;
     Error *local_err = NULL;
     int ret;
+    ret = mc_start_incoming_migration();
 
     qemu_sem_init(&mis->colo_incoming_sem, 0);
 

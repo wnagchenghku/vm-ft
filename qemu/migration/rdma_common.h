@@ -48,4 +48,7 @@ int process_rdma_cm_event(struct rdma_event_channel *echannel, enum rdma_cm_even
 
 int get_addr(char *dst, struct sockaddr *addr);
 
+int mc_start_incoming_migration(void);
+int mc_start_outgoing_migration(void);
+
 #endif /* RDMA_COMMON_H */

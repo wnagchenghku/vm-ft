@@ -190,7 +190,7 @@ static int client_disconnect_and_clean(void)
 
 int mc_start_outgoing_migration(void) {
 	struct sockaddr_in server_sockaddr;
-	int ret, option;
+	int ret;
 	bzero(&server_sockaddr, sizeof server_sockaddr);
 	server_sockaddr.sin_family = AF_INET;
 	server_sockaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
