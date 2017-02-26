@@ -63,3 +63,7 @@ extern bsymbolic functions
 6. explanation about how buffering works from QEMU MC wiki, two simultaneous buffers
 
 7. https://linux.die.net/man/2/writev
+
+8. hard coded 10.22.1.3 in rdma init, can be done with strstart. hard code sock path.
+
+9. understanding memory region

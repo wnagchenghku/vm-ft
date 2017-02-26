@@ -902,31 +902,6 @@ connect_qp_exit:
     return rc;
 }
 
-
-int mc_rdma_init(int is_client)
-{
-    rdma = (MC_RDMAContext*)malloc(sizeof(MC_RDMAContext));
-    if (is_client)
-        config.server_name = "10.22.1.3";
-
-    config.gid_idx = 0;
-    config.ib_port = 2;
-    resources_init();
-
-    if (resources_create())
-    {
-        fprintf (stderr, "failed to create resources\n");
-    }
-
-    /* connect the QPs */
-    if (connect_qp())
-    {
-        fprintf (stderr, "failed to connect QPs\n");
-    }
-
-    return 0;
-}
-
 /* ================================================================== */
 /* RDMA */
 
@@ -1126,6 +1101,21 @@ static int mc_rdma_exchange_get_response(MC_RDMAControlHeader *head, int expecti
     return 0;
 }
 
+
+/*
+ * When a RECV work request has completed, the work request's
+ * buffer is pointed at the header.
+ *
+ * This will advance the pointer to the data portion
+ * of the control message of the work request's buffer that
+ * was populated after the work request finished.
+ */
+static void mc_rdma_move_header(int idx, RDMAControlHeader *head)
+{
+    rdma->wr_data[idx].control_len = head->len;
+    rdma->wr_data[idx].control_curr = rdma->wr_data[idx].control + sizeof(RDMAControlHeader);
+}
+
 static int mc_rdma_exchange_send(MC_RDMAControlHeader *head, uint8_t *data)
 {
     int ret = 0;
@@ -1140,6 +1130,15 @@ static int mc_rdma_exchange_send(MC_RDMAControlHeader *head, uint8_t *data)
         if (ret < 0) {
             return ret;
         }
+    }
+
+    /*
+     * Post a WR to replace the one we just consumed for the READY message.
+     */
+    ret = mc_rdma_post_recv_control(RDMA_WRID_READY);
+    if (ret) {
+        fprintf(stderr, "rdma migration: error posting first control recv!");
+        return ret;
     }
 
     /*
@@ -1177,7 +1176,37 @@ static int mc_rdma_exchange_recv(MC_RDMAControlHeader *head, int expecting)
      */
     ret = mc_rdma_exchange_get_response(head, expecting, RDMA_WRID_READY);
 
+    if (ret < 0) {
+        return ret;
+    }
+
+    mc_rdma_move_header(rdma, RDMA_WRID_READY, head);
+
+    /*
+     * Post a new RECV work request to replace the one we just consumed.
+     */
+    ret = mc_rdma_post_recv_control(rdma, RDMA_WRID_READY);
+    if (ret) {
+        fprintf(stderr, "rdma migration: error posting second control recv!");
+        return ret;
+    }
+
     return 0;  
+}
+
+static size_t mc_rdma_fill(uint8_t *buf, size_t size, int idx)
+{
+    size_t len = 0;
+
+    if (rdma->wr_data[idx].control_len) {
+
+        len = MIN(size, rdma->wr_data[idx].control_len);
+        memcpy(buf, rdma->wr_data[idx].control_curr, len);
+        rdma->wr_data[idx].control_curr += len;
+        rdma->wr_data[idx].control_len -= len;
+    }
+
+    return len;
 }
 
 int mc_rdma_put_buffer(const uint8_t *buf, int size)
@@ -1197,6 +1226,33 @@ int mc_rdma_get_buffer(uint8_t *buf, int size)
     int ret = 0;
 
     ret = mc_rdma_exchange_recv(&head, RDMA_CONTROL_QEMU_FILE);
+
+    return mc_rdma_fill(buf, size, 0);
+}
+
+
+int mc_rdma_init(int is_client)
+{
+    rdma = (MC_RDMAContext*)malloc(sizeof(MC_RDMAContext));
+    if (is_client)
+        config.server_name = "10.22.1.3";
+
+    config.gid_idx = 0;
+    config.ib_port = 2;
+    resources_init();
+
+    if (resources_create())
+    {
+        fprintf (stderr, "failed to create resources\n");
+    }
+
+    /* connect the QPs */
+    if (connect_qp())
+    {
+        fprintf (stderr, "failed to connect QPs\n");
+    }
+
+    mc_rdma_post_recv_control(RDMA_WRID_READY);
 
     return 0;
 }
