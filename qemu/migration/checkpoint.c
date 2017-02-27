@@ -373,7 +373,7 @@ int mc_flush_oldest_buffer(void)
 }
 
 /*
- * Synchronously send a micro-checkpointing command
+ * Synchronously send a micro-checkpointing command, qemu_rdma_put_buffer
  */
 int mc_send(QEMUFile *f, uint64_t request)
 {

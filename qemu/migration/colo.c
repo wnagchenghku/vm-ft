@@ -28,6 +28,7 @@
 
 /* ================================================================== */
 /* QEMU MC */
+const char *uri = "rdma:10.22.1.3:6666";
 
 #define MC_SLAB_BUFFER_SIZE     (5UL * 1024UL * 1024UL) /* empirical */
 
@@ -605,7 +606,6 @@ static void colo_process_checkpoint(MigrationState *s)
         goto out;
     }
 
-    const char *uri = "rdma:10.22.1.3:6666";
     const char *p;
     strstart(uri, "rdma:", &p);
     rdma_start_outgoing_migration(s, p, &local_err);
@@ -786,7 +786,6 @@ void *colo_process_incoming_thread(void *opaque)
         goto out;
     }
 
-    const char *uri = "rdma:10.22.1.3:6666";
     const char *p;
     strstart(uri, "rdma:", &p);
     mc_rdma_start_incoming_migration(mis, p, &local_err);
@@ -797,6 +796,19 @@ void *colo_process_incoming_thread(void *opaque)
 
         ret = mc_recv(mis->mc_from_src_file, MC_TRANSACTION_ANY, &action);
 
+        switch(action) {
+        case MC_TRANSACTION_START:
+            DDPRINTF("Transaction start");
+
+            break;
+        case RAM_SAVE_FLAG_HOOK: /* rdma */
+            DDPRINTF("Hook complete.\n");
+
+            break;
+        default:
+            fprintf(stderr, "Unknown MC action: %" PRIu64 "\n", action);
+        }
+        
         colo_wait_handle_message(mis->from_src_file, &request, &local_err);
         if (local_err) {
             goto out;
