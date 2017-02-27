@@ -442,14 +442,15 @@ static void colo_process_checkpoint(MigrationState *s)
     // colo_receive_check_message(s->rp_state.from_dst_file,
     //                    COLO_MESSAGE_CHECKPOINT_READY, &local_err);
     uint64_t action;
-    if (ret = mc_recv(s->to_dst_file, MC_TRANSACTION_ANY, &action) < 0) {
-        switch(action) {
-        case MC_TRANSACTION_START:
-            break;
-        default:
-            fprintf(stderr, "Unknown MC action: %" PRIu64 "\n", action);
-            break;
-        }
+    ret = mc_recv(s->to_dst_file, MC_TRANSACTION_ANY, &action);
+    if (ret < 0) {
+    }
+    switch(action) {
+    case COLO_MESSAGE_CHECKPOINT_READY:
+        break;
+    default:
+        fprintf(stderr, "Unknown MC action: %" PRIu64 "\n", action);
+        break;
     }
 
     if (local_err) {
@@ -638,7 +639,10 @@ void *colo_process_incoming_thread(void *opaque)
     // colo_send_message(mis->to_src_file, COLO_MESSAGE_CHECKPOINT_READY,
     //                   &local_err);
 
-    if (ret = mc_send(mis->from_src_file, COLO_MESSAGE_CHECKPOINT_READY)) {
+    ret = mc_send(mis->from_src_file, COLO_MESSAGE_CHECKPOINT_READY);
+    if (ret < 0)
+    {
+
     }
 
     if (local_err) {
