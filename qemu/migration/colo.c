@@ -24,7 +24,7 @@
 #include "net/colo-compare.h"
 
 #include "checkpoint.h"
-#include "rdma_common.h"
+#include "qemu/cutils.h"
 
 /* ================================================================== */
 /* QEMU MC */
@@ -605,6 +605,11 @@ static void colo_process_checkpoint(MigrationState *s)
         goto out;
     }
 
+    const char *uri = "rdma:10.22.1.3:6666";
+    const char *p;
+    strstart(uri, "rdma:", &p);
+    rdma_start_outgoing_migration(s, p, &local_err);
+
     while (s->state == MIGRATION_STATUS_COLO) {
         if (failover_request_is_active()) {
             error_report("failover request");
@@ -774,6 +779,9 @@ void *colo_process_incoming_thread(void *opaque)
     if (local_err) {
         goto out;
     }
+
+    const char *uri = "rdma:10.22.1.3:6666";
+    mc_rdma_start_incoming_migration(mis, uri, &local_err);
 
     while (mis->state == MIGRATION_STATUS_COLO) {
         int request;

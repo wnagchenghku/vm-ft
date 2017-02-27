@@ -3477,6 +3477,66 @@ err:
     g_free(rdma);
 }
 
+void mc_rdma_start_incoming_migration(void *opaque, const char *host_port, Error **errp)
+{
+    MigrationIncomingState *s = opaque;
+    int ret;
+    RDMAContext *rdma;
+    Error *local_err = NULL;
+
+    trace_rdma_start_incoming_migration();
+    rdma = qemu_rdma_data_init(host_port, &local_err);
+
+    if (rdma == NULL) {
+        goto err;
+    }
+
+    ret = qemu_rdma_dest_init(rdma, &local_err);
+
+    if (ret) {
+        goto err;
+    }
+
+    trace_rdma_start_incoming_migration_after_dest_init();
+
+    ret = rdma_listen(rdma->listen_id, 5);
+
+    if (ret) {
+        ERROR(errp, "listening on socket!");
+        goto err;
+    }
+
+    trace_rdma_start_incoming_migration_after_rdma_listen();
+
+    QEMUFile *f;
+
+    trace_qemu_rdma_accept_incoming_migration();
+    ret = qemu_rdma_accept(rdma);
+
+    if (ret) {
+        ERROR(errp, "RDMA Migration initialization failed!");
+        return;
+    }
+
+    trace_qemu_rdma_accept_incoming_migration_accepted();
+
+    f = qemu_fopen_rdma(rdma, "rb");
+    if (f == NULL) {
+        ERROR(errp, "could not qemu_fopen_rdma!");
+        qemu_rdma_cleanup(rdma);
+        return;
+    }
+
+    rdma->migration_started_on_destination = 1;
+
+    s->mc_from_src_file = f;
+
+    return;
+err:
+    error_propagate(errp, local_err);
+    g_free(rdma);
+}
+
 void rdma_start_outgoing_migration(void *opaque,
                             const char *host_port, Error **errp)
 {
@@ -3506,8 +3566,8 @@ void rdma_start_outgoing_migration(void *opaque,
 
     trace_rdma_start_outgoing_migration_after_rdma_connect();
 
-    s->to_dst_file = qemu_fopen_rdma(rdma, "wb");
-    migrate_fd_connect(s);
+    s->mc_to_dst_file = qemu_fopen_rdma(rdma, "wb");
+    //migrate_fd_connect(s);
     return;
 err:
     error_propagate(errp, local_err);

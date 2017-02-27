@@ -82,6 +82,7 @@ typedef enum {
 /* State for the incoming migration */
 struct MigrationIncomingState {
     QEMUFile *from_src_file;
+    QEMUFile *mc_from_src_file;
 
     /*
      * Free at the start of the main state load, set as the main thread finishes
@@ -143,6 +144,7 @@ struct MigrationState
     QemuThread thread;
     QEMUBH *cleanup_bh;
     QEMUFile *to_dst_file;
+    QEMUFile *mc_to_dst_file;
     int parameters[MIGRATION_PARAMETER__MAX];
 
     int state;
@@ -210,6 +212,7 @@ void fd_start_outgoing_migration(MigrationState *s, const char *fdname, Error **
 void rdma_start_outgoing_migration(void *opaque, const char *host_port, Error **errp);
 
 void rdma_start_incoming_migration(const char *host_port, Error **errp);
+void mc_rdma_start_incoming_migration(void *opaque, const char *host_port, Error **errp);
 
 void migrate_fd_error(MigrationState *s);
 
