@@ -430,6 +430,12 @@ static void colo_process_checkpoint(MigrationState *s)
     
     failover_init_state();
 
+    s->rp_state.from_dst_file = qemu_file_get_return_path(s->to_dst_file);
+    if (!s->rp_state.from_dst_file) {
+        error_report("Open QEMUFile from_dst_file failed");
+        goto out;
+    }
+
     ret = colo_prepare_before_save(s);
     if (ret < 0) {
         goto out;
@@ -439,19 +445,8 @@ static void colo_process_checkpoint(MigrationState *s)
      * Wait for Secondary finish loading vm states and enter COLO
      * restore.
      */
-    // colo_receive_check_message(s->rp_state.from_dst_file,
-    //                    COLO_MESSAGE_CHECKPOINT_READY, &local_err);
-    uint64_t action;
-    ret = mc_recv(s->to_dst_file, MC_TRANSACTION_ANY, &action);
-    if (ret < 0) {
-    }
-    switch(action) {
-    case COLO_MESSAGE_CHECKPOINT_READY:
-        break;
-    default:
-        fprintf(stderr, "Unknown MC action: %" PRIu64 "\n", action);
-        break;
-    }
+    colo_receive_check_message(s->rp_state.from_dst_file,
+                        COLO_MESSAGE_CHECKPOINT_READY, &local_err);
 
     if (local_err) {
         goto out;
@@ -610,6 +605,17 @@ void *colo_process_incoming_thread(void *opaque)
 
     failover_init_state();
 
+    mis->to_src_file = qemu_file_get_return_path(mis->from_src_file);
+    if (!mis->to_src_file) {
+        error_report("colo incoming thread: Open QEMUFile to_src_file failed");
+        goto out;
+    }
+    /* Note: We set the fd to unblocked in migration incoming coroutine,
+     * But here we are in the colo incoming thread, so it is ok to set the
+     * fd back to blocked.
+     */
+    qemu_file_set_blocking(mis->from_src_file, true);
+
     ret = colo_init_ram_cache();
     if (ret < 0) {
         error_report("Failed to initialize ram cache");
@@ -636,14 +642,8 @@ void *colo_process_incoming_thread(void *opaque)
         goto out;
     }
 
-    // colo_send_message(mis->to_src_file, COLO_MESSAGE_CHECKPOINT_READY,
-    //                   &local_err);
-
-    ret = mc_send(mis->from_src_file, COLO_MESSAGE_CHECKPOINT_READY);
-    if (ret < 0)
-    {
-
-    }
+    colo_send_message(mis->to_src_file, COLO_MESSAGE_CHECKPOINT_READY,
+                       &local_err);
 
     if (local_err) {
         goto out;
