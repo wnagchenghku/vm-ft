@@ -781,7 +781,9 @@ void *colo_process_incoming_thread(void *opaque)
     }
 
     const char *uri = "rdma:10.22.1.3:6666";
-    mc_rdma_start_incoming_migration(mis, uri, &local_err);
+    const char *p;
+    strstart(uri, "rdma:", &p);
+    mc_rdma_start_incoming_migration(mis, p, &local_err);
 
     while (mis->state == MIGRATION_STATUS_COLO) {
         int request;
