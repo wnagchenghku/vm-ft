@@ -203,31 +203,6 @@ size_t ram_control_save_page(QEMUFile *f, ram_addr_t block_offset,
     return RAM_SAVE_CONTROL_NOT_SUPP;
 }
 
-int mc_ram_control_save_page(QEMUFile *f, ram_addr_t block_offset,
-                             uint8_t *host_addr,
-                             ram_addr_t offset, long size,
-                             uint64_t *bytes_sent)
-{
-    if (f->ops->mc_save_page) {
-        int ret = f->ops->mc_save_page(f, f->opaque, block_offset,
-                                    host_addr,
-                                    offset, size, bytes_sent);
-
-        if (ret != RAM_SAVE_CONTROL_DELAYED
-            && ret != RAM_SAVE_CONTROL_NOT_SUPP) {
-            if (bytes_sent && *bytes_sent > 0) {
-                qemu_update_position(f, *bytes_sent);
-            } else if (ret < 0) {
-                qemu_file_set_error(f, ret);
-            }
-        }
-
-        return ret;
-    }
-
-    return RAM_SAVE_CONTROL_NOT_SUPP;
-}
-
 /*
  * Attempt to fill the buffer from the underlying file
  * Returns the number of bytes read, or negative value for an error.

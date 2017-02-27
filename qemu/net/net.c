@@ -48,8 +48,6 @@
 #include "net/filter.h"
 #include "qapi/string-output-visitor.h"
 
-#include "rsm-interface.h"
-
 /* Net bridge is currently not supported for W32. */
 #if !defined(_WIN32)
 # define CONFIG_NET_BRIDGE
@@ -557,18 +555,6 @@ static ssize_t filter_receive_iov(NetClientState *nc,
     NetFilterState *nf = NULL;
 
     if (direction == NET_FILTER_DIRECTION_TX) {
-
-        if (is_leader())
-        {
-            ssize_t size = 0;
-            size = iov_size(iov, iovcnt);
-            char *buf;
-            buf = g_malloc(size);
-            iov_to_buf(iov, iovcnt, 0, buf, size);
-            proxy_on_mirror((uint8_t *)buf, size);
-            g_free(buf);
-        }
-
         QTAILQ_FOREACH(nf, &nc->filters, next) {
             ret = qemu_netfilter_receive(nf, direction, sender, flags, iov,
                                          iovcnt, sent_cb);

@@ -23,124 +23,6 @@
 #include "replication.h"
 #include "net/colo-compare.h"
 
-#include "checkpoint.h"
-#include "qemu/cutils.h"
-
-/* ================================================================== */
-/* QEMU MC */
-const char *uri = "rdma:10.22.1.3:6666";
-
-#define MC_SLAB_BUFFER_SIZE     (5UL * 1024UL * 1024UL) /* empirical */
-
-#define MC_MAX_SLAB_COPY_DESCRIPTORS (MC_SLAB_BUFFER_SIZE / 4096)
-
-typedef struct QEMU_PACKED MCCopy {
-    uint64_t ramblock_offset;
-    uint64_t host_addr;
-    uint64_t offset;
-    uint64_t size;
-} MCCopy;
-
-typedef struct QEMU_PACKED MCCopyset {
-    QTAILQ_ENTRY(MCCopyset) node;
-    MCCopy copies[MC_MAX_SLAB_COPY_DESCRIPTORS];
-    uint64_t nb_copies;
-    int idx;
-} MCCopyset;
-
-typedef struct MCParams {
-    QTAILQ_HEAD(chead, MCCopyset) copy_head;
-    int nb_copysets;
-    uint64_t total_copies;
-    QEMUFile *staging;
-    MCCopyset *curr_copyset;
-} MCParams;
-
-/*
- * Get the next copyset in the list. If there is none, then make one.
- */
-static MCCopyset *mc_copy_next(MCParams *mc, MCCopyset *copyset)
-{
-    if (!QTAILQ_NEXT(copyset, node)) {
-        int idx = mc->nb_copysets++;
-        DDPRINTF("Extending copysets by one: %d sets total, "
-                 "%" PRIu64 " MB\n", mc->nb_copysets,
-                 mc->nb_copysets * sizeof(MCCopyset) / 1024UL / 1024UL);
-        mc->curr_copyset = g_malloc(sizeof(MCCopyset));
-        mc->curr_copyset->idx = idx;
-        QTAILQ_INSERT_TAIL(&mc->copy_head, mc->curr_copyset, node);
-        copyset = mc->curr_copyset;
-    } else {
-        DDPRINTF("Adding to existing copyset: %d sets total, "
-                 "%" PRIu64 " MB\n", mc->nb_copysets,
-                 mc->nb_copysets * sizeof(MCCopyset) / 1024UL / 1024UL);
-        copyset = QTAILQ_NEXT(copyset, node);
-    }
-
-    mc->curr_copyset = copyset;
-    copyset->nb_copies = 0;
-
-    return copyset;
-}
-
-static int mc_save_page(QEMUFile *f, void *opaque,
-                           ram_addr_t block_offset,
-                           uint8_t *host_addr,
-                           ram_addr_t offset,
-                           long size, uint64_t *bytes_sent)
-{
-    MCParams *mc = opaque;
-    MCCopyset *copyset = mc->curr_copyset;
-    MCCopy *c;
-
-    if (copyset->nb_copies >= MC_MAX_SLAB_COPY_DESCRIPTORS) {
-        copyset = mc_copy_next(mc, copyset);
-    }
-
-    c = &copyset->copies[copyset->nb_copies++];
-    c->ramblock_offset = (uint64_t) block_offset;
-    c->host_addr = (uint64_t) (uintptr_t) host_addr;
-    c->offset = (uint64_t) offset;
-    c->size = (uint64_t) size;
-    mc->total_copies++;
-
-    return RAM_SAVE_CONTROL_DELAYED;
-}
-
-static const QEMUFileOps mc_write_ops = {
-    .mc_save_page = mc_save_page,
-};
-
-static const QEMUFileOps mc_read_ops = {
-};
-
-QEMUFile *qemu_fopen_mc(void *opaque, const char *mode)
-{
-    MCParams *mc = opaque;
-    MCCopyset *copyset;
-
-    if (qemu_file_mode_is_not_valid(mode)) {
-        return NULL;
-    }
-
-    QTAILQ_INIT(&mc->copy_head);
-
-    copyset = g_malloc(sizeof(MCCopyset));
-    copyset->idx = 0;
-    QTAILQ_INSERT_HEAD(&mc->copy_head, copyset, node);
-    mc->total_copies = 0;
-    mc->curr_copyset = copyset;
-    mc->nb_copysets = 1;
-
-    if (mode[0] == 'w') {
-        return qemu_fopen_ops(mc, &mc_write_ops);
-    }
-
-    return qemu_fopen_ops(mc, &mc_read_ops);
-}
-
-/* ================================================================== */
-
 static bool vmstate_loading;
 
 /* colo buffer */
@@ -410,7 +292,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     vm_stop_force_state(RUN_STATE_COLO);
     qemu_mutex_unlock_iothread();
     trace_colo_vm_state_change("run", "stop");
-
     /*
      * failover request bh could be called after
      * vm_stop_force_state so we check failover_request_is_active() again.
@@ -491,16 +372,11 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     }
 
     ret = 0;
-
-    mc_start_buffer();
-
     /* Resume primary guest */
     qemu_mutex_lock_iothread();
     vm_start();
     qemu_mutex_unlock_iothread();
     trace_colo_vm_state_change("stop", "run");
-
-    mc_flush_oldest_buffer();
 
     colo_compare_do_checkpoint();
 
@@ -535,13 +411,6 @@ static void colo_process_checkpoint(MigrationState *s)
     int64_t current_time, checkpoint_time = qemu_clock_get_ms(QEMU_CLOCK_HOST);
     Error *local_err = NULL;
     int ret;
-
-    ret = mc_enable_buffering();
-    if (ret > 0) {
-    } else {
-        if (ret < 0 || mc_start_buffer() < 0) {
-        }
-    }
 
     failover_init_state();
 
@@ -580,15 +449,6 @@ static void colo_process_checkpoint(MigrationState *s)
         goto out;
     }
 
-    MCParams mc;
-    QEMUFile *mc_staging = NULL;
-    if (!(mc_staging = qemu_fopen_mc(&mc, "wb"))) {
-        fprintf(stderr, "Failed to setup MC staging area\n");
-    }
-    mc.staging = mc_staging;
-
-    mc_start_buffer();
-
     vm_start();
     qemu_mutex_unlock_iothread();
     trace_colo_vm_state_change("stop", "run");
@@ -598,34 +458,15 @@ static void colo_process_checkpoint(MigrationState *s)
         goto out;
     }
 
-    const char *p;
-    strstart(uri, "rdma:", &p);
-    sleep(1);
-    rdma_start_outgoing_migration(s, p, &local_err);
-
     while (s->state == MIGRATION_STATUS_COLO) {
-
-        if ((ret = mc_send(s->mc_to_dst_file, MC_TRANSACTION_START) < 0)) {
-            fprintf(stderr, "transaction start failed\n");
-            break;
-        }
-
-        DDPRINTF("Sending checkpoint size\n");
-        uint64_t slab_total = 1;
-        uint64_t start_copyset = 2;
-        uint64_t used_slabs = 3;
-
-        qemu_put_be64(s->mc_to_dst_file, slab_total);
-        qemu_put_be64(s->mc_to_dst_file, start_copyset);
-        qemu_put_be64(s->mc_to_dst_file, used_slabs);
-
-        qemu_fflush(s->mc_to_dst_file);
-
         if (failover_request_is_active()) {
             error_report("failover request");
             goto out;
         }
 
+        if (colo_compare_result()) {
+            goto checkpoint_begin;
+        }
         current_time = qemu_clock_get_ms(QEMU_CLOCK_HOST);
         if ((current_time - checkpoint_time <
             s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY]) &&
@@ -790,35 +631,8 @@ void *colo_process_incoming_thread(void *opaque)
         goto out;
     }
 
-    const char *p;
-    strstart(uri, "rdma:", &p);
-    mc_rdma_start_incoming_migration(mis, p, &local_err);
-    uint64_t action;
-
     while (mis->state == MIGRATION_STATUS_COLO) {
         int request;
-
-        ret = mc_recv(mis->mc_from_src_file, MC_TRANSACTION_ANY, &action);
-
-        switch(action) {
-        case MC_TRANSACTION_START:
-            DDPRINTF("Transaction start");
-            uint64_t checkpoint_size = qemu_get_be64(mis->mc_from_src_file);
-            uint64_t start_copyset = qemu_get_be64(mis->mc_from_src_file);
-            uint64_t slabs = qemu_get_be64(mis->mc_from_src_file);
-
-            DDPRINTF("Transaction start: size %" PRIu64
-                     " copyset start: %" PRIu64 " slabs %" PRIu64 "\n",
-                     checkpoint_size, start_copyset, slabs);
-
-            break;
-        case RAM_SAVE_FLAG_HOOK: /* rdma */
-            DDPRINTF("Hook complete.\n");
-
-            break;
-        default:
-            fprintf(stderr, "Unknown MC action: %" PRIu64 "\n", action);
-        }
 
         colo_wait_handle_message(mis->from_src_file, &request, &local_err);
         if (local_err) {

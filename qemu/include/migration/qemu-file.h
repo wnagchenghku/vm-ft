@@ -87,13 +87,6 @@ typedef size_t (QEMURamSaveFunc)(QEMUFile *f, void *opaque,
                                size_t size,
                                uint64_t *bytes_sent);
 
-typedef int (QEMUMCRamSaveFunc)(QEMUFile *f, void *opaque,
-                               ram_addr_t block_offset,
-                               uint8_t *host_addr,
-                               ram_addr_t offset,
-                               long size,
-                               uint64_t *bytes_sent);
-
 /*
  * Return a QEMUFile for comms in the opposite direction
  */
@@ -117,7 +110,6 @@ typedef struct QEMUFileOps {
     QEMURamHookFunc *after_ram_iterate;
     QEMURamHookFunc *hook_ram_load;
     QEMURamSaveFunc *save_page;
-    QEMUMCRamSaveFunc *mc_save_page;
     QEMURetPathFunc *get_return_path;
     QEMUFileShutdownFunc *shut_down;
 } QEMUFileOps;
@@ -133,7 +125,6 @@ QEMUFile *qemu_fopen_ops(void *opaque, const QEMUFileOps *ops);
 QEMUFile *qemu_fopen(const char *filename, const char *mode);
 QEMUFile *qemu_fdopen(int fd, const char *mode);
 QEMUFile *qemu_fopen_socket(int fd, const char *mode);
-QEMUFile *qemu_fopen_mc(void *opaque, const char *mode);
 QEMUFile *qemu_popen_cmd(const char *command, const char *mode);
 QEMUFile *qemu_bufopen(const char *mode, QEMUSizedBuffer *input);
 int qemu_get_fd(QEMUFile *f);
