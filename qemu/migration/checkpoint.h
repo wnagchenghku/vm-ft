@@ -25,6 +25,26 @@
 #include "sysemu/block-backend.h"
 #include <sys/ioctl.h>
 
+#define DEBUG_MC
+#define DEBUG_MC_VERBOSE
+#define DEBUG_MC_REALLY_VERBOSE
+
+#ifdef DEBUG_MC
+#define DPRINTF(fmt, ...) \
+    do { printf("mc: " fmt, ## __VA_ARGS__); } while (0)
+#else
+#define DPRINTF(fmt, ...) \
+    do { } while (0)
+#endif
+
+#ifdef DEBUG_MC_VERBOSE
+#define DDPRINTF(fmt, ...) \
+    do { printf("mc: " fmt, ## __VA_ARGS__); } while (0)
+#else
+#define DDPRINTF(fmt, ...) \
+    do { } while (0)
+#endif
+
 enum {
     MC_TRANSACTION_NACK = 300,
     MC_TRANSACTION_START,

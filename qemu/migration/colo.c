@@ -34,14 +34,6 @@ const char *uri = "rdma:10.22.1.3:6666";
 
 #define MC_MAX_SLAB_COPY_DESCRIPTORS (MC_SLAB_BUFFER_SIZE / 4096)
 
-#ifdef DEBUG_MC_VERBOSE
-#define DDPRINTF(fmt, ...) \
-    do { printf("mc: " fmt, ## __VA_ARGS__); } while (0)
-#else
-#define DDPRINTF(fmt, ...) \
-    do { } while (0)
-#endif
-
 typedef struct QEMU_PACKED MCCopy {
     uint64_t ramblock_offset;
     uint64_t host_addr;
@@ -608,6 +600,7 @@ static void colo_process_checkpoint(MigrationState *s)
 
     const char *p;
     strstart(uri, "rdma:", &p);
+    sleep(1);
     rdma_start_outgoing_migration(s, p, &local_err);
 
     while (s->state == MIGRATION_STATUS_COLO) {
@@ -616,7 +609,6 @@ static void colo_process_checkpoint(MigrationState *s)
             fprintf(stderr, "transaction start failed\n");
             break;
         }
-
 
         DDPRINTF("Sending checkpoint size\n");
         uint64_t slab_total = 1;

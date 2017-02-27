@@ -2983,6 +2983,7 @@ int main(int argc, char **argv, char **envp)
     char* config_path = getenv("config_path");
     char* proxy_log_dir = NULL;
     proxy_init(config_path, proxy_log_dir);
+    sleep(1);
     
     int i;
     int snapshot, linux_boot;
