@@ -5,31 +5,17 @@
 #include <libnl3/netlink/cli/qdisc.h>
 #include <libnl3/netlink/cli/link.h>
 
-#include "qemu/osdep.h"
-#include "qemu/timer.h"
-#include "sysemu/sysemu.h"
-#include "migration/colo.h"
-#include "trace.h"
-#include "qemu/error-report.h"
-#include "qapi/error.h"
-#include "migration/failover.h"
-#include "qapi-event.h"
-#include "block/block.h"
-#include "replication.h"
-
-#include "qemu-common.h"
-#include "hw/virtio/virtio.h"
-#include "hw/virtio/virtio-net.h"
-#include "qemu/sockets.h"
-#include "migration/migration.h"
-#include "migration/qemu-file.h"
-#include "qmp-commands.h"
-#include "net/tap-linux.h"
-#include "trace/simple.h"
-#include "sysemu/block-backend.h"
-#include <sys/ioctl.h>
-
 #include "checkpoint.h"
+
+static const char * mc_desc[] = {
+    [MC_TRANSACTION_NACK] = "NACK",
+    [MC_TRANSACTION_START] = "START",
+    [MC_TRANSACTION_COMMIT] = "COMMIT",
+    [MC_TRANSACTION_ABORT] = "ABORT",
+    [MC_TRANSACTION_ACK] = "ACK",
+    [MC_TRANSACTION_END] = "END",
+    [MC_TRANSACTION_ANY] = "ANY",
+};
 
 #ifndef rtnl_tc_get_ops
 extern struct rtnl_tc_ops * rtnl_tc_get_ops(struct rtnl_tc *);
@@ -384,4 +370,61 @@ int mc_flush_oldest_buffer(void)
     DDPRINTF("Flushed oldest checkpoint barrier\n");
 
     return mc_deliver(1);
+}
+
+/*
+ * Synchronously send a micro-checkpointing command
+ */
+int mc_send(QEMUFile *f, uint64_t request)
+{
+    int ret = 0;
+
+    qemu_put_be64(f, request);
+
+    ret = qemu_file_get_error(f);
+    if (ret) {
+        fprintf(stderr, "transaction: send error while sending %" PRIu64 ", "
+                "bailing: %s\n", request, strerror(-ret));
+    } else {
+        DDPRINTF("transaction: sent: %s (%" PRIu64 ")\n",
+            mc_desc[request], request);
+    }
+
+    qemu_fflush(f);
+
+    return ret;
+}
+
+/*
+ * Synchronously receive a micro-checkpointing command
+ */
+int mc_recv(QEMUFile *f, uint64_t request, uint64_t *action)
+{
+    int ret = 0;
+    uint64_t got;
+
+    got = qemu_get_be64(f);
+
+    ret = qemu_file_get_error(f);
+    if (ret) {
+        fprintf(stderr, "transaction: recv error while expecting %s (%"
+                PRIu64 "), bailing: %s\n", mc_desc[request],
+                request, strerror(-ret));
+    } else {
+        if ((request != MC_TRANSACTION_ANY) && request != got) {
+            fprintf(stderr, "transaction: was expecting %s (%" PRIu64
+                    ") but got %" PRIu64 " instead\n",
+                    mc_desc[request], request, got);
+            ret = -EINVAL;
+        } else {
+            DDPRINTF("transaction: recv: %s (%" PRIu64 ")\n",
+                     mc_desc[got], got);
+            ret = 0;
+            if (action) {
+                *action = got;
+            }
+        }
+    }
+
+    return ret;
 }

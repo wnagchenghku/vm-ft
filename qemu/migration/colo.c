@@ -611,6 +611,12 @@ static void colo_process_checkpoint(MigrationState *s)
     rdma_start_outgoing_migration(s, p, &local_err);
 
     while (s->state == MIGRATION_STATUS_COLO) {
+
+        if ((ret = mc_send(s->mc_to_dst_file, MC_TRANSACTION_START) < 0)) {
+            fprintf(stderr, "transaction start failed\n");
+            break;
+        }
+
         if (failover_request_is_active()) {
             error_report("failover request");
             goto out;
@@ -784,9 +790,12 @@ void *colo_process_incoming_thread(void *opaque)
     const char *p;
     strstart(uri, "rdma:", &p);
     mc_rdma_start_incoming_migration(mis, p, &local_err);
+    uint64_t action;
 
     while (mis->state == MIGRATION_STATUS_COLO) {
         int request;
+
+        ret = mc_recv(mis->mc_from_src_file, MC_TRANSACTION_ANY, &action);
 
         colo_wait_handle_message(mis->from_src_file, &request, &local_err);
         if (local_err) {
