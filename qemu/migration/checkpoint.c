@@ -445,12 +445,6 @@ enum {
     RDMA_WRID_MAX,
 };
 
-typedef struct MC_RDMALocalContext {
-    struct ibv_pd *pd;
-    struct ibv_cq *cq;
-    struct ibv_qp *qp;
-} MC_RDMALocalContext;
-
 typedef struct MC_RDMAContext {
     struct ibv_context *ib_ctx;
     struct ibv_port_attr port_attr;
@@ -460,9 +454,18 @@ typedef struct MC_RDMAContext {
 
     MC_RDMAWorkRequestData wr_data[RDMA_WRID_MAX];
 
+    /*
+     * This is used by *_exchange_send() to figure out whether or not
+     * the initial "READY" message has already been received or not.
+     */
+    int control_ready_expected;
+
     int total_registrations;
 
-    MC_RDMALocalContext lc_remote;
+    struct ibv_pd *pd;
+    struct ibv_cq *cq;
+    struct ibv_qp *qp;
+
 } MC_RDMAContext;
 
 static MC_RDMAContext *rdma;
@@ -573,7 +576,7 @@ static void resources_init(void)
 
 static int mc_rdma_reg_control(int idx)
 {
-    rdma->wr_data[idx].control_mr = ibv_reg_mr(rdma->lc_remote.pd, rdma->wr_data[idx].control, RDMA_CONTROL_MAX_BUFFER, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
+    rdma->wr_data[idx].control_mr = ibv_reg_mr(rdma->pd, rdma->wr_data[idx].control, RDMA_CONTROL_MAX_BUFFER, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
     if (rdma->wr_data[idx].control_mr) {
         rdma->total_registrations++;
         return 0;
@@ -600,6 +603,7 @@ static int resources_create(void)
             rc = -1;
             goto resources_create_exit;
         }
+        rdma->control_ready_expected = 1;
     }
     else
     {
@@ -671,16 +675,16 @@ static int resources_create(void)
         goto resources_create_exit;
     }
 
-    rdma->lc_remote.pd = ibv_alloc_pd(rdma->ib_ctx);
-    if (!rdma->lc_remote.pd)
+    rdma->pd = ibv_alloc_pd(rdma->ib_ctx);
+    if (!rdma->pd)
     {
         fprintf (stderr, "ibv_alloc_pd failed\n");
         rc = 1;
         goto resources_create_exit;
     }
 
-    rdma->lc_remote.cq = ibv_create_cq(rdma->ib_ctx, (RDMA_SIGNALED_SEND_MAX * 3), NULL, NULL, 0);
-    if (!rdma->lc_remote.cq)
+    rdma->cq = ibv_create_cq(rdma->ib_ctx, (RDMA_SIGNALED_SEND_MAX * 3), NULL, NULL, 0);
+    if (!rdma->cq)
     {
         fprintf (stderr, "failed to create CQ with %u entries\n", (RDMA_SIGNALED_SEND_MAX * 3));
         rc = 1;
@@ -698,39 +702,39 @@ static int resources_create(void)
     /* create the Queue Pair */
     memset(&qp_init_attr, 0, sizeof (qp_init_attr));
     qp_init_attr.qp_type = IBV_QPT_RC;
-    qp_init_attr.send_cq = rdma->lc_remote.cq;
-    qp_init_attr.recv_cq = rdma->lc_remote.cq;
+    qp_init_attr.send_cq = rdma->cq;
+    qp_init_attr.recv_cq = rdma->cq;
     qp_init_attr.cap.max_send_wr = RDMA_SIGNALED_SEND_MAX;
     qp_init_attr.cap.max_recv_wr = 3;
     qp_init_attr.cap.max_send_sge = 1;
     qp_init_attr.cap.max_recv_sge = 1;
-    rdma->lc_remote.qp = ibv_create_qp(rdma->lc_remote.pd, &qp_init_attr);
-    if (!rdma->lc_remote.qp)
+    rdma->qp = ibv_create_qp(rdma->pd, &qp_init_attr);
+    if (!rdma->qp)
     {
         fprintf(stderr, "failed to create QP\n");
         rc = 1;
         goto resources_create_exit;
     }
-    fprintf(stdout, "QP was created, QP number=0x%x\n", rdma->lc_remote.qp->qp_num);
+    fprintf(stdout, "QP was created, QP number=0x%x\n", rdma->qp->qp_num);
 
 resources_create_exit:
     if (rc)
     {
         /* Error encountered, cleanup */
-        if (rdma->lc_remote.qp)
+        if (rdma->qp)
         {
-            ibv_destroy_qp(rdma->lc_remote.qp);
-            rdma->lc_remote.qp = NULL;
+            ibv_destroy_qp(rdma->qp);
+            rdma->qp = NULL;
         }
-        if (rdma->lc_remote.cq)
+        if (rdma->cq)
         {
-            ibv_destroy_cq(rdma->lc_remote.cq);
-            rdma->lc_remote.cq = NULL;
+            ibv_destroy_cq(rdma->cq);
+            rdma->cq = NULL;
         }
-        if (rdma->lc_remote.pd)
+        if (rdma->pd)
         {
-            ibv_dealloc_pd(rdma->lc_remote.pd);
-            rdma->lc_remote.pd = NULL;
+            ibv_dealloc_pd(rdma->pd);
+            rdma->pd = NULL;
         }
         if (rdma->ib_ctx)
         {
@@ -847,7 +851,7 @@ static int connect_qp(void)
     else
         memset(&my_gid, 0, sizeof my_gid);
 
-    local_con_data.qp_num = htonl(rdma->lc_remote.qp->qp_num);
+    local_con_data.qp_num = htonl(rdma->qp->qp_num);
     local_con_data.lid = htons(rdma->port_attr.lid);
     memcpy(local_con_data.gid, &my_gid, 16);
     fprintf(stdout, "\nLocal LID = 0x%x\n", rdma->port_attr.lid);
@@ -872,21 +876,21 @@ static int connect_qp(void)
                 p[10], p[11], p[12], p[13], p[14], p[15]);
     }
     /* modify the QP to init */
-    rc = modify_qp_to_init(rdma->lc_remote.qp);
+    rc = modify_qp_to_init(rdma->qp);
     if (rc)
     {
         fprintf(stderr, "change QP state to INIT failed\n");
         goto connect_qp_exit;
     }
 
-    rc = modify_qp_to_rtr(rdma->lc_remote.qp, remote_con_data.qp_num, remote_con_data.lid, remote_con_data.gid);
+    rc = modify_qp_to_rtr(rdma->qp, remote_con_data.qp_num, remote_con_data.lid, remote_con_data.gid);
     if (rc)
     {
         fprintf(stderr, "failed to modify QP state to RTR\n");
         goto connect_qp_exit;
     }
     fprintf(stderr, "Modified QP state to RTR\n");
-    rc = modify_qp_to_rts(rdma->lc_remote.qp);
+    rc = modify_qp_to_rts(rdma->qp);
     if (rc)
     {
         fprintf(stderr, "failed to modify QP state to RTR\n");
@@ -938,37 +942,55 @@ static void mc_network_to_control(MC_RDMAControlHeader *control)
     control->len = ntohl(control->len);
 }
 
-static uint64_t mc_rdma_poll(MC_RDMALocalContext *lc, uint64_t *wr_id_out, uint32_t *byte_len)
+static uint64_t mc_rdma_poll(uint64_t *wr_id_out, uint32_t *byte_len)
 {
     int ret;
     struct ibv_wc wc;
     uint64_t wr_id;
 
-    ret = ibv_poll_cq(lc->cq, 1, &wc);
+    ret = ibv_poll_cq(rdma->cq, 1, &wc);
 
     if (!ret) {
         *wr_id_out = RDMA_WRID_NONE;
         return 0;
     }
 
-    wr_id = wc.wr_id;
+    if (ret < 0) {
+        fprintf(stderr, "ibv_poll_cq return %d", ret);
+        return ret;
+    }
+
+    wr_id = wc.wr_id & RDMA_WRID_TYPE_MASK;
 
     if (wc.status != IBV_WC_SUCCESS) {
         fprintf(stderr, "ibv_poll_cq wc.status=%d %s!\n", wc.status, ibv_wc_status_str(wc.status));
         return -1;
     }
 
+    if (rdma->control_ready_expected && (wr_id >= RDMA_WRID_RECV_CONTROL)) {
+        rdma->control_ready_expected = 0;
+    }
+
     *wr_id_out = wc.wr_id;
+    if (byte_len) {
+        *byte_len = wc.byte_len;
+    }
+
     return 0;
 }
 
-static int mc_rdma_block_for_wrid(MC_RDMALocalContext *lc, int wrid_requested, uint32_t *byte_len)
+/*
+ * First poll to see if a work request has already completed,
+ * otherwise block.
+ *
+ */
+static int mc_rdma_block_for_wrid(int wrid_requested, uint32_t *byte_len)
 {
     int ret = 0;
     uint64_t wr_id = RDMA_WRID_NONE, wr_id_in;
     /* poll cq first */
     while (wr_id != wrid_requested) {
-        ret = mc_rdma_poll(lc, &wr_id_in, byte_len);
+        ret = mc_rdma_poll(&wr_id_in, byte_len);
         if (ret < 0) {
             return ret;
         }
@@ -981,7 +1003,33 @@ static int mc_rdma_block_for_wrid(MC_RDMALocalContext *lc, int wrid_requested, u
         if (wr_id != wrid_requested) {
         }
     }
-    return ret;
+
+    if (wr_id == wrid_requested) {
+        return 0;
+    }
+
+    while (1) {
+        // ibv_get_cq_event() - blocks until gets "event"
+
+        while (wr_id != wrid_requested) {
+            ret = mc_rdma_poll(&wr_id_in, byte_len);
+            if (ret < 0) {
+            }
+
+            wr_id = wr_id_in & RDMA_WRID_TYPE_MASK;
+
+            if (wr_id == RDMA_WRID_NONE) {
+                break;
+            }
+        }
+
+        if (wr_id == wrid_requested) {
+            goto success_block_for_wrid;
+        }
+    }
+
+success_block_for_wrid:
+    return 0;
 }
 
 
@@ -1010,14 +1058,14 @@ static int mc_rdma_post_send_control(uint8_t *buf, MC_RDMAControlHeader *head)
         memcpy(wr->control + sizeof(MC_RDMAControlHeader), buf, head->len);
     }
 
-    ret = ibv_post_send(rdma->lc_remote.qp, &send_wr, &bad_wr);
+    ret = ibv_post_send(rdma->qp, &send_wr, &bad_wr);
 
     if (ret > 0) {
         fprintf(stderr, "Failed to use post IB SEND for control!");
         return -ret;
     }
 
-    ret = mc_rdma_block_for_wrid(&rdma->lc_remote, RDMA_WRID_SEND_CONTROL, NULL);
+    ret = mc_rdma_block_for_wrid(RDMA_WRID_SEND_CONTROL, NULL);
     if (ret < 0) {
         fprintf(stderr, "send polling control!");
     }
@@ -1041,7 +1089,7 @@ static int mc_rdma_post_recv_control(int idx)
                                  };
 
 
-    if (ibv_post_recv(rdma->lc_remote.qp, &recv_wr, &bad_wr)) {
+    if (ibv_post_recv(rdma->qp, &recv_wr, &bad_wr)) {
         return -1;
     }
 
@@ -1051,7 +1099,7 @@ static int mc_rdma_post_recv_control(int idx)
 static int mc_rdma_exchange_get_response(MC_RDMAControlHeader *head, int expecting, int idx)
 {
     uint32_t byte_len;
-    int ret = mc_rdma_block_for_wrid(&rdma->lc_remote, RDMA_WRID_RECV_CONTROL + idx, &byte_len);
+    int ret = mc_rdma_block_for_wrid(RDMA_WRID_RECV_CONTROL + idx, &byte_len);
 
     if (ret < 0) {
         fprintf(stderr, "recv polling control!");
@@ -1081,19 +1129,26 @@ static int mc_rdma_exchange_get_response(MC_RDMAControlHeader *head, int expecti
 static int mc_rdma_exchange_send(MC_RDMAControlHeader *head, uint8_t *data)
 {
     int ret = 0;
-    /*
-     * If the user is expecting a response, post a WR in anticipation of it.
-     */
 
+    /*
+     * Wait until the dest is ready before attempting to deliver the message
+     * by waiting for a READY message.
+     */
+    if (rdma->control_ready_expected) {
+        MC_RDMAControlHeader resp;
+        ret = mc_rdma_exchange_get_response(&resp, RDMA_CONTROL_READY, RDMA_WRID_READY);
+        if (ret < 0) {
+            return ret;
+        }
+    }
 
     /*
      * Deliver the control message that was requested.
      */
     ret = mc_rdma_post_send_control(data, head);
 
-    /*
-     * If we're expecting a response, block and wait for it.
-     */
+
+    rdma->control_ready_expected = 1;
 
     return 0;
 
@@ -1101,7 +1156,22 @@ static int mc_rdma_exchange_send(MC_RDMAControlHeader *head, uint8_t *data)
 
 static int mc_rdma_exchange_recv(MC_RDMAControlHeader *head, int expecting)
 {
+    MC_RDMAControlHeader ready = {
+                                .len = 0,
+                                .type = RDMA_CONTROL_READY,
+                              };
     int ret;
+
+    /*
+     * Inform the source that we're ready to receive a message.
+     */
+    ret = mc_rdma_post_send_control(NULL, &ready);
+
+    if (ret < 0) {
+        fprintf(stderr, "Failed to send control buffer!");
+        return ret;
+    }
+
     /*
      * Block and wait for the message.
      */
