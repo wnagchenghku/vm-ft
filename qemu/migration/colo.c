@@ -23,6 +23,8 @@
 #include "replication.h"
 #include "net/colo-compare.h"
 
+#include "checkpoint.h"
+
 static bool vmstate_loading;
 
 /* colo buffer */
@@ -372,11 +374,16 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     }
 
     ret = 0;
+
+    mc_start_buffer();
+
     /* Resume primary guest */
     qemu_mutex_lock_iothread();
     vm_start();
     qemu_mutex_unlock_iothread();
     trace_colo_vm_state_change("stop", "run");
+
+    mc_flush_oldest_buffer();
 
     colo_compare_do_checkpoint();
 
@@ -412,6 +419,15 @@ static void colo_process_checkpoint(MigrationState *s)
     Error *local_err = NULL;
     int ret;
 
+    ret = mc_enable_buffering();
+    if (ret > 0) {
+
+    } else {
+        if (ret < 0 || mc_start_buffer() < 0) {
+
+        }
+    }
+    
     failover_init_state();
 
     s->rp_state.from_dst_file = qemu_file_get_return_path(s->to_dst_file);
