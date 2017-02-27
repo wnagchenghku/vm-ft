@@ -632,6 +632,8 @@ static int resources_create(struct resources *res)
 
     mr_flags = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE;
 
+    res->buf = (char*)malloc(RDMA_CONTROL_MAX_BUFFER);
+
     res->mr = ibv_reg_mr(res->pd, res->buf, RDMA_CONTROL_MAX_BUFFER, mr_flags);
     if (!res->mr)
     {
@@ -862,7 +864,7 @@ connect_qp_exit:
 int mc_rdma_init(int is_client)
 {
     struct resources res;
-    if (!is_client)
+    if (is_client)
         config.server_name = "10.22.1.3";
 
     config.gid_idx = 0;
