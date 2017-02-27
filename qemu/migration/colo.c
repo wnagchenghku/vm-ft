@@ -617,6 +617,18 @@ static void colo_process_checkpoint(MigrationState *s)
             break;
         }
 
+
+        DDPRINTF("Sending checkpoint size\n");
+        uint64_t slab_total = 1;
+        uint64_t start_copyset = 2;
+        uint64_t used_slabs = 3;
+
+        qemu_put_be64(s->mc_to_dst_file, slab_total);
+        qemu_put_be64(s->mc_to_dst_file, start_copyset);
+        qemu_put_be64(s->mc_to_dst_file, used_slabs);
+
+        qemu_fflush(s->mc_to_dst_file);
+
         if (failover_request_is_active()) {
             error_report("failover request");
             goto out;
@@ -799,6 +811,13 @@ void *colo_process_incoming_thread(void *opaque)
         switch(action) {
         case MC_TRANSACTION_START:
             DDPRINTF("Transaction start");
+            uint64_t checkpoint_size = qemu_get_be64(mis->mc_from_src_file);
+            uint64_t start_copyset = qemu_get_be64(mis->mc_from_src_file);
+            uint64_t slabs = qemu_get_be64(mis->mc_from_src_file);
+
+            DDPRINTF("Transaction start: size %" PRIu64
+                     " copyset start: %" PRIu64 " slabs %" PRIu64 "\n",
+                     checkpoint_size, start_copyset, slabs);
 
             break;
         case RAM_SAVE_FLAG_HOOK: /* rdma */
@@ -808,7 +827,7 @@ void *colo_process_incoming_thread(void *opaque)
         default:
             fprintf(stderr, "Unknown MC action: %" PRIu64 "\n", action);
         }
-        
+
         colo_wait_handle_message(mis->from_src_file, &request, &local_err);
         if (local_err) {
             goto out;
