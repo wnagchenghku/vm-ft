@@ -45,20 +45,9 @@
     do { } while (0)
 #endif
 
-enum {
-    MC_TRANSACTION_NACK = 300,
-    MC_TRANSACTION_START,
-    MC_TRANSACTION_COMMIT,
-    MC_TRANSACTION_ABORT,
-    MC_TRANSACTION_ACK,
-    MC_TRANSACTION_END,
-    MC_TRANSACTION_DISK_ENABLE,
-    MC_TRANSACTION_DISK_DISABLE,
-    MC_TRANSACTION_ANY,
-};
-
 int mc_enable_buffering(void);
 int mc_start_buffer(void);
 int mc_flush_oldest_buffer(void);
+int mc_rdma_init(int is_client);
 
 #endif /* QEMU_CHECKPOINT_H */

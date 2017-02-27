@@ -475,6 +475,8 @@ static void colo_process_checkpoint(MigrationState *s)
         goto out;
     }
 
+    mc_rdma_init(1);
+
     while (s->state == MIGRATION_STATUS_COLO) {
         if (failover_request_is_active()) {
             error_report("failover request");
@@ -648,6 +650,8 @@ void *colo_process_incoming_thread(void *opaque)
     if (local_err) {
         goto out;
     }
+
+    mc_rdma_init(0);
 
     while (mis->state == MIGRATION_STATUS_COLO) {
         int request;
