@@ -48,6 +48,8 @@
 int mc_enable_buffering(void);
 int mc_start_buffer(void);
 int mc_flush_oldest_buffer(void);
-int mc_rdma_init(int is_client);
 
+int mc_rdma_init(int is_client);
+int mc_rdma_put_buffer(const uint8_t *buf, int size);
+int mc_rdma_get_buffer(uint8_t *buf, int size);
 #endif /* QEMU_CHECKPOINT_H */

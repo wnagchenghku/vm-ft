@@ -344,7 +344,7 @@ int mc_flush_oldest_buffer(void)
 }
 
 /* ================================================================== */
-/* RDMA */
+/* RDMA init */
 #include <infiniband/verbs.h>
 #include <byteswap.h>
 
@@ -387,7 +387,7 @@ struct config_t
     int gid_idx;
 };
 
-struct config_t config = {
+static struct config_t config = {
     NULL,
     NULL,
     19875,
@@ -397,28 +397,75 @@ struct config_t config = {
 
 struct cm_con_data_t
 {
-    uint64_t addr;
-    uint32_t rkey;
     uint32_t qp_num;
     uint16_t lid;
     uint8_t gid[16];
 } __attribute__ ((packed));
 
-struct resources
-{
-    struct ibv_device_attr device_attr;
+#define RDMA_WRID_BLOCK_SHIFT 16UL
 
-    struct ibv_port_attr port_attr;
-    struct cm_con_data_t remote_props;
-    struct ibv_context *ib_ctx;
+#define RDMA_WRID_TYPE_MASK \
+    ((1UL << RDMA_WRID_BLOCK_SHIFT) - 1UL)
+
+enum {
+    RDMA_WRID_NONE = 0,
+    RDMA_WRID_SEND_CONTROL = 2000,
+    RDMA_WRID_RECV_CONTROL = 4000,
+};
+
+enum {
+    RDMA_CONTROL_NONE = 0,
+    RDMA_CONTROL_ERROR,
+    RDMA_CONTROL_READY,
+    RDMA_CONTROL_QEMU_FILE,
+};
+
+static const char *control_desc[] = {
+    [RDMA_CONTROL_NONE] = "NONE",
+    [RDMA_CONTROL_ERROR] = "ERROR",
+    [RDMA_CONTROL_READY] = "READY",
+    [RDMA_CONTROL_QEMU_FILE] = "QEMU FILE",
+};
+
+typedef struct QEMU_PACKED {
+    uint32_t len;     /* Total length of data portion */
+    uint32_t type;    /* which control command to perform */
+} MC_RDMAControlHeader;
+
+typedef struct {
+    uint8_t  control[RDMA_CONTROL_MAX_BUFFER];
+    struct   ibv_mr *control_mr;              
+    size_t   control_len;                    
+} MC_RDMAWorkRequestData;
+
+enum {
+    RDMA_WRID_READY = 0,
+    RDMA_WRID_DATA,
+    RDMA_WRID_CONTROL,
+    RDMA_WRID_MAX,
+};
+
+typedef struct MC_RDMALocalContext {
     struct ibv_pd *pd;
     struct ibv_cq *cq;
     struct ibv_qp *qp;
-    struct ibv_mr *mr; 
-    char *buf;
+} MC_RDMALocalContext;
 
+typedef struct MC_RDMAContext {
+    struct ibv_context *ib_ctx;
+    struct ibv_port_attr port_attr;
+    struct ibv_device_attr device_attr;
+    struct cm_con_data_t remote_props;
     int sock;
-};
+
+    MC_RDMAWorkRequestData wr_data[RDMA_WRID_MAX];
+
+    int total_registrations;
+
+    MC_RDMALocalContext lc_remote;
+} MC_RDMAContext;
+
+static MC_RDMAContext *rdma;
 
 static int sock_connect(const char *servername, int port)
 {
@@ -501,7 +548,7 @@ static int sock_sync_data(int sock, int xfer_size, char *local_data, char *remot
     int rc;
     int read_bytes = 0;
     int total_read_bytes = 0;
-    rc = write (sock, local_data, xfer_size);
+    rc = write(sock, local_data, xfer_size);
     if (rc < xfer_size)
         fprintf (stderr, "Failed writing data during sock_sync_data\n");
     else
@@ -518,26 +565,36 @@ static int sock_sync_data(int sock, int xfer_size, char *local_data, char *remot
 }
 
 
-static void resources_init(struct resources *res)
+static void resources_init(void)
 {
-    memset(res, 0, sizeof *res);
-    res->sock = -1;
+    memset(rdma, 0, sizeof(MC_RDMAContext));
+    rdma->sock = -1;
 }
 
-static int resources_create(struct resources *res)
+static int mc_rdma_reg_control(int idx)
+{
+    rdma->wr_data[idx].control_mr = ibv_reg_mr(rdma->lc_remote.pd, rdma->wr_data[idx].control, RDMA_CONTROL_MAX_BUFFER, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
+    if (rdma->wr_data[idx].control_mr) {
+        rdma->total_registrations++;
+        return 0;
+    }
+    fprintf(stderr, "qemu_rdma_reg_control failed");
+    return -1;
+}
+
+static int resources_create(void)
 {
     struct ibv_device **dev_list = NULL;
     struct ibv_qp_init_attr qp_init_attr;
     struct ibv_device *ib_dev = NULL;
     int i;
-    int mr_flags = 0;
     int num_devices;
     int rc = 0;
 
     if (config.server_name)
     {
-        res->sock = sock_connect(config.server_name, config.tcp_port);
-        if (res->sock < 0)
+        rdma->sock = sock_connect(config.server_name, config.tcp_port);
+        if (rdma->sock < 0)
         {
             fprintf(stderr, "failed to establish TCP connection to server %s, port %d\n", config.server_name, config.tcp_port);
             rc = -1;
@@ -547,8 +604,8 @@ static int resources_create(struct resources *res)
     else
     {
         fprintf(stdout, "waiting on port %d for TCP connection\n", config.tcp_port);
-        res->sock = sock_connect(NULL, config.tcp_port);
-        if (res->sock < 0)
+        rdma->sock = sock_connect(NULL, config.tcp_port);
+        if (rdma->sock < 0)
         {
             fprintf(stderr, "failed to establish TCP connection with client on port %d\n", config.tcp_port);
             rc = -1;
@@ -595,8 +652,8 @@ static int resources_create(struct resources *res)
         goto resources_create_exit;
     }
 
-    res->ib_ctx = ibv_open_device(ib_dev);
-    if (!res->ib_ctx)
+    rdma->ib_ctx = ibv_open_device(ib_dev);
+    if (!rdma->ib_ctx)
     {
         fprintf(stderr, "failed to open device %s\n", config.dev_name);
         rc = 1;
@@ -607,103 +664,89 @@ static int resources_create(struct resources *res)
     dev_list = NULL;
     ib_dev = NULL;
 
-    if (ibv_query_port(res->ib_ctx, config.ib_port, &res->port_attr))
+    if (ibv_query_port(rdma->ib_ctx, config.ib_port, &rdma->port_attr))
     {
         fprintf (stderr, "ibv_query_port on port %u failed\n", config.ib_port);
         rc = 1;
         goto resources_create_exit;
     }
 
-    res->pd = ibv_alloc_pd(res->ib_ctx);
-    if (!res->pd)
+    rdma->lc_remote.pd = ibv_alloc_pd(rdma->ib_ctx);
+    if (!rdma->lc_remote.pd)
     {
         fprintf (stderr, "ibv_alloc_pd failed\n");
         rc = 1;
         goto resources_create_exit;
     }
 
-    res->cq = ibv_create_cq(res->ib_ctx, (RDMA_SIGNALED_SEND_MAX * 3), NULL, NULL, 0);
-    if (!res->cq)
+    rdma->lc_remote.cq = ibv_create_cq(rdma->ib_ctx, (RDMA_SIGNALED_SEND_MAX * 3), NULL, NULL, 0);
+    if (!rdma->lc_remote.cq)
     {
         fprintf (stderr, "failed to create CQ with %u entries\n", (RDMA_SIGNALED_SEND_MAX * 3));
         rc = 1;
         goto resources_create_exit;
     }
 
-    mr_flags = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE;
-
-    res->buf = (char*)malloc(RDMA_CONTROL_MAX_BUFFER);
-
-    res->mr = ibv_reg_mr(res->pd, res->buf, RDMA_CONTROL_MAX_BUFFER, mr_flags);
-    if (!res->mr)
-    {
-        fprintf(stderr, "ibv_reg_mr failed with mr_flags=0x%x\n", mr_flags);
-        rc = 1;
-        goto resources_create_exit;
+    int ret, idx;
+    for (idx = 0; idx < RDMA_WRID_MAX; idx++) {
+        ret = mc_rdma_reg_control(idx);
+        if (ret) {
+            fprintf(stderr, "registering %d control!", idx);
+        }
     }
-    fprintf(stdout, "MR was registered with addr=%p, lkey=0x%x, rkey=0x%x, flags=0x%x\n", res->buf, res->mr->lkey, res->mr->rkey, mr_flags);
+
     /* create the Queue Pair */
     memset(&qp_init_attr, 0, sizeof (qp_init_attr));
     qp_init_attr.qp_type = IBV_QPT_RC;
-    qp_init_attr.send_cq = res->cq;
-    qp_init_attr.recv_cq = res->cq;
+    qp_init_attr.send_cq = rdma->lc_remote.cq;
+    qp_init_attr.recv_cq = rdma->lc_remote.cq;
     qp_init_attr.cap.max_send_wr = RDMA_SIGNALED_SEND_MAX;
     qp_init_attr.cap.max_recv_wr = 3;
     qp_init_attr.cap.max_send_sge = 1;
     qp_init_attr.cap.max_recv_sge = 1;
-    res->qp = ibv_create_qp(res->pd, &qp_init_attr);
-    if (!res->qp)
+    rdma->lc_remote.qp = ibv_create_qp(rdma->lc_remote.pd, &qp_init_attr);
+    if (!rdma->lc_remote.qp)
     {
         fprintf(stderr, "failed to create QP\n");
         rc = 1;
         goto resources_create_exit;
     }
-    fprintf(stdout, "QP was created, QP number=0x%x\n", res->qp->qp_num);
+    fprintf(stdout, "QP was created, QP number=0x%x\n", rdma->lc_remote.qp->qp_num);
 
 resources_create_exit:
     if (rc)
     {
         /* Error encountered, cleanup */
-        if (res->qp)
+        if (rdma->lc_remote.qp)
         {
-            ibv_destroy_qp(res->qp);
-            res->qp = NULL;
+            ibv_destroy_qp(rdma->lc_remote.qp);
+            rdma->lc_remote.qp = NULL;
         }
-        if (res->mr)
+        if (rdma->lc_remote.cq)
         {
-            ibv_dereg_mr(res->mr);
-            res->mr = NULL;
+            ibv_destroy_cq(rdma->lc_remote.cq);
+            rdma->lc_remote.cq = NULL;
         }
-        if (res->buf)
+        if (rdma->lc_remote.pd)
         {
-            free(res->buf);
-            res->buf = NULL;
+            ibv_dealloc_pd(rdma->lc_remote.pd);
+            rdma->lc_remote.pd = NULL;
         }
-        if (res->cq)
+        if (rdma->ib_ctx)
         {
-            ibv_destroy_cq(res->cq);
-            res->cq = NULL;
-        }
-        if (res->pd)
-        {
-            ibv_dealloc_pd(res->pd);
-            res->pd = NULL;
-        }
-        if (res->ib_ctx)
-        {
-            ibv_close_device(res->ib_ctx);
-            res->ib_ctx = NULL;
+            ibv_close_device(rdma->ib_ctx);
+            rdma->ib_ctx = NULL;
         }
         if (dev_list)
         {
             ibv_free_device_list(dev_list);
             dev_list = NULL;
         }
-        if (res->sock >= 0)
+        if (rdma->sock >= 0)
         {
-            if (close(res->sock))
+            if (close(rdma->sock))
                 fprintf(stderr, "failed to close socket\n");
-            res->sock = -1;
+            rdma->sock = -1;
         }
     }
     return rc;
@@ -735,7 +778,8 @@ static int modify_qp_to_rtr(struct ibv_qp *qp, uint32_t remote_qpn, uint16_t dli
     int rc;
     memset (&attr, 0, sizeof (attr));
     attr.qp_state = IBV_QPS_RTR;
-    attr.path_mtu = IBV_MTU_256;
+    //attr.path_mtu = IBV_MTU_256;
+    attr.path_mtu = rdma->port_attr.active_mtu;
     attr.dest_qp_num = remote_qpn;
     attr.rq_psn = 0;
     attr.max_dest_rd_atomic = 1;
@@ -751,7 +795,7 @@ static int modify_qp_to_rtr(struct ibv_qp *qp, uint32_t remote_qpn, uint16_t dli
         attr.ah_attr.port_num = 1;
         memcpy(&attr.ah_attr.grh.dgid, dgid, 16);
         attr.ah_attr.grh.flow_label = 0;
-        attr.ah_attr.grh.hop_limit = 1;
+        attr.ah_attr.grh.hop_limit = 0xFF;
         attr.ah_attr.grh.sgid_index = config.gid_idx;
         attr.ah_attr.grh.traffic_class = 0;
     }
@@ -771,8 +815,8 @@ static int modify_qp_to_rts(struct ibv_qp *qp)
     memset(&attr, 0, sizeof (attr));
     attr.qp_state = IBV_QPS_RTS;
     attr.timeout = 0x12;
-    attr.retry_cnt = 6;
-    attr.rnr_retry = 0;
+    attr.retry_cnt = 7;
+    attr.rnr_retry = 7;
     attr.sq_psn = 0;
     attr.max_rd_atomic = 1;
     flags = IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT |
@@ -783,7 +827,7 @@ static int modify_qp_to_rts(struct ibv_qp *qp)
     return rc;
 }
 
-static int connect_qp(struct resources *res)
+static int connect_qp(void)
 {
     struct cm_con_data_t local_con_data;
     struct cm_con_data_t remote_con_data;
@@ -793,7 +837,7 @@ static int connect_qp(struct resources *res)
     union ibv_gid my_gid;
     if (config.gid_idx >= 0)
     {
-        rc = ibv_query_gid(res->ib_ctx, config.ib_port, config.gid_idx, &my_gid);
+        rc = ibv_query_gid(rdma->ib_ctx, config.ib_port, config.gid_idx, &my_gid);
         if (rc)
         {
             fprintf (stderr, "could not get gid for port %d, index %d\n", config.ib_port, config.gid_idx);
@@ -803,27 +847,21 @@ static int connect_qp(struct resources *res)
     else
         memset(&my_gid, 0, sizeof my_gid);
 
-    local_con_data.addr = htonll((uintptr_t) res->buf);
-    local_con_data.rkey = htonl(res->mr->rkey);
-    local_con_data.qp_num = htonl(res->qp->qp_num);
-    local_con_data.lid = htons(res->port_attr.lid);
+    local_con_data.qp_num = htonl(rdma->lc_remote.qp->qp_num);
+    local_con_data.lid = htons(rdma->port_attr.lid);
     memcpy(local_con_data.gid, &my_gid, 16);
-    fprintf(stdout, "\nLocal LID = 0x%x\n", res->port_attr.lid);
-    if (sock_sync_data(res->sock, sizeof (struct cm_con_data_t), (char*)&local_con_data, (char*)&tmp_con_data) < 0)
+    fprintf(stdout, "\nLocal LID = 0x%x\n", rdma->port_attr.lid);
+    if (sock_sync_data(rdma->sock, sizeof (struct cm_con_data_t), (char*)&local_con_data, (char*)&tmp_con_data) < 0)
     {
         fprintf(stderr, "failed to exchange connection data between sides\n");
         rc = 1;
         goto connect_qp_exit;
     }
-    remote_con_data.addr = ntohll(tmp_con_data.addr);
-    remote_con_data.rkey = ntohl(tmp_con_data.rkey);
     remote_con_data.qp_num = ntohl(tmp_con_data.qp_num);
     remote_con_data.lid = ntohs(tmp_con_data.lid);
     memcpy(remote_con_data.gid, tmp_con_data.gid, 16);
 
-    res->remote_props = remote_con_data;
-    fprintf(stdout, "Remote address = 0x%" PRIx64 "\n", remote_con_data.addr);
-    fprintf(stdout, "Remote rkey = 0x%x\n", remote_con_data.rkey);
+    rdma->remote_props = remote_con_data;
     fprintf(stdout, "Remote QP number = 0x%x\n", remote_con_data.qp_num);
     fprintf(stdout, "Remote LID = 0x%x\n", remote_con_data.lid);
     if (config.gid_idx >= 0)
@@ -834,21 +872,21 @@ static int connect_qp(struct resources *res)
                 p[10], p[11], p[12], p[13], p[14], p[15]);
     }
     /* modify the QP to init */
-    rc = modify_qp_to_init(res->qp);
+    rc = modify_qp_to_init(rdma->lc_remote.qp);
     if (rc)
     {
         fprintf(stderr, "change QP state to INIT failed\n");
         goto connect_qp_exit;
     }
 
-    rc = modify_qp_to_rtr(res->qp, remote_con_data.qp_num, remote_con_data.lid, remote_con_data.gid);
+    rc = modify_qp_to_rtr(rdma->lc_remote.qp, remote_con_data.qp_num, remote_con_data.lid, remote_con_data.gid);
     if (rc)
     {
         fprintf(stderr, "failed to modify QP state to RTR\n");
         goto connect_qp_exit;
     }
     fprintf(stderr, "Modified QP state to RTR\n");
-    rc = modify_qp_to_rts(res->qp);
+    rc = modify_qp_to_rts(rdma->lc_remote.qp);
     if (rc)
     {
         fprintf(stderr, "failed to modify QP state to RTR\n");
@@ -863,24 +901,232 @@ connect_qp_exit:
 
 int mc_rdma_init(int is_client)
 {
-    struct resources res;
+    rdma = (MC_RDMAContext*)malloc(sizeof(MC_RDMAContext));
     if (is_client)
         config.server_name = "10.22.1.3";
 
     config.gid_idx = 0;
     config.ib_port = 2;
-    resources_init(&res);
+    resources_init();
 
-    if (resources_create(&res))
+    if (resources_create())
     {
         fprintf (stderr, "failed to create resources\n");
     }
 
     /* connect the QPs */
-    if (connect_qp(&res))
+    if (connect_qp())
     {
         fprintf (stderr, "failed to connect QPs\n");
     }
+
+    return 0;
+}
+
+/* ================================================================== */
+/* RDMA */
+
+static void mc_control_to_network(MC_RDMAControlHeader *control)
+{
+    control->type = htonl(control->type);
+    control->len = htonl(control->len);
+}
+
+static void mc_network_to_control(MC_RDMAControlHeader *control)
+{
+    control->type = ntohl(control->type);
+    control->len = ntohl(control->len);
+}
+
+static uint64_t mc_rdma_poll(MC_RDMALocalContext *lc, uint64_t *wr_id_out, uint32_t *byte_len)
+{
+    int ret;
+    struct ibv_wc wc;
+    uint64_t wr_id;
+
+    ret = ibv_poll_cq(lc->cq, 1, &wc);
+
+    if (!ret) {
+        *wr_id_out = RDMA_WRID_NONE;
+        return 0;
+    }
+
+    wr_id = wc.wr_id;
+
+    if (wc.status != IBV_WC_SUCCESS) {
+        fprintf(stderr, "ibv_poll_cq wc.status=%d %s!\n", wc.status, ibv_wc_status_str(wc.status));
+        return -1;
+    }
+
+    *wr_id_out = wc.wr_id;
+    return 0;
+}
+
+static int mc_rdma_block_for_wrid(MC_RDMALocalContext *lc, int wrid_requested, uint32_t *byte_len)
+{
+    int ret = 0;
+    uint64_t wr_id = RDMA_WRID_NONE, wr_id_in;
+    /* poll cq first */
+    while (wr_id != wrid_requested) {
+        ret = mc_rdma_poll(lc, &wr_id_in, byte_len);
+        if (ret < 0) {
+            return ret;
+        }
+
+        wr_id = wr_id_in & RDMA_WRID_TYPE_MASK;
+
+        if (wr_id == RDMA_WRID_NONE) {
+            break;
+        }
+        if (wr_id != wrid_requested) {
+        }
+    }
+    return ret;
+}
+
+
+static int mc_rdma_post_send_control(uint8_t *buf, MC_RDMAControlHeader *head)
+{
+    int ret = 0;
+    MC_RDMAWorkRequestData *wr = &rdma->wr_data[RDMA_WRID_CONTROL];
+    struct ibv_send_wr *bad_wr;
+    struct ibv_sge sge = {
+                           .addr = (uintptr_t)(wr->control),
+                           .length = head->len + sizeof(MC_RDMAControlHeader),
+                           .lkey = wr->control_mr->lkey,
+                         };
+    struct ibv_send_wr send_wr = {
+                                   .wr_id = RDMA_WRID_SEND_CONTROL,
+                                   .opcode = IBV_WR_SEND,
+                                   .send_flags = IBV_SEND_SIGNALED,
+                                   .sg_list = &sge,
+                                   .num_sge = 1,
+                                };
+
+    memcpy(wr->control, head, sizeof(MC_RDMAControlHeader));
+    mc_control_to_network((void *) wr->control);
+
+    if (buf) {
+        memcpy(wr->control + sizeof(MC_RDMAControlHeader), buf, head->len);
+    }
+
+    ret = ibv_post_send(rdma->lc_remote.qp, &send_wr, &bad_wr);
+
+    if (ret > 0) {
+        fprintf(stderr, "Failed to use post IB SEND for control!");
+        return -ret;
+    }
+
+    ret = mc_rdma_block_for_wrid(&rdma->lc_remote, RDMA_WRID_SEND_CONTROL, NULL);
+    if (ret < 0) {
+        fprintf(stderr, "send polling control!");
+    }
+
+    return ret;
+}
+
+static int mc_rdma_post_recv_control(int idx)
+{
+    struct ibv_recv_wr *bad_wr;
+    struct ibv_sge sge = {
+                            .addr = (uintptr_t)(rdma->wr_data[idx].control),
+                            .length = RDMA_CONTROL_MAX_BUFFER,
+                            .lkey = rdma->wr_data[idx].control_mr->lkey,
+                         };
+
+    struct ibv_recv_wr recv_wr = {
+                                    .wr_id = RDMA_WRID_RECV_CONTROL + idx,
+                                    .sg_list = &sge,
+                                    .num_sge = 1,
+                                 };
+
+
+    if (ibv_post_recv(rdma->lc_remote.qp, &recv_wr, &bad_wr)) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static int mc_rdma_exchange_get_response(MC_RDMAControlHeader *head, int expecting, int idx)
+{
+    uint32_t byte_len;
+    int ret = mc_rdma_block_for_wrid(&rdma->lc_remote, RDMA_WRID_RECV_CONTROL + idx, &byte_len);
+
+    if (ret < 0) {
+        fprintf(stderr, "recv polling control!");
+        return ret;
+    }
+
+    mc_network_to_control((void *) rdma->wr_data[idx].control);
+    memcpy(head, rdma->wr_data[idx].control, sizeof(MC_RDMAControlHeader));
+
+    if (expecting == RDMA_CONTROL_NONE) {
+    } else if (head->type != expecting || head->type == RDMA_CONTROL_ERROR) {
+        fprintf(stderr, "Was expecting a %s (%d) control message, but got: %s (%d), length: %d", control_desc[expecting], expecting, control_desc[head->type], head->type, head->len);
+        return -EIO;
+    }
+    if (head->len > RDMA_CONTROL_MAX_BUFFER - sizeof(*head)) {
+        fprintf(stderr, "too long length: %d", head->len);
+        return -EINVAL;
+    }
+    if (sizeof(*head) + head->len != byte_len) {
+        fprintf(stderr, "Malformed length: %d byte_len %d", head->len, byte_len);
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
+static int mc_rdma_exchange_send(MC_RDMAControlHeader *head, uint8_t *data)
+{
+    int ret = 0;
+    /*
+     * If the user is expecting a response, post a WR in anticipation of it.
+     */
+
+
+    /*
+     * Deliver the control message that was requested.
+     */
+    ret = mc_rdma_post_send_control(data, head);
+
+    /*
+     * If we're expecting a response, block and wait for it.
+     */
+
+    return 0;
+
+}
+
+static int mc_rdma_exchange_recv(MC_RDMAControlHeader *head, int expecting)
+{
+    int ret;
+    /*
+     * Block and wait for the message.
+     */
+    ret = mc_rdma_exchange_get_response(head, expecting, RDMA_WRID_READY);
+
+    return 0;  
+}
+
+int mc_rdma_put_buffer(const uint8_t *buf, int size)
+{
+    uint8_t * data = (void *) buf;
+
+    MC_RDMAControlHeader head;
+    head.len = size;
+    mc_rdma_exchange_send(&head, data);
+
+    return size;
+}
+
+int mc_rdma_get_buffer(uint8_t *buf, int size)
+{
+    MC_RDMAControlHeader head;
+    int ret = 0;
+
+    ret = mc_rdma_exchange_recv(&head, RDMA_CONTROL_QEMU_FILE);
 
     return 0;
 }
