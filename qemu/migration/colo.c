@@ -23,7 +23,8 @@
 #include "replication.h"
 #include "net/colo-compare.h"
 
-#include "checkpoint.h"
+#include "output-buffer.h"
+#include "mc-rdma.h"
 
 static bool vmstate_loading;
 

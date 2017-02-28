@@ -36,7 +36,7 @@
 #include "exec/address-spaces.h"
 #include "migration/colo.h"
 
-#include "checkpoint.h"
+#include "mc-rdma.h"
 
 #define MAX_THROTTLE  (32 << 20)      /* Migration transfer speed throttling */
 
