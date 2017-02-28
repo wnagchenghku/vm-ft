@@ -52,8 +52,11 @@ int dare_main(proxy_node* proxy, const char* config_path)
     static int srv_type = SRV_TYPE_START;
 
     const char *server_type = getenv("server_type");
-    if (strcmp(server_type, "join") == 0)
-    	srv_type = SRV_TYPE_JOIN;
+    if (server_type != NULL) {
+        if (strcmp(server_type, "join") == 0) {
+            srv_type = SRV_TYPE_JOIN;
+        }
+    }
     char *dare_log_file = getenv("dare_log_file");
     if (dare_log_file == NULL)
         dare_log_file = "";
@@ -105,15 +108,13 @@ static hk_t gen_key(nid_t node_id,nc_t node_count){
     return key;
 }
 
-uint64_t req_id;
 static void leader_handle_submit_req(void* buf, ssize_t data_size)
 {
     pthread_spin_lock(&tailq_lock);
     uint64_t cur_rec = ++proxy->cur_rec;
 
-    req_id++;
     tailq_entry_t* n2 = (tailq_entry_t*)malloc(sizeof(tailq_entry_t));
-    n2->req_id = req_id;
+    n2->req_id = ++proxy->sync_req_id;
     n2->connection_id = MIRROR_CONNECTION;
     n2->type = MIRROR;
     n2->cmd.len = data_size;
@@ -234,14 +235,15 @@ static void do_action_send(size_t data_size,void* data,void* arg)
     proxy_node* proxy = arg;
     uint32_t len = htonl(data_size);
 
-    int n = write(proxy->mirror_clientfd, &len, sizeof(len));
+    int n = send(proxy->mirror_clientfd, &len, sizeof(len), 0);
     if (n < 0)
         fprintf(stderr, "ERROR writing to socket!\n");
 
-    n = write(proxy->mirror_clientfd, data, data_size);
+    n = send(proxy->mirror_clientfd, data, data_size, 0);
     if (n < 0)
         fprintf(stderr, "ERROR writing to socket!\n");
 
+    proxy->sync_req_id++;
 }
 
 static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,void* data,void*arg)

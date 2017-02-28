@@ -33,6 +33,8 @@
 #include "migration/qemu-file-internal.h"
 #include "trace.h"
 
+#include "mc-rdma.h"
+
 /*
  * Stop a file from being read/written - not all backing files can do this
  * typically only sockets can.
@@ -142,7 +144,8 @@ void ram_control_before_iterate(QEMUFile *f, uint64_t flags)
     int ret = 0;
 
     if (f->ops->before_ram_iterate) {
-        ret = f->ops->before_ram_iterate(f, f->opaque, flags, NULL);
+        //ret = f->ops->before_ram_iterate(f, f->opaque, flags, NULL);
+        ret = mc_rdma_registration_start(f, flags, NULL);
         if (ret < 0) {
             qemu_file_set_error(f, ret);
         }
@@ -154,7 +157,8 @@ void ram_control_after_iterate(QEMUFile *f, uint64_t flags)
     int ret = 0;
 
     if (f->ops->after_ram_iterate) {
-        ret = f->ops->after_ram_iterate(f, f->opaque, flags, NULL);
+        //ret = f->ops->after_ram_iterate(f, f->opaque, flags, NULL);
+        ret = mc_rdma_registration_stop(f, flags, NULL);
         if (ret < 0) {
             qemu_file_set_error(f, ret);
         }
@@ -166,7 +170,8 @@ void ram_control_load_hook(QEMUFile *f, uint64_t flags, void *data)
     int ret = -EINVAL;
 
     if (f->ops->hook_ram_load) {
-        ret = f->ops->hook_ram_load(f, f->opaque, flags, data);
+        //ret = f->ops->hook_ram_load(f, f->opaque, flags, data);
+        ret = mc_rdma_load_hook(f, flags, NULL);
         if (ret < 0) {
             qemu_file_set_error(f, ret);
         }

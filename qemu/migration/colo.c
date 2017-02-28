@@ -23,7 +23,8 @@
 #include "replication.h"
 #include "net/colo-compare.h"
 
-#include "checkpoint.h"
+#include "output-buffer.h"
+#include "mc-rdma.h"
 
 static bool vmstate_loading;
 
@@ -475,9 +476,6 @@ static void colo_process_checkpoint(MigrationState *s)
         goto out;
     }
 
-    int is_client = 1;
-    mc_rdma_init(is_client);
-
     while (s->state == MIGRATION_STATUS_COLO) {
         if (failover_request_is_active()) {
             error_report("failover request");
@@ -651,9 +649,6 @@ void *colo_process_incoming_thread(void *opaque)
     if (local_err) {
         goto out;
     }
-
-    int is_client = 0;
-    mc_rdma_init(is_client);
 
     while (mis->state == MIGRATION_STATUS_COLO) {
         int request;

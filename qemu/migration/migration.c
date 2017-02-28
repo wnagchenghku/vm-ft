@@ -36,7 +36,7 @@
 #include "exec/address-spaces.h"
 #include "migration/colo.h"
 
-#include "checkpoint.h"
+#include "mc-rdma.h"
 
 #define MAX_THROTTLE  (32 << 20)      /* Migration transfer speed throttling */
 
@@ -391,6 +391,7 @@ static void process_incoming_migration_co(void *opaque)
     postcopy_state_set(POSTCOPY_INCOMING_NONE);
     migrate_set_state(&mis->state, MIGRATION_STATUS_NONE,
                       MIGRATION_STATUS_ACTIVE);
+    mc_start_incoming_migration();
     ret = qemu_loadvm_state(f);
 
     ps = postcopy_state_get();
@@ -1079,7 +1080,7 @@ void qmp_migrate(const char *uri, bool has_blk, bool blk,
     s = migrate_init(&params);
 
     if (strstart(uri, "tcp:", &p)) {
-        mc_host_port = p;
+        memcpy(mc_host_port, p, strlen(p));
         tcp_start_outgoing_migration(s, p, &local_err);
 #ifdef CONFIG_RDMA
     } else if (strstart(uri, "rdma:", &p)) {
@@ -1721,6 +1722,7 @@ static void *migration_thread(void *opaque)
         qemu_savevm_send_postcopy_advise(s->to_dst_file);
     }
 
+    mc_start_outgoing_migration();
     qemu_savevm_state_begin(s->to_dst_file, &s->params);
 
     s->setup_time = qemu_clock_get_ms(QEMU_CLOCK_HOST) - setup_start;

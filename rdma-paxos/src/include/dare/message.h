@@ -4,7 +4,7 @@
 
 struct tailq_cmd_t {
     uint16_t    len;
-    uint8_t cmd[87380];
+    uint8_t cmd[1024];
 };
 typedef struct tailq_cmd_t tailq_cmd_t;
 
