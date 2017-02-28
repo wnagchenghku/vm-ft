@@ -476,8 +476,7 @@ static void colo_process_checkpoint(MigrationState *s)
         goto out;
     }
 
-    int is_client = 1;
-    mc_rdma_init(is_client);
+    mc_start_outgoing_migration();
 
     while (s->state == MIGRATION_STATUS_COLO) {
         if (failover_request_is_active()) {
@@ -653,8 +652,7 @@ void *colo_process_incoming_thread(void *opaque)
         goto out;
     }
 
-    int is_client = 0;
-    mc_rdma_init(is_client);
+    mc_start_incoming_migration();
 
     while (mis->state == MIGRATION_STATUS_COLO) {
         int request;

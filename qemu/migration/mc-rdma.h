@@ -3,7 +3,8 @@
 
 extern const char *mc_host_port;
 
-int mc_rdma_init(int is_client);
+int mc_start_incoming_migration(void);
+int mc_start_outgoing_migration(void);
 ssize_t mc_rdma_get_buffer(uint8_t *buf, int64_t pos, size_t size);
 ssize_t mc_rdma_put_buffer(const uint8_t *buf, int64_t pos, size_t size);
 

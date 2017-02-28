@@ -315,6 +315,7 @@ void qemu_start_incoming_migration(const char *uri, Error **errp)
     if (!strcmp(uri, "defer")) {
         deferred_incoming_migration(errp);
     } else if (strstart(uri, "tcp:", &p)) {
+        mc_host_port = p;
         tcp_start_incoming_migration(p, errp);
 #ifdef CONFIG_RDMA
     } else if (strstart(uri, "rdma:", &p)) {

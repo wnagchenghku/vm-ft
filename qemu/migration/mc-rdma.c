@@ -1307,6 +1307,19 @@ static int mc_rdma_write(MC_RDMAContext *rdma,
     return 0;
 }
 
+static void *mc_rdma_data_init(const char *host_port)
+{
+    MC_RDMAContext *rdma = NULL;
+
+    if (host_port) {
+        rdma = g_new0(MC_RDMAContext, 1);
+        rdma->current_index = -1;
+        rdma->current_chunk = -1;
+    }
+
+    return rdma;
+}
+
 ssize_t mc_rdma_put_buffer(const uint8_t *buf, int64_t pos, size_t size)
 {
     size_t remaining = size;
@@ -2036,14 +2049,6 @@ static int resources_create(void)
         goto resources_create_exit;
     }
 
-    int ret, idx;
-    for (idx = 0; idx < MC_RDMA_WRID_MAX; idx++) {
-        ret = mc_rdma_reg_control(rdma, idx);
-        if (ret) {
-            fprintf(stderr, "registering %d control!", idx);
-        }
-    }
-
     /* create the Queue Pair */
     memset(&qp_init_attr, 0, sizeof (qp_init_attr));
     qp_init_attr.qp_type = IBV_QPT_RC;
@@ -2248,16 +2253,44 @@ connect_qp_exit:
 }
 
 const char *mc_host_port;
-int mc_rdma_init(int is_client)
+int mc_start_incoming_migration(void)
 {
-    rdma = (MC_RDMAContext*)malloc(sizeof(MC_RDMAContext));
-    if (is_client)
-    {
-        InetSocketAddress *addr;
-        addr = inet_parse(mc_host_port, NULL);
-        if (addr != NULL) {
-            config.server_name = g_strdup(addr->host);
+    int ret = -EINVAL;
+
+    rdma = mc_rdma_data_init(mc_host_port);
+
+    config.gid_idx = 0;
+    config.ib_port = 2;
+    resources_init();
+
+    if (resources_create())
+        error_report("failed to create resources\n");
+
+    ret = mc_rdma_init_ram_blocks(rdma);
+    int idx;
+    for (idx = 0; idx < MC_RDMA_WRID_MAX; idx++) {
+        ret = mc_rdma_reg_control(rdma, idx);
+        if (ret) {
+            error_report("rdma: error registering %d control", idx);
         }
+    }
+
+    if (connect_qp())
+        error_report("failed to connect QPs\n");
+
+    ret = mc_rdma_post_recv_control(rdma, MC_RDMA_WRID_READY);
+
+    return 0;
+}
+
+int mc_start_outgoing_migration(void)
+{
+    rdma = mc_rdma_data_init(mc_host_port);
+
+    InetSocketAddress *addr;
+    addr = inet_parse(mc_host_port, NULL);
+    if (addr != NULL) {
+        config.server_name = g_strdup(addr->host);
     }
 
     config.gid_idx = 0;
@@ -2265,15 +2298,29 @@ int mc_rdma_init(int is_client)
     resources_init();
 
     if (resources_create())
-    {
-        fprintf (stderr, "failed to create resources\n");
+        error_report("failed to create resources\n");
+
+    int ret, idx;
+    ret = mc_rdma_init_ram_blocks(rdma);
+
+    /* Build the hash that maps from offset to RAMBlock */
+    rdma->blockmap = g_hash_table_new(g_direct_hash, g_direct_equal);
+    for (idx = 0; idx < rdma->local_ram_blocks.nb_blocks; idx++) {
+        g_hash_table_insert(rdma->blockmap,
+                (void *)(uintptr_t)rdma->local_ram_blocks.block[idx].offset,
+                &rdma->local_ram_blocks.block[idx]);
     }
 
-    /* connect the QPs */
-    if (connect_qp())
-    {
-        fprintf (stderr, "failed to connect QPs\n");
+    for (idx = 0; idx < MC_RDMA_WRID_MAX; idx++) {
+        ret = mc_rdma_reg_control(rdma, idx);
+        if (ret) {
+        }
     }
+
+    if (connect_qp())
+        error_report("failed to connect QPs\n");
+
+    ret = mc_rdma_post_recv_control(rdma, MC_RDMA_WRID_READY);
 
     return 0;
 }
