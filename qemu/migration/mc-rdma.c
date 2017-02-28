@@ -1298,15 +1298,13 @@ static int mc_rdma_write(MC_RDMAContext *rdma,
     return 0;
 }
 
-static void *mc_rdma_data_init(const char *host_port)
+static void *mc_rdma_data_init()
 {
     MC_RDMAContext *rdma = NULL;
 
-    if (host_port) {
-        rdma = g_new0(MC_RDMAContext, 1);
-        rdma->current_index = -1;
-        rdma->current_chunk = -1;
-    }
+    rdma = g_new0(MC_RDMAContext, 1);
+    rdma->current_index = -1;
+    rdma->current_chunk = -1;
 
     return rdma;
 }
@@ -1949,7 +1947,6 @@ static int sock_sync_data(int sock, int xfer_size, char *local_data, char *remot
 
 static void resources_init(void)
 {
-    memset(rdma, 0, sizeof(MC_RDMAContext));
     rdma->sock = -1;
 }
 
@@ -2262,12 +2259,12 @@ connect_qp_exit:
     return rc;
 }
 
-const char *mc_host_port;
+char mc_host_port[65];
 int mc_start_incoming_migration(void)
 {
     int ret = -EINVAL;
 
-    rdma = mc_rdma_data_init(mc_host_port);
+    rdma = mc_rdma_data_init();
 
     config.gid_idx = 0;
     config.ib_port = 2;
@@ -2295,7 +2292,7 @@ int mc_start_incoming_migration(void)
 
 int mc_start_outgoing_migration(void)
 {
-    rdma = mc_rdma_data_init(mc_host_port);
+    rdma = mc_rdma_data_init();
 
     InetSocketAddress *addr;
     addr = inet_parse(mc_host_port, NULL);

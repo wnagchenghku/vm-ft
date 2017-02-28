@@ -10,7 +10,7 @@
 #include "qemu/sockets.h"
 #include "qemu/bitmap.h"
 
-extern const char *mc_host_port;
+extern char mc_host_port[65];
 
 int mc_start_incoming_migration(void);
 int mc_start_outgoing_migration(void);
