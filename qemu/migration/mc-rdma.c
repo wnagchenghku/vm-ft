@@ -1,14 +1,5 @@
 #include <infiniband/verbs.h>
 
-#include "qemu/osdep.h"
-#include "qapi/error.h"
-#include "qemu-common.h"
-#include "qemu/cutils.h"
-#include "migration/migration.h"
-#include "qemu/error-report.h"
-#include "qemu/sockets.h"
-#include "qemu/bitmap.h"
-
 #include "mc-rdma.h"
 
 #define MC_ERROR(errp, fmt, ...) \
@@ -1483,7 +1474,6 @@ err:
     return ret;
 }
 
-
 static int mc_dest_ram_sort_func(const void *a, const void *b)
 {
     unsigned int a_index = ((const MC_RDMALocalBlock *)a)->src_index;
@@ -1492,7 +1482,7 @@ static int mc_dest_ram_sort_func(const void *a, const void *b)
     return (a_index < b_index) ? -1 : (a_index != b_index);
 }
 
-static int mc_rdma_registration_handle(void)
+static int mc_rdma_registration_handle(QEMUFile *f)
 {
     MC_RDMAControlHeader reg_resp = { .len = sizeof(MC_RDMARegisterResult),
                                .type = MC_RDMA_CONTROL_REGISTER_RESULT,
@@ -1726,8 +1716,28 @@ out:
     return ret;
 }
 
+int mc_rdma_load_hook(QEMUFile *f, uint64_t flags, void *data)
+{
+    switch (flags) {
+    case RAM_CONTROL_HOOK:
+        return mc_rdma_registration_handle(f);
+
+    default:
+        /* Shouldn't be called with any other values */
+        abort();
+    }
+}
+
+int mc_rdma_registration_start(QEMUFile *f, uint64_t flags, void *data)
+{
+    qemu_put_be64(f, RAM_SAVE_FLAG_HOOK);
+    qemu_fflush(f);
+
+    return 0;
+}
+
 // qemu_fflush -> put_buffer
-static int mc_rdma_registration_stop(uint64_t flags, void *data)
+int mc_rdma_registration_stop(QEMUFile *f, uint64_t flags, void *data)
 {
     Error *local_err = NULL, **errp = &local_err;
 
