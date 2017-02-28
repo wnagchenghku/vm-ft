@@ -45,6 +45,8 @@
     do { } while (0)
 #endif
 
+extern const char *mc_host_port;
+
 int mc_enable_buffering(void);
 int mc_start_buffer(void);
 int mc_flush_oldest_buffer(void);

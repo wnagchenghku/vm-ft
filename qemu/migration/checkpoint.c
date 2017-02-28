@@ -435,7 +435,8 @@ typedef struct QEMU_PACKED {
 typedef struct {
     uint8_t  control[RDMA_CONTROL_MAX_BUFFER];
     struct   ibv_mr *control_mr;              
-    size_t   control_len;                    
+    size_t   control_len;                      /* length of the message */
+    uint8_t *control_curr;                     /* start of unconsumed bytes */
 } MC_RDMAWorkRequestData;
 
 enum {
@@ -572,6 +573,11 @@ static void resources_init(void)
 {
     memset(rdma, 0, sizeof(MC_RDMAContext));
     rdma->sock = -1;
+    int idx;
+    for (idx = 0; idx < RDMA_WRID_MAX; idx++) {
+        rdma->wr_data[idx].control_len = 0;
+        rdma->wr_data[idx].control_curr = NULL;
+    }
 }
 
 static int mc_rdma_reg_control(int idx)
@@ -1110,10 +1116,10 @@ static int mc_rdma_exchange_get_response(MC_RDMAControlHeader *head, int expecti
  * of the control message of the work request's buffer that
  * was populated after the work request finished.
  */
-static void mc_rdma_move_header(int idx, RDMAControlHeader *head)
+static void mc_rdma_move_header(int idx, MC_RDMAControlHeader *head)
 {
     rdma->wr_data[idx].control_len = head->len;
-    rdma->wr_data[idx].control_curr = rdma->wr_data[idx].control + sizeof(RDMAControlHeader);
+    rdma->wr_data[idx].control_curr = rdma->wr_data[idx].control + sizeof(MC_RDMAControlHeader);
 }
 
 static int mc_rdma_exchange_send(MC_RDMAControlHeader *head, uint8_t *data)
@@ -1180,12 +1186,12 @@ static int mc_rdma_exchange_recv(MC_RDMAControlHeader *head, int expecting)
         return ret;
     }
 
-    mc_rdma_move_header(rdma, RDMA_WRID_READY, head);
+    mc_rdma_move_header(RDMA_WRID_READY, head);
 
     /*
      * Post a new RECV work request to replace the one we just consumed.
      */
-    ret = mc_rdma_post_recv_control(rdma, RDMA_WRID_READY);
+    ret = mc_rdma_post_recv_control(RDMA_WRID_READY);
     if (ret) {
         fprintf(stderr, "rdma migration: error posting second control recv!");
         return ret;
@@ -1230,12 +1236,19 @@ int mc_rdma_get_buffer(uint8_t *buf, int size)
     return mc_rdma_fill(buf, size, 0);
 }
 
+const char *mc_host_port;
 
 int mc_rdma_init(int is_client)
 {
     rdma = (MC_RDMAContext*)malloc(sizeof(MC_RDMAContext));
     if (is_client)
-        config.server_name = "10.22.1.3";
+    {
+        InetSocketAddress *addr;
+        addr = inet_parse(mc_host_port, NULL);
+        if (addr != NULL) {
+            config.server_name = g_strdup(addr->host);
+        }
+    }
 
     config.gid_idx = 0;
     config.ib_port = 2;

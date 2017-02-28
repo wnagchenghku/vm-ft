@@ -36,6 +36,8 @@
 #include "exec/address-spaces.h"
 #include "migration/colo.h"
 
+#include "checkpoint.h"
+
 #define MAX_THROTTLE  (32 << 20)      /* Migration transfer speed throttling */
 
 /* Amount of time to allocate to each "chunk" of bandwidth-throttled
@@ -1077,6 +1079,7 @@ void qmp_migrate(const char *uri, bool has_blk, bool blk,
     s = migrate_init(&params);
 
     if (strstart(uri, "tcp:", &p)) {
+        mc_host_port = p;
         tcp_start_outgoing_migration(s, p, &local_err);
 #ifdef CONFIG_RDMA
     } else if (strstart(uri, "rdma:", &p)) {
