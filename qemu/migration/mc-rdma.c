@@ -1298,7 +1298,7 @@ static int mc_rdma_write(MC_RDMAContext *rdma,
     return 0;
 }
 
-static void *mc_rdma_data_init()
+static void *mc_rdma_data_init(void)
 {
     MC_RDMAContext *rdma = NULL;
 
