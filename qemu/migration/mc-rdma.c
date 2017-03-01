@@ -534,10 +534,6 @@ static int mc_rdma_reg_control(MC_RDMAContext *rdma, int idx)
         return 0;
     }
 
-    rdma->colo_control_wr_data.control_mr = ibv_reg_mr(rdma->pd,
-            rdma->colo_control_wr_data.control, MC_RDMA_CONTROL_MAX_BUFFER,
-            IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
-
     error_report("mc_rdma_reg_control failed");
     return -1;
 }
@@ -2406,6 +2402,10 @@ int mc_start_incoming_migration(void)
         }
     }
 
+    rdma->colo_control_wr_data.control_mr = ibv_reg_mr(rdma->pd,
+            rdma->colo_control_wr_data.control, MC_RDMA_CONTROL_MAX_BUFFER,
+            IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
+
     if (connect_qp())
         error_report("failed to connect QPs\n");
 
@@ -2451,6 +2451,10 @@ int mc_start_outgoing_migration(void)
         if (ret) {
         }
     }
+
+    rdma->colo_control_wr_data.control_mr = ibv_reg_mr(rdma->pd,
+            rdma->colo_control_wr_data.control, MC_RDMA_CONTROL_MAX_BUFFER,
+            IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
 
     if (connect_qp())
         error_report("failed to connect QPs\n");
