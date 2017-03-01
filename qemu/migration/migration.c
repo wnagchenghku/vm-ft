@@ -392,6 +392,7 @@ static void process_incoming_migration_co(void *opaque)
     migrate_set_state(&mis->state, MIGRATION_STATUS_NONE,
                       MIGRATION_STATUS_ACTIVE);
     mc_start_incoming_migration();
+
     ret = qemu_loadvm_state(f);
 
     ps = postcopy_state_get();
@@ -1705,6 +1706,8 @@ static void *migration_thread(void *opaque)
 
     rcu_register_thread();
 
+    mc_start_outgoing_migration();
+
     qemu_savevm_state_header(s->to_dst_file);
 
     if (migrate_postcopy_ram()) {
@@ -1722,7 +1725,6 @@ static void *migration_thread(void *opaque)
         qemu_savevm_send_postcopy_advise(s->to_dst_file);
     }
 
-    mc_start_outgoing_migration();
     qemu_savevm_state_begin(s->to_dst_file, &s->params);
 
     s->setup_time = qemu_clock_get_ms(QEMU_CLOCK_HOST) - setup_start;

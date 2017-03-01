@@ -169,6 +169,7 @@ typedef struct MC_RDMAContext {
     int sock;
 
     MC_RDMAWorkRequestData wr_data[MC_RDMA_WRID_MAX];
+    MC_RDMAWorkRequestData colo_control_wr_data;
 
     int control_ready_expected;
 
@@ -532,6 +533,11 @@ static int mc_rdma_reg_control(MC_RDMAContext *rdma, int idx)
         rdma->total_registrations++;
         return 0;
     }
+
+    rdma->colo_control_wr_data.control_mr = ibv_reg_mr(rdma->pd,
+            rdma->colo_control_wr_data.control, MC_RDMA_CONTROL_MAX_BUFFER,
+            IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
+
     error_report("mc_rdma_reg_control failed");
     return -1;
 }
@@ -1728,7 +1734,7 @@ out:
     return ret;
 }
 
-int mc_rdma_load_hook(QEMUFile *f, uint64_t flags, void *data)
+int mc_rdma_load_hook(QEMUFile *f, void *opaque, uint64_t flags, void *data)
 {
     switch (flags) {
     case RAM_CONTROL_HOOK:
@@ -1740,7 +1746,7 @@ int mc_rdma_load_hook(QEMUFile *f, uint64_t flags, void *data)
     }
 }
 
-int mc_rdma_registration_start(QEMUFile *f, uint64_t flags, void *data)
+int mc_rdma_registration_start(QEMUFile *f, void *opaque, uint64_t flags, void *data)
 {
     qemu_put_be64(f, RAM_SAVE_FLAG_HOOK);
     qemu_fflush(f);
@@ -1749,7 +1755,7 @@ int mc_rdma_registration_start(QEMUFile *f, uint64_t flags, void *data)
 }
 
 // qemu_fflush -> put_buffer
-int mc_rdma_registration_stop(QEMUFile *f, uint64_t flags, void *data)
+int mc_rdma_registration_stop(QEMUFile *f, void *opaque, uint64_t flags, void *data)
 {
     Error *local_err = NULL, **errp = &local_err;
 
@@ -2270,6 +2276,106 @@ static int connect_qp(void)
 
 connect_qp_exit:
     return rc;
+}
+
+int mc_rdma_put_colo_control_buffer(void *buf, uint32_t size)
+{
+    int ret = 0;
+    MC_RDMAControlHeader head;
+    head.len = size;
+    MC_RDMAWorkRequestData *wr = &rdma->colo_control_wr_data;
+    struct ibv_send_wr *bad_wr;
+    struct ibv_sge sge = {
+                           .addr = (uintptr_t)(wr->control),
+                           .length = head.len + sizeof(MC_RDMAControlHeader),
+                           .lkey = wr->control_mr->lkey,
+                         };
+    struct ibv_send_wr send_wr = {
+                                   .opcode = IBV_WR_SEND,
+                                   .send_flags = IBV_SEND_SIGNALED,
+                                   .sg_list = &sge,
+                                   .num_sge = 1,
+                                };
+
+    memcpy(wr->control, &head, sizeof(MC_RDMAControlHeader));
+    mc_control_to_network((void *) wr->control);
+
+    memcpy(wr->control + sizeof(MC_RDMAControlHeader), buf, head.len);
+
+
+    ret = ibv_post_send(rdma->qp, &send_wr, &bad_wr);
+
+    if (ret > 0) {
+        error_report("Failed to use post IB SEND for colo control");
+        return -ret;
+    }
+
+    int poll_result;
+    struct ibv_wc wc;
+
+    do {
+        poll_result = ibv_poll_cq(rdma->cq, 1, &wc);
+    } while (poll_result == 0);
+
+    if (wc.status != IBV_WC_SUCCESS) {
+        fprintf(stderr, "ibv_poll_cq wc.status=%d %s!\n",
+                        wc.status, ibv_wc_status_str(wc.status));
+
+        return -1;
+    }
+
+    return 0;
+}
+
+ssize_t mc_rdma_get_colo_control_buffer(void *buf, size_t size)
+{
+    MC_RDMAControlHeader head;
+    struct ibv_recv_wr *bad_wr;
+    struct ibv_sge sge = {
+                            .addr = (uintptr_t)(rdma->colo_control_wr_data.control),
+                            .length = MC_RDMA_CONTROL_MAX_BUFFER,
+                            .lkey = rdma->colo_control_wr_data.control_mr->lkey,
+                         };
+
+    struct ibv_recv_wr recv_wr = {
+                                    .sg_list = &sge,
+                                    .num_sge = 1,
+                                 };
+
+
+    if (ibv_post_recv(rdma->qp, &recv_wr, &bad_wr)) {
+        return -1;
+    }
+
+    int poll_result;
+    struct ibv_wc wc;
+
+    do {
+        poll_result = ibv_poll_cq(rdma->cq, 1, &wc);
+    } while (poll_result == 0);
+
+    if (wc.status != IBV_WC_SUCCESS) {
+        fprintf(stderr, "ibv_poll_cq wc.status=%d %s!\n",
+                        wc.status, ibv_wc_status_str(wc.status));
+
+        return -1;
+    }
+
+    mc_network_to_control((void *) rdma->colo_control_wr_data.control);
+    memcpy(&head, rdma->colo_control_wr_data.control, sizeof(MC_RDMAControlHeader));
+
+    rdma->colo_control_wr_data.control_len = head.len;
+    rdma->colo_control_wr_data.control_curr =
+        rdma->colo_control_wr_data.control + sizeof(MC_RDMAControlHeader);
+
+    size_t len = 0;
+    if (rdma->colo_control_wr_data.control_len) {
+
+        len = rdma->colo_control_wr_data.control_len;
+        memcpy(buf, rdma->colo_control_wr_data.control_curr, len);
+    }
+
+    return len;
 }
 
 char mc_host_port[65];
