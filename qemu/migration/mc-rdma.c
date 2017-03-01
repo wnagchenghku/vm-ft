@@ -183,6 +183,8 @@ typedef struct MC_RDMAContext {
 
     bool pin_all;
 
+    bool connected;
+
     struct ibv_qp *qp;
     struct ibv_pd *pd;
     struct ibv_cq *cq;
@@ -1298,6 +1300,18 @@ static int mc_rdma_write(MC_RDMAContext *rdma,
     return 0;
 }
 
+static int mc_rdma_dest_init(MC_RDMAContext *rdma)
+{
+    int idx;
+
+    for (idx = 0; idx < MC_RDMA_WRID_MAX; idx++) {
+        rdma->wr_data[idx].control_len = 0;
+        rdma->wr_data[idx].control_curr = NULL;
+    }
+
+    return 0;
+}
+
 static void *mc_rdma_data_init(void)
 {
     MC_RDMAContext *rdma = NULL;
@@ -1968,7 +1982,6 @@ static int resources_create(void)
             rc = -1;
             goto resources_create_exit;
         }
-        rdma->control_ready_expected = 1;
     }
     else
     {
@@ -2262,9 +2275,14 @@ connect_qp_exit:
 char mc_host_port[65];
 int mc_start_incoming_migration(void)
 {
-    int ret = -EINVAL;
+    int ret;
 
     rdma = mc_rdma_data_init();
+
+    if (rdma == NULL) {
+    }
+
+    ret = mc_rdma_dest_init(rdma);
 
     config.gid_idx = 0;
     config.ib_port = 2;
@@ -2285,7 +2303,11 @@ int mc_start_incoming_migration(void)
     if (connect_qp())
         error_report("failed to connect QPs\n");
 
+    rdma->connected = true;
+
     ret = mc_rdma_post_recv_control(rdma, MC_RDMA_WRID_READY);
+
+    rdma->migration_started_on_destination = 1;
 
     return 0;
 }
@@ -2327,7 +2349,11 @@ int mc_start_outgoing_migration(void)
     if (connect_qp())
         error_report("failed to connect QPs\n");
 
+    rdma->connected = true;
+
     ret = mc_rdma_post_recv_control(rdma, MC_RDMA_WRID_READY);
 
+    rdma->control_ready_expected = 1;
+    rdma->nb_sent = 0;
     return 0;
 }
