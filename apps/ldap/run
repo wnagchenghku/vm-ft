@@ -1,0 +1,18 @@
+#!/bin/bash
+sudo apt-get install build-essential golang libldap2-dev
+export GOPATH=~/go
+export PATH=$GOPATH/bin:PATH
+
+export GODEBUG=cgocheck=0
+go get github.com/hamano/lb
+
+#lb setup base -b 'dc=example,dc=com' ldap://ip_address/
+#lb setup person --cn 'test' ldap://ip_address/
+#lb setup person --cn 'user%d' --last 10 ldap://ip_address/
+#lb add -c 10 -n 1000 ldap://ip_address/
+#lb delete -c 1 -n 1000 ldap://ip_address/
+#lb bind -c 10 -n 1000 -D cn=user,dc=example,dc=com -w secret ldap://#localhost/
+#lb bind -D 'cn=user%d,dc=example,dc=com' -w secret --last 10 ldap://#localhost/
+#lb search -c 10 -n 1000 -a "(cn=user%d)" --last 1000 -s sub ldap://#localhost/
+#lb modify -c 10 -n 1000 --attr sn --value modified ldap://localhost/
+#refer https://github.com/hamano/lb
