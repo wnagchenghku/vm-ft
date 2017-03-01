@@ -43,8 +43,6 @@
 #include "qemu/rcu_queue.h"
 #include "migration/colo.h"
 
-#include "mc-rdma.h"
-
 #ifdef DEBUG_MIGRATION_RAM
 #define DPRINTF(fmt, ...) \
     do { fprintf(stdout, "migration_ram: " fmt, ## __VA_ARGS__); } while (0)
@@ -2013,10 +2011,8 @@ static int ram_save_setup(QEMUFile *f, void *opaque)
 
     rcu_read_unlock();
 
-    //ram_control_before_iterate(f, RAM_CONTROL_SETUP);
-    mc_rdma_registration_start(f, RAM_CONTROL_SETUP, NULL);
-    //ram_control_after_iterate(f, RAM_CONTROL_SETUP);
-    mc_rdma_registration_stop(f, RAM_CONTROL_SETUP, NULL);
+    ram_control_before_iterate(f, RAM_CONTROL_SETUP);
+    ram_control_after_iterate(f, RAM_CONTROL_SETUP);
 
     qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
 
@@ -2615,8 +2611,7 @@ static int ram_load(QEMUFile *f, void *opaque, int version_id)
             break;
         default:
             if (flags & RAM_SAVE_FLAG_HOOK) {
-                //ram_control_load_hook(f, RAM_CONTROL_HOOK, NULL);
-                mc_rdma_load_hook(f, RAM_CONTROL_HOOK, NULL);
+                ram_control_load_hook(f, RAM_CONTROL_HOOK, NULL);
             } else {
                 error_report("Unknown combination of migration flags: %#x",
                              flags);
