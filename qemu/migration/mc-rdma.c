@@ -169,6 +169,7 @@ typedef struct MC_RDMAContext {
     int sock;
 
     MC_RDMAWorkRequestData wr_data[MC_RDMA_WRID_MAX];
+    MC_RDMAWorkRequestData colo_ctrl_wr_data;
 
     int control_ready_expected;
 
@@ -188,6 +189,9 @@ typedef struct MC_RDMAContext {
     struct ibv_qp *qp;
     struct ibv_pd *pd;
     struct ibv_cq *cq;
+
+    struct ibv_qp *colo_ctrl_qp;
+    struct ibv_cq *colo_ctrl_cq;
 
     int error_state;
     int error_reported;
@@ -532,6 +536,7 @@ static int mc_rdma_reg_control(MC_RDMAContext *rdma, int idx)
         rdma->total_registrations++;
         return 0;
     }
+
     error_report("mc_rdma_reg_control failed");
     return -1;
 }
@@ -1433,12 +1438,13 @@ static int mc_rdma_drain_cq(MC_RDMAContext *rdma)
     return 0;
 }
 
-static size_t mc_rdma_save_page(ram_addr_t block_offset, ram_addr_t offset,
+size_t mc_rdma_save_page(QEMUFile *f, void *opaque,
+                                  ram_addr_t block_offset, ram_addr_t offset,
                                   size_t size, uint64_t *bytes_sent)
 {
     int ret;
 
-    //qemu_fflush(f);
+    qemu_fflush(f);
 
     if (size > 0) {
         /*
@@ -1728,7 +1734,7 @@ out:
     return ret;
 }
 
-int mc_rdma_load_hook(QEMUFile *f, uint64_t flags, void *data)
+int mc_rdma_load_hook(QEMUFile *f, void *opaque, uint64_t flags, void *data)
 {
     switch (flags) {
     case RAM_CONTROL_HOOK:
@@ -1740,7 +1746,7 @@ int mc_rdma_load_hook(QEMUFile *f, uint64_t flags, void *data)
     }
 }
 
-int mc_rdma_registration_start(QEMUFile *f, uint64_t flags, void *data)
+int mc_rdma_registration_start(QEMUFile *f, void *opaque, uint64_t flags, void *data)
 {
     qemu_put_be64(f, RAM_SAVE_FLAG_HOOK);
     qemu_fflush(f);
@@ -1749,7 +1755,7 @@ int mc_rdma_registration_start(QEMUFile *f, uint64_t flags, void *data)
 }
 
 // qemu_fflush -> put_buffer
-int mc_rdma_registration_stop(QEMUFile *f, uint64_t flags, void *data)
+int mc_rdma_registration_stop(QEMUFile *f, void *opaque, uint64_t flags, void *data)
 {
     Error *local_err = NULL, **errp = &local_err;
 
@@ -2087,6 +2093,32 @@ static int resources_create(void)
     }
     fprintf(stdout, "QP was created, QP number=0x%x\n", rdma->qp->qp_num);
 
+    rdma->colo_ctrl_cq = ibv_create_cq(rdma->ib_ctx, 1, NULL, NULL, 0);
+    if (!rdma->colo_ctrl_cq)
+    {
+        fprintf (stderr, "failed to create COLO CTRL CQ with %u entries\n", 1);
+        rc = 1;
+        goto resources_create_exit;
+    }
+
+    /* create the COLO CTRL Queue Pair */
+    memset(&qp_init_attr, 0, sizeof (qp_init_attr));
+    qp_init_attr.qp_type = IBV_QPT_RC;
+    qp_init_attr.send_cq = rdma->colo_ctrl_cq;
+    qp_init_attr.recv_cq = rdma->colo_ctrl_cq;
+    qp_init_attr.cap.max_send_wr = 1;
+    qp_init_attr.cap.max_recv_wr = 1;
+    qp_init_attr.cap.max_send_sge = 1;
+    qp_init_attr.cap.max_recv_sge = 1;
+    rdma->colo_ctrl_qp = ibv_create_qp(rdma->pd, &qp_init_attr);
+    if (!rdma->colo_ctrl_qp)
+    {
+        fprintf(stderr, "failed to create COLO CTRL QP\n");
+        rc = 1;
+        goto resources_create_exit;
+    }
+    fprintf(stdout, "COLO CTRL QP was created, QP number=0x%x\n", rdma->colo_ctrl_qp->qp_num);
+
 resources_create_exit:
     if (rc)
     {
@@ -2100,6 +2132,16 @@ resources_create_exit:
         {
             ibv_destroy_cq(rdma->cq);
             rdma->cq = NULL;
+        }
+        if (rdma->colo_ctrl_qp)
+        {
+            ibv_destroy_qp(rdma->colo_ctrl_qp);
+            rdma->colo_ctrl_qp = NULL;
+        }
+        if (rdma->colo_ctrl_cq)
+        {
+            ibv_destroy_cq(rdma->colo_ctrl_cq);
+            rdma->colo_ctrl_cq = NULL;
         }
         if (rdma->pd)
         {
@@ -2268,8 +2310,155 @@ static int connect_qp(void)
     }
     fprintf(stdout, "QP state was change to RTS\n");
 
+    local_con_data.qp_num = htonl(rdma->colo_ctrl_qp->qp_num);
+    local_con_data.lid = htons(rdma->port_attr.lid);
+    memcpy(local_con_data.gid, &my_gid, 16);
+    fprintf(stdout, "\nLocal LID = 0x%x\n", rdma->port_attr.lid);
+    if (sock_sync_data(rdma->sock, sizeof (struct cm_con_data_t), (char*)&local_con_data, (char*)&tmp_con_data) < 0)
+    {
+        fprintf(stderr, "failed to exchange connection data between sides\n");
+        rc = 1;
+        goto connect_qp_exit;
+    }
+    remote_con_data.qp_num = ntohl(tmp_con_data.qp_num);
+    remote_con_data.lid = ntohs(tmp_con_data.lid);
+    memcpy(remote_con_data.gid, tmp_con_data.gid, 16);
+
+    rdma->remote_props = remote_con_data;
+    fprintf(stdout, "Remote COLO CTRL QP number = 0x%x\n", remote_con_data.qp_num);
+    fprintf(stdout, "Remote LID = 0x%x\n", remote_con_data.lid);
+    if (config.gid_idx >= 0)
+    {
+        uint8_t *p = remote_con_data.gid;
+        fprintf (stdout, "Remote GID = %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n",
+                p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9],
+                p[10], p[11], p[12], p[13], p[14], p[15]);
+    }
+    /* modify the QP to init */
+    rc = modify_qp_to_init(rdma->colo_ctrl_qp);
+    if (rc)
+    {
+        fprintf(stderr, "change COLO CTRL QP state to INIT failed\n");
+        goto connect_qp_exit;
+    }
+
+    rc = modify_qp_to_rtr(rdma->colo_ctrl_qp, remote_con_data.qp_num, remote_con_data.lid, remote_con_data.gid);
+    if (rc)
+    {
+        fprintf(stderr, "failed to modify COLO CTRL QP state to RTR\n");
+        goto connect_qp_exit;
+    }
+    fprintf(stderr, "Modified COLO CTRL QP state to RTR\n");
+    rc = modify_qp_to_rts(rdma->colo_ctrl_qp);
+    if (rc)
+    {
+        fprintf(stderr, "failed to modify COLO CTRL QP state to RTR\n");
+        goto connect_qp_exit;
+    }
+    fprintf(stdout, "COLO CTRL QP state was change to RTS\n");
+
 connect_qp_exit:
     return rc;
+}
+
+int mc_rdma_put_colo_ctrl_buffer(void *buf, uint32_t size)
+{
+    int ret = 0;
+    MC_RDMAControlHeader head;
+    head.len = size;
+    MC_RDMAWorkRequestData *wr = &rdma->colo_ctrl_wr_data;
+    struct ibv_send_wr *bad_wr;
+    struct ibv_sge sge = {
+                           .addr = (uintptr_t)(wr->control),
+                           .length = head.len + sizeof(MC_RDMAControlHeader),
+                           .lkey = wr->control_mr->lkey,
+                         };
+    struct ibv_send_wr send_wr = {
+                                   .opcode = IBV_WR_SEND,
+                                   .send_flags = IBV_SEND_SIGNALED,
+                                   .sg_list = &sge,
+                                   .num_sge = 1,
+                                };
+
+    memcpy(wr->control, &head, sizeof(MC_RDMAControlHeader));
+    mc_control_to_network((void *) wr->control);
+
+    memcpy(wr->control + sizeof(MC_RDMAControlHeader), buf, head.len);
+
+
+    ret = ibv_post_send(rdma->colo_ctrl_qp, &send_wr, &bad_wr);
+
+    if (ret > 0) {
+        error_report("Failed to use post IB SEND for colo control");
+        return -ret;
+    }
+
+    int poll_result;
+    struct ibv_wc wc;
+
+    do {
+        poll_result = ibv_poll_cq(rdma->colo_ctrl_cq, 1, &wc);
+    } while (poll_result == 0);
+
+    if (wc.status != IBV_WC_SUCCESS) {
+        fprintf(stderr, "ibv_poll_cq wc.status=%d %s!\n",
+                        wc.status, ibv_wc_status_str(wc.status));
+
+        return -1;
+    }
+
+    return 0;
+}
+
+ssize_t mc_rdma_get_colo_ctrl_buffer(void *buf, size_t size)
+{
+    MC_RDMAControlHeader head;
+    struct ibv_recv_wr *bad_wr;
+    struct ibv_sge sge = {
+                            .addr = (uintptr_t)(rdma->colo_ctrl_wr_data.control),
+                            .length = MC_RDMA_CONTROL_MAX_BUFFER,
+                            .lkey = rdma->colo_ctrl_wr_data.control_mr->lkey,
+                         };
+
+    struct ibv_recv_wr recv_wr = {
+                                    .sg_list = &sge,
+                                    .num_sge = 1,
+                                 };
+
+
+    if (ibv_post_recv(rdma->colo_ctrl_qp, &recv_wr, &bad_wr)) {
+        return -1;
+    }
+
+    int poll_result;
+    struct ibv_wc wc;
+
+    do {
+        poll_result = ibv_poll_cq(rdma->colo_ctrl_cq, 1, &wc);
+    } while (poll_result == 0);
+
+    if (wc.status != IBV_WC_SUCCESS) {
+        fprintf(stderr, "ibv_poll_cq wc.status=%d %s!\n",
+                        wc.status, ibv_wc_status_str(wc.status));
+
+        return -1;
+    }
+
+    mc_network_to_control((void *) rdma->colo_ctrl_wr_data.control);
+    memcpy(&head, rdma->colo_ctrl_wr_data.control, sizeof(MC_RDMAControlHeader));
+
+    rdma->colo_ctrl_wr_data.control_len = head.len;
+    rdma->colo_ctrl_wr_data.control_curr =
+        rdma->colo_ctrl_wr_data.control + sizeof(MC_RDMAControlHeader);
+
+    size_t len = 0;
+    if (rdma->colo_ctrl_wr_data.control_len) {
+
+        len = rdma->colo_ctrl_wr_data.control_len;
+        memcpy(buf, rdma->colo_ctrl_wr_data.control_curr, len);
+    }
+
+    return len;
 }
 
 char mc_host_port[65];
@@ -2299,6 +2488,10 @@ int mc_start_incoming_migration(void)
             error_report("rdma: error registering %d control", idx);
         }
     }
+
+    rdma->colo_ctrl_wr_data.control_mr = ibv_reg_mr(rdma->pd,
+            rdma->colo_ctrl_wr_data.control, MC_RDMA_CONTROL_MAX_BUFFER,
+            IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
 
     if (connect_qp())
         error_report("failed to connect QPs\n");
@@ -2345,6 +2538,10 @@ int mc_start_outgoing_migration(void)
         if (ret) {
         }
     }
+
+    rdma->colo_ctrl_wr_data.control_mr = ibv_reg_mr(rdma->pd,
+            rdma->colo_ctrl_wr_data.control, MC_RDMA_CONTROL_MAX_BUFFER,
+            IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
 
     if (connect_qp())
         error_report("failed to connect QPs\n");
