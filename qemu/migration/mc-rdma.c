@@ -1734,9 +1734,36 @@ out:
     return ret;
 }
 
+static int mc_block_notification_handle(const char *name)
+{
+    int curr;
+    int found = -1;
+
+    /* Find the matching RAMBlock in our local list */
+    for (curr = 0; curr < rdma->local_ram_blocks.nb_blocks; curr++) {
+        if (!strcmp(rdma->local_ram_blocks.block[curr].block_name, name)) {
+            found = curr;
+            break;
+        }
+    }
+
+    if (found == -1) {
+        error_report("RAMBlock '%s' not found on destination", name);
+        return -ENOENT;
+    }
+
+    rdma->local_ram_blocks.block[curr].src_index = rdma->next_src_index;
+    rdma->next_src_index++;
+
+    return 0;
+}
+
 int mc_rdma_load_hook(QEMUFile *f, void *opaque, uint64_t flags, void *data)
 {
     switch (flags) {
+    case RAM_CONTROL_BLOCK_REG:
+        return mc_block_notification_handle(data);
+
     case RAM_CONTROL_HOOK:
         return mc_rdma_registration_handle(f);
 

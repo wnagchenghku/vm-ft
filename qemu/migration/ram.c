@@ -781,8 +781,8 @@ static int ram_save_page(QEMUFile *f, PageSearchStatus *pss,
     bytes_xmit = 0;
     //ret = ram_control_save_page(f, block->offset,
     //                       offset, TARGET_PAGE_SIZE, &bytes_xmit);
-
-    ret = mc_ram_control_save_page(f, block->offset, offset, TARGET_PAGE_SIZE, &bytes_xmit);
+    if (in_colo_state)
+        ret = mc_ram_control_save_page(f, block->offset, offset, TARGET_PAGE_SIZE, &bytes_xmit);
 
     if (bytes_xmit) {
         *bytes_transferred += bytes_xmit;
@@ -967,8 +967,8 @@ static int ram_save_compressed_page(QEMUFile *f, PageSearchStatus *pss,
     bytes_xmit = 0;
     //ret = ram_control_save_page(f, block->offset,
     //                            offset, TARGET_PAGE_SIZE, &bytes_xmit);
-
-    ret = mc_ram_control_save_page(f, block->offset, offset, TARGET_PAGE_SIZE, &bytes_xmit);
+    if (in_colo_state)
+        ret = mc_ram_control_save_page(f, block->offset, offset, TARGET_PAGE_SIZE, &bytes_xmit);
 
     if (bytes_xmit) {
         *bytes_transferred += bytes_xmit;
@@ -2042,8 +2042,8 @@ static int ram_save_iterate(QEMUFile *f, void *opaque)
     /* Read version before ram_list.blocks */
     smp_rmb();
 
-    //ram_control_before_iterate(f, RAM_CONTROL_ROUND);
-    mc_ram_control_before_iterate(f, RAM_CONTROL_ROUND);
+    ram_control_before_iterate(f, RAM_CONTROL_ROUND);
+    //mc_ram_control_before_iterate(f, RAM_CONTROL_ROUND);
 
     t0 = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
     i = 0;
@@ -2080,8 +2080,8 @@ static int ram_save_iterate(QEMUFile *f, void *opaque)
      * Must occur before EOS (or any QEMUFile operation)
      * because of RDMA protocol.
      */
-    //ram_control_after_iterate(f, RAM_CONTROL_ROUND);
-    mc_ram_control_after_iterate(f, RAM_CONTROL_ROUND);
+    ram_control_after_iterate(f, RAM_CONTROL_ROUND);
+    //mc_ram_control_after_iterate(f, RAM_CONTROL_ROUND);
 
     qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
     bytes_transferred += 8;
@@ -2579,7 +2579,9 @@ static int ram_load(QEMUFile *f, void *opaque, int version_id)
                             error_report_err(local_err);
                         }
                     }
-                    ram_control_load_hook(f, RAM_CONTROL_BLOCK_REG,
+                    //ram_control_load_hook(f, RAM_CONTROL_BLOCK_REG,
+                    //                      block->idstr);
+                    mc_ram_control_load_hook(f, RAM_CONTROL_BLOCK_REG,
                                           block->idstr);
                 } else {
                     error_report("Unknown ramblock \"%s\", cannot "

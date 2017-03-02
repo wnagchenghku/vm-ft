@@ -28,6 +28,8 @@
 
 static bool vmstate_loading;
 
+bool in_colo_state = false;
+
 /* colo buffer */
 #define COLO_BUFFER_BASE_SIZE (4 * 1024 * 1024)
 
@@ -322,7 +324,9 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     * TODO: We may need a timeout mechanism to prevent COLO process
     * to be blocked here.
     */
+    in_colo_state = true;
     qemu_savevm_live_state(s->to_dst_file);
+    in_colo_state = false;
     /* Note: device state is saved into buffer */
     ret = qemu_save_device_state(trans);
     qemu_mutex_unlock_iothread();
