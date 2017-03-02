@@ -21,5 +21,6 @@ ssize_t mc_rdma_get_colo_ctrl_buffer(void *buf, size_t size);
 int mc_rdma_load_hook(QEMUFile *f, void *opaque, uint64_t flags, void *data);
 int mc_rdma_registration_start(QEMUFile *f, void *opaque, uint64_t flags, void *data);
 int mc_rdma_registration_stop(QEMUFile *f, void *opaque, uint64_t flags, void *data);
+size_t mc_rdma_save_page(QEMUFile *f, void *opaque, ram_addr_t block_offset, ram_addr_t offset, size_t size, uint64_t *bytes_sent);
 
 #endif /* QEMU_MC_RDMA_H */

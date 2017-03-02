@@ -1438,12 +1438,13 @@ static int mc_rdma_drain_cq(MC_RDMAContext *rdma)
     return 0;
 }
 
-static size_t mc_rdma_save_page(ram_addr_t block_offset, ram_addr_t offset,
+size_t mc_rdma_save_page(QEMUFile *f, void *opaque,
+                                  ram_addr_t block_offset, ram_addr_t offset,
                                   size_t size, uint64_t *bytes_sent)
 {
     int ret;
 
-    //qemu_fflush(f);
+    qemu_fflush(f);
 
     if (size > 0) {
         /*
@@ -2100,7 +2101,7 @@ static int resources_create(void)
         goto resources_create_exit;
     }
 
-    /* create the Queue Pair */
+    /* create the COLO CTRL Queue Pair */
     memset(&qp_init_attr, 0, sizeof (qp_init_attr));
     qp_init_attr.qp_type = IBV_QPT_RC;
     qp_init_attr.send_cq = rdma->colo_ctrl_cq;
