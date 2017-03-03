@@ -7,7 +7,7 @@ RDMA Paxos
 ```
 # export VMFT_ROOT=<absolute path of vm-ft>
 # cd rdma-paxos/target
-# apt-get install libconfig-dev libdb5.3-dev libev-dev 
+# install libconfig libdb libev 
 # make
 ```
 Qemu colo

@@ -3849,8 +3849,7 @@ int main(int argc, char **argv, char **envp)
             case QEMU_OPTION_name:
                 opts = qemu_opts_parse_noisily(qemu_find_opts("name"),
                                                optarg, true);
-                
-                int is_primary = (optarg == "primary") ? 1 : 0;
+                int is_primary = (strcmp(optarg, "primary") == 0) ? 1 : 0;
                 char* proxy_log_dir = NULL;
                 proxy_init(proxy_log_dir, is_primary);
                 
