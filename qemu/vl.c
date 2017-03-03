@@ -2981,7 +2981,6 @@ int main(int argc, char **argv, char **envp)
 {
     char* proxy_log_dir = NULL;
     proxy_init(proxy_log_dir);
-    sleep(1);
     
     int i;
     int snapshot, linux_boot;

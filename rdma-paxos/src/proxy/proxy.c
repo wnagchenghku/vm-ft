@@ -261,7 +261,7 @@ static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,vo
     return;
 }
 
-const char* config_path = "../../rdma-paxos/target/nodes.local.cfg";
+const char* config_path = "../rdma-paxos/target/nodes.local.cfg";
 
 proxy_node* proxy_init(const char* proxy_log_path)
 {
@@ -273,6 +273,8 @@ proxy_node* proxy_init(const char* proxy_log_path)
     }
 
     memset(proxy,0,sizeof(proxy_node));
+
+    dare_main(proxy, config_path);
     
     if(proxy_read_config(proxy,config_path)){
         err_log("PROXY : Configuration File Reading Error.\n");
@@ -319,8 +321,6 @@ proxy_node* proxy_init(const char* proxy_log_path)
     if(pthread_spin_init(&tailq_lock, PTHREAD_PROCESS_PRIVATE)){
         err_log("PROXY: Cannot init the lock\n");
     }
-
-    dare_main(proxy, config_path);
 
     return proxy;
 
