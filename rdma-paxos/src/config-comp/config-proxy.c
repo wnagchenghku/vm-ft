@@ -28,23 +28,6 @@ int proxy_read_config(struct proxy_node_t* cur_node,const char* config_path){
     }
     cur_node->db_name[db_name_len] = '\0';
 
-
-    const char* peer_ipaddr=NULL;
-    int peer_port=-1;
-    if(!config_lookup_string(&config_file,"ip_address",&peer_ipaddr)){
-        goto goto_config_error;
-    }
-    if(!config_lookup_int(&config_file,"port",&peer_port)){
-        goto goto_config_error;
-    }
-
-    cur_node->sys_addr.s_addr.sin_port = htons(peer_port);
-    cur_node->sys_addr.s_addr.sin_family = AF_INET;
-    inet_pton(AF_INET,peer_ipaddr,&cur_node->sys_addr.s_addr.sin_addr);
-
-    cur_node->sys_addr.s_sock_len = sizeof(cur_node->sys_addr.s_addr);
-
-
     config_destroy(&config_file);
     return 0;
 

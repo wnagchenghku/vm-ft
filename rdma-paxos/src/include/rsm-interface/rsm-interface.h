@@ -9,7 +9,7 @@ struct proxy_node_t;
 extern "C" {
 #endif
 
-	struct proxy_node_t* proxy_init(const char* config_path, const char* proxy_log_path);
+	struct proxy_node_t* proxy_init(const char* proxy_log_path);
 	void proxy_on_mirror(uint8_t *buf, int len);
 	int is_leader(void);
 	

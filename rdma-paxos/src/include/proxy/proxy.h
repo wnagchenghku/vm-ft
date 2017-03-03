@@ -23,11 +23,6 @@ typedef struct list_entry_t list_entry_t;
 
 LIST_HEAD(, list_entry_t) listhead;
 
-typedef struct proxy_address_t{
-    struct sockaddr_in s_addr;
-    size_t s_sock_len;
-}proxy_address;
-
 typedef struct socket_pair_t{
     int clt_id;
     uint64_t req_id;
@@ -38,8 +33,6 @@ typedef struct socket_pair_t{
 }socket_pair;
 
 typedef struct proxy_node_t{
-	proxy_address sys_addr;
-
     socket_pair* leader_hash_map;
     socket_pair* follower_hash_map;
     uint64_t highest_rec;

@@ -259,7 +259,9 @@ static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,vo
     return;
 }
 
-proxy_node* proxy_init(const char* config_path,const char* proxy_log_path)
+const char* config_path = "./nodes.local.cfg";
+
+proxy_node* proxy_init(const char* proxy_log_path)
 {
     proxy = (proxy_node*)malloc(sizeof(proxy_node));
 
