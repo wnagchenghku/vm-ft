@@ -779,10 +779,12 @@ static int ram_save_page(QEMUFile *f, PageSearchStatus *pss,
 
     /* In doubt sent page as normal */
     bytes_xmit = 0;
-    //ret = ram_control_save_page(f, block->offset,
-    //                       offset, TARGET_PAGE_SIZE, &bytes_xmit);
-    if (in_colo_state)
-        ret = mc_ram_control_save_page(f, block->offset, offset, TARGET_PAGE_SIZE, &bytes_xmit);
+    ret = ram_control_save_page(f, block->offset,
+                           offset, TARGET_PAGE_SIZE, &bytes_xmit);
+    if (ram_migration_in_colo_state) {
+        ret = mc_ram_control_save_page(f, block->offset,
+                                    offset, TARGET_PAGE_SIZE, &bytes_xmit);
+    }
 
     if (bytes_xmit) {
         *bytes_transferred += bytes_xmit;
@@ -965,10 +967,12 @@ static int ram_save_compressed_page(QEMUFile *f, PageSearchStatus *pss,
     p = block->host + offset;
 
     bytes_xmit = 0;
-    //ret = ram_control_save_page(f, block->offset,
-    //                            offset, TARGET_PAGE_SIZE, &bytes_xmit);
-    if (in_colo_state)
-        ret = mc_ram_control_save_page(f, block->offset, offset, TARGET_PAGE_SIZE, &bytes_xmit);
+    ret = ram_control_save_page(f, block->offset,
+                                offset, TARGET_PAGE_SIZE, &bytes_xmit);
+    if (ram_migration_in_colo_state) {
+        ret = mc_ram_control_save_page(f, block->offset,
+                                    offset, TARGET_PAGE_SIZE, &bytes_xmit);
+    }
 
     if (bytes_xmit) {
         *bytes_transferred += bytes_xmit;
@@ -2017,9 +2021,9 @@ static int ram_save_setup(QEMUFile *f, void *opaque)
 
     rcu_read_unlock();
 
-    //ram_control_before_iterate(f, RAM_CONTROL_SETUP);
+    // ram_control_before_iterate(f, RAM_CONTROL_SETUP);
     mc_ram_control_before_iterate(f, RAM_CONTROL_SETUP);
-    //ram_control_after_iterate(f, RAM_CONTROL_SETUP);
+    // ram_control_after_iterate(f, RAM_CONTROL_SETUP);
     mc_ram_control_after_iterate(f, RAM_CONTROL_SETUP);
 
     qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
@@ -2579,10 +2583,10 @@ static int ram_load(QEMUFile *f, void *opaque, int version_id)
                             error_report_err(local_err);
                         }
                     }
-                    //ram_control_load_hook(f, RAM_CONTROL_BLOCK_REG,
-                    //                      block->idstr);
+                    // ram_control_load_hook(f, RAM_CONTROL_BLOCK_REG,
+                    //                       block->idstr);
                     mc_ram_control_load_hook(f, RAM_CONTROL_BLOCK_REG,
-                                          block->idstr);
+                                            block->idstr);
                 } else {
                     error_report("Unknown ramblock \"%s\", cannot "
                                  "accept migration", id);
@@ -2625,7 +2629,7 @@ static int ram_load(QEMUFile *f, void *opaque, int version_id)
             break;
         default:
             if (flags & RAM_SAVE_FLAG_HOOK) {
-                //ram_control_load_hook(f, RAM_CONTROL_HOOK, NULL);
+                // ram_control_load_hook(f, RAM_CONTROL_HOOK, NULL);
                 mc_ram_control_load_hook(f, RAM_CONTROL_HOOK, NULL);
             } else {
                 error_report("Unknown combination of migration flags: %#x",

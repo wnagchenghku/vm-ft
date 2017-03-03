@@ -38,6 +38,6 @@ void colo_do_failover(MigrationState *s);
 
 bool colo_shutdown(void);
 
-extern bool in_colo_state;
+extern bool ram_migration_in_colo_state;
 
 #endif

@@ -155,12 +155,9 @@ void mc_ram_control_before_iterate(QEMUFile *f, uint64_t flags)
 {
     int ret = 0;
 
-    if (true) {
-        //ret = f->ops->before_ram_iterate(f, f->opaque, flags, NULL);
-        ret = mc_rdma_registration_start(f, f->opaque, flags, NULL);
-        if (ret < 0) {
-            qemu_file_set_error(f, ret);
-        }
+    ret = mc_rdma_registration_start(f, f->opaque, flags, NULL);
+    if (ret < 0) {
+        qemu_file_set_error(f, ret);
     }
 }
 
@@ -180,12 +177,9 @@ void mc_ram_control_after_iterate(QEMUFile *f, uint64_t flags)
 {
     int ret = 0;
 
-    if (true) {
-        //ret = f->ops->after_ram_iterate(f, f->opaque, flags, NULL);
-        ret = mc_rdma_registration_stop(f, f->opaque, flags, NULL);
-        if (ret < 0) {
-            qemu_file_set_error(f, ret);
-        }
+    ret = mc_rdma_registration_stop(f, f->opaque, flags, NULL);
+    if (ret < 0) {
+        qemu_file_set_error(f, ret);
     }
 }
 
@@ -213,21 +207,11 @@ void mc_ram_control_load_hook(QEMUFile *f, uint64_t flags, void *data)
 {
     int ret = -EINVAL;
 
-    if (true) {
-        //ret = f->ops->hook_ram_load(f, f->opaque, flags, data);
-        ret = mc_rdma_load_hook(f, f->opaque, flags, data);
-        if (ret < 0) {
-            qemu_file_set_error(f, ret);
-        }
-    } else {
-        /*
-         * Hook is a hook specifically requested by the source sending a flag
-         * that expects there to be a hook on the destination.
-         */
-        if (flags == RAM_CONTROL_HOOK) {
-            qemu_file_set_error(f, ret);
-        }
+    ret = mc_rdma_load_hook(f, f->opaque, flags, data);
+    if (ret < 0) {
+        qemu_file_set_error(f, ret);
     }
+
 }
 
 size_t ram_control_save_page(QEMUFile *f, ram_addr_t block_offset,
@@ -256,21 +240,18 @@ size_t mc_ram_control_save_page(QEMUFile *f, ram_addr_t block_offset,
                              ram_addr_t offset, size_t size,
                              uint64_t *bytes_sent)
 {
-    if (true) {
-        int ret = mc_rdma_save_page(f, f->opaque, block_offset, offset, size, bytes_sent);
+    int ret = mc_rdma_save_page(f, f->opaque, block_offset,
+                                offset, size, bytes_sent);
 
-        if (ret != RAM_SAVE_CONTROL_DELAYED) {
-            if (bytes_sent && *bytes_sent > 0) {
-                qemu_update_position(f, *bytes_sent);
-            } else if (ret < 0) {
-                qemu_file_set_error(f, ret);
-            }
+    if (ret != RAM_SAVE_CONTROL_DELAYED) {
+        if (bytes_sent && *bytes_sent > 0) {
+            qemu_update_position(f, *bytes_sent);
+        } else if (ret < 0) {
+            qemu_file_set_error(f, ret);
         }
-
-        return ret;
     }
 
-    return RAM_SAVE_CONTROL_NOT_SUPP;
+    return ret;
 }
 
 /*
