@@ -102,13 +102,6 @@ static int is_inner(pthread_t tid)
     return 0;
 }
 
-static hk_t gen_key(nid_t node_id,nc_t node_count){
-    hk_t key = 0;
-    key |= ((hk_t)node_id<<8);
-    key |= (hk_t)node_count;
-    return key;
-}
-
 static void leader_handle_submit_req(void* buf, ssize_t data_size)
 {
     pthread_spin_lock(&tailq_lock);
@@ -126,25 +119,6 @@ static void leader_handle_submit_req(void* buf, ssize_t data_size)
     pthread_spin_unlock(&tailq_lock);
 
     while (cur_rec > proxy->highest_rec);
-}
-
-static void get_socket_buffer_size(int sockfd)
-{
-    socklen_t i;
-    size_t len;
-
-    i = sizeof(len);
-    if (getsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &len, &i) < 0) {
-        perror(": getsockopt");
-    }
-
-    printf("receive buffer size = %d\n", len);
-
-    if (getsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &len, &i) < 0) {
-        perror(": getsockopt");
-    }
-
-    printf("send buffer size = %d\n", len);
 }
 
 static int set_blocking(int fd, int blocking) {
