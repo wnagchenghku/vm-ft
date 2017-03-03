@@ -63,6 +63,19 @@ int dare_main(proxy_node* proxy, int is_primary)
         dare_log_file = "";
 
     input->srv_type = srv_type;
+    
+    pthread_mutex_t dare_ready_lock;
+    if(pthread_mutex_init(&dare_ready_lock, NULL)){
+        err_log("PROXY: Cannot init dare ready lock\n");
+    }
+    pthread_cond_t dare_ready_cond;
+    if(pthread_cond_init(&dare_ready_cond, NULL)){
+        err_log("PROXY: Cannot init dare ready cond\n");
+    }
+    input->dare_ready_lock = &dare_ready_lock;
+    input->dare_ready_cond = &dare_ready_cond;
+    int dare_init_status = DARE_STARTING;
+    input->dare_init_status = &dare_init_status;
 
     if (strcmp(dare_log_file, "") != 0) {
         input->log = fopen(dare_log_file, "w+");
@@ -84,10 +97,26 @@ int dare_main(proxy_node* proxy, int is_primary)
         return 1;
     }
 
+    pthread_mutex_lock(&dare_ready_lock);
+    while(1) {
+        //Wait for a signal
+        pthread_cond_wait(&dare_ready_cond, &dare_ready_lock);
+
+        if (dare_init_status == DARE_STARTING) {
+            //Not ready yet, keep waiting
+            continue;
+        } else {
+            break;
+        }
+    }
+    pthread_mutex_unlock(&dare_ready_lock);
+
     list_entry_t *n1 = malloc(sizeof(list_entry_t));
     n1->tid = dare_thread;
     LIST_INSERT_HEAD(&listhead, n1, entries);
     //fclose(log_fp);
+
+    free(input);
     
     return 0;
 }
@@ -234,8 +263,6 @@ proxy_node* proxy_init(const char* proxy_log_path, int is_primary)
     }
 
     memset(proxy,0,sizeof(proxy_node));
-
-    dare_main(proxy, is_primary);
     
     if(proxy_read_config(proxy,config_path)){
         err_log("PROXY : Configuration File Reading Error.\n");
@@ -282,6 +309,8 @@ proxy_node* proxy_init(const char* proxy_log_path, int is_primary)
     if(pthread_spin_init(&tailq_lock, PTHREAD_PROCESS_PRIVATE)){
         err_log("PROXY: Cannot init the lock\n");
     }
+
+    dare_main(proxy, is_primary);
 
     return proxy;
 

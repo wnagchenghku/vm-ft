@@ -83,6 +83,9 @@ server as permanently failed */
 #define LR_UPDATE_LOG     5
 #define LR_UPDATE_END     6
 
+#define DARE_READY (0)
+#define DARE_STARTING (1)
+
 struct server_t {
     uint64_t next_wr_id;    // next WR ID to wait for
     uint64_t cached_end_offset; // the new end offset if the log update succeeds
@@ -157,6 +160,10 @@ struct dare_server_input_t {
     proxy_set_qemu_chardev_cb_t set_qemu_chardev;
     char config_path[128];
     void* up_para;
+
+    pthread_mutex_t *dare_ready_lock;
+    pthread_cond_t *dare_ready_cond;
+    int *dare_init_status;
 };
 typedef struct dare_server_input_t dare_server_input_t;
 

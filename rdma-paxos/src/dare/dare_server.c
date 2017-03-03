@@ -217,8 +217,6 @@ void *dare_server_init(void *arg)
         free_server_data();
         //error_return(1, log_fp, "Cannot init server data\n");
     }
-
-    free(input);
         
     /* Init EV loop */
     data.loop = EV_DEFAULT;
@@ -276,6 +274,12 @@ void *dare_server_init(void *arg)
 
     ev_io_init(&redirector_accept_watcher, redirector_accept_handler, redirector_serverfd, EV_READ);
     ev_io_start (data.loop, &redirector_accept_watcher);
+
+    //Init completed successfully, wake up the main thread
+    pthread_mutex_lock(input->dare_ready_lock);
+    *input->dare_init_status = DARE_READY;
+    pthread_cond_signal(input->dare_ready_cond);
+    pthread_mutex_unlock(input->dare_ready_lock);
 
     /* Now wait for events to arrive */
     ev_run(data.loop, 0);
