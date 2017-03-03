@@ -92,16 +92,6 @@ int dare_main(proxy_node* proxy, int is_primary)
     return 0;
 }
 
-static int is_inner(pthread_t tid)
-{
-    list_entry_t *np;
-    LIST_FOREACH(np, &listhead, entries) {
-        if (np->tid == tid)
-            return 1;
-    }
-    return 0;
-}
-
 static void leader_handle_submit_req(void* buf, ssize_t data_size)
 {
     pthread_spin_lock(&tailq_lock);

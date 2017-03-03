@@ -3,9 +3,11 @@
 Tested using Ubuntu 16.04.2, MLNX_OFED_LINUX-3.4-2.0.0.0-ubuntu16.04-x86_64
 
 ### Test environment prepare
-RDMA Paxos
 ```
 # export VMFT_ROOT=<absolute path of vm-ft>
+```
+RDMA Paxos
+```
 # cd rdma-paxos/target
 # install libconfig libdb libev 
 # make
@@ -13,7 +15,8 @@ RDMA Paxos
 Qemu colo
 ```
 # cd qemu
-# apt-get install libglib2.0-dev zlib1g-dev libpixman-1-dev libgcrypt11-dev libcurl4-gnutls-dev libgnutls-dev libaio-dev libfdt-dev libtool
+# git submodule update --init pixman
+# apt-get install libglib2.0-dev zlib1g-dev libgnutls-dev libtool
 # ./configure --disable-werror --target-list=x86_64-softmmu --extra-ldflags="-Wl,--no-as-needed -L$VMFT_ROOT/rdma-paxos/target -linterpose -lnl-3 -lnl-cli-3 -lnl-route-3 -lnl-3 -lnl-cli-3 -lnl-route-3" --extra-cflags="-I$VMFT_ROOT/rdma-paxos/src/include/rsm-interface -I/usr/include/libnl3 -I/usr/include/libnl3"
 ```
 
