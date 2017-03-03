@@ -315,6 +315,7 @@ void qemu_start_incoming_migration(const char *uri, Error **errp)
     if (!strcmp(uri, "defer")) {
         deferred_incoming_migration(errp);
     } else if (strstart(uri, "tcp:", &p)) {
+        mc_start_incoming_migration();
         tcp_start_incoming_migration(p, errp);
 #ifdef CONFIG_RDMA
     } else if (strstart(uri, "rdma:", &p)) {
@@ -391,7 +392,6 @@ static void process_incoming_migration_co(void *opaque)
     postcopy_state_set(POSTCOPY_INCOMING_NONE);
     migrate_set_state(&mis->state, MIGRATION_STATUS_NONE,
                       MIGRATION_STATUS_ACTIVE);
-    mc_start_incoming_migration();
 
     ret = qemu_loadvm_state(f);
 
@@ -1081,7 +1081,7 @@ void qmp_migrate(const char *uri, bool has_blk, bool blk,
     s = migrate_init(&params);
 
     if (strstart(uri, "tcp:", &p)) {
-        memcpy(mc_host_port, p, strlen(p));
+        mc_start_outgoing_migration(p);
         tcp_start_outgoing_migration(s, p, &local_err);
 #ifdef CONFIG_RDMA
     } else if (strstart(uri, "rdma:", &p)) {
@@ -1705,8 +1705,6 @@ static void *migration_thread(void *opaque)
     bool enable_colo = migrate_colo_enabled();
 
     rcu_register_thread();
-
-    mc_start_outgoing_migration();
 
     qemu_savevm_state_header(s->to_dst_file);
 

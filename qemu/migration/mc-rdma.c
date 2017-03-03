@@ -1852,19 +1852,14 @@ static int sock_connect(const char *servername, int port)
             else
             {
                 listenfd = sockfd;
-                sockfd = -1;
                 if (bind(listenfd, iterator->ai_addr, iterator->ai_addrlen))
                     goto sock_connect_exit;
                 listen(listenfd, 1);
-                sockfd = accept(listenfd, NULL, 0);
             }
         }
     }
 
 sock_connect_exit:
-
-    if (listenfd)
-        close(listenfd);
 
     if (resolved_addr)
         freeaddrinfo(resolved_addr);
@@ -1875,8 +1870,8 @@ sock_connect_exit:
             fprintf(stderr, "Couldn't connect to %s:%d\n", servername, port);
         else
         {
-            perror("server accept");
-            fprintf(stderr, "accept() failed\n");
+            perror("server listen");
+            fprintf(stderr, "listen() failed\n");
         }
     }
     return sockfd;
@@ -1917,28 +1912,6 @@ static int resources_create(void)
     int num_devices;
     int rc = 0;
 
-    if (config.server_name)
-    {
-        rdma->sock = sock_connect(config.server_name, config.tcp_port);
-        if (rdma->sock < 0)
-        {
-            fprintf(stderr, "failed to establish TCP connection to server %s, port %d\n", config.server_name, config.tcp_port);
-            rc = -1;
-            goto resources_create_exit;
-        }
-    }
-    else
-    {
-        fprintf(stdout, "waiting on port %d for TCP connection\n", config.tcp_port);
-        rdma->sock = sock_connect(NULL, config.tcp_port);
-        if (rdma->sock < 0)
-        {
-            fprintf(stderr, "failed to establish TCP connection with client on port %d\n", config.tcp_port);
-            rc = -1;
-            goto resources_create_exit;
-        }
-    }
-    fprintf(stdout, "TCP connection was established\n");
     fprintf(stdout, "searching for IB devices in host\n");
 
     dev_list = ibv_get_device_list(&num_devices);
@@ -2399,21 +2372,15 @@ ssize_t mc_rdma_get_colo_ctrl_buffer(void *buf, size_t size)
     return len;
 }
 
-char mc_host_port[65];
-int mc_start_incoming_migration(void)
+static void mc_accept_incoming_migration(void *arg)
 {
     int ret;
 
-    rdma = mc_rdma_data_init();
+    int listenfd = rdma->sock;
+    rdma->sock = accept(listenfd, NULL, NULL);
+    qemu_set_fd_handler(listenfd, NULL, NULL, NULL);
 
-    if (rdma == NULL) {
-    }
-
-    ret = mc_rdma_dest_init(rdma);
-
-    config.gid_idx = 0;
-    config.ib_port = 2;
-    resources_init();
+    fprintf(stdout, "TCP connection was established\n");
 
     if (resources_create())
         error_report("failed to create resources\n");
@@ -2439,11 +2406,32 @@ int mc_start_incoming_migration(void)
     ret = mc_rdma_post_recv_control(rdma, MC_RDMA_WRID_READY);
 
     rdma->migration_started_on_destination = 1;
+}
+
+int mc_start_incoming_migration(void)
+{
+    rdma = mc_rdma_data_init();
+
+    if (rdma == NULL) {
+    }
+
+    mc_rdma_dest_init(rdma);
+
+    config.gid_idx = 0;
+    config.ib_port = 2;
+    resources_init();
+
+    fprintf(stdout, "waiting on port %d for TCP connection\n", config.tcp_port);
+    rdma->sock = sock_connect(NULL, config.tcp_port);
+    if (rdma->sock < 0)
+        fprintf(stderr, "failed to listen on port %d\n", config.tcp_port);
+
+    qemu_set_fd_handler(rdma->sock, mc_accept_incoming_migration, NULL, NULL);
 
     return 0;
 }
 
-int mc_start_outgoing_migration(void)
+int mc_start_outgoing_migration(const char *mc_host_port)
 {
     rdma = mc_rdma_data_init();
 
@@ -2456,6 +2444,12 @@ int mc_start_outgoing_migration(void)
     config.gid_idx = 0;
     config.ib_port = 2;
     resources_init();
+
+    rdma->sock = sock_connect(config.server_name, config.tcp_port);
+    if (rdma->sock < 0)
+        fprintf(stderr, "failed to establish TCP connection to server %s, port %d\n", config.server_name, config.tcp_port);
+
+    fprintf(stdout, "TCP connection was established\n");
 
     if (resources_create())
         error_report("failed to create resources\n");

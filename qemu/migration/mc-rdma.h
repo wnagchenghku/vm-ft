@@ -7,13 +7,12 @@
 #include "qemu/cutils.h"
 #include "migration/migration.h"
 #include "qemu/error-report.h"
+#include "qemu/main-loop.h"
 #include "qemu/sockets.h"
 #include "qemu/bitmap.h"
 
-extern char mc_host_port[65];
-
 int mc_start_incoming_migration(void);
-int mc_start_outgoing_migration(void);
+int mc_start_outgoing_migration(const char *mc_host_port);
 
 int mc_rdma_put_colo_ctrl_buffer(void *buf, uint32_t size);
 ssize_t mc_rdma_get_colo_ctrl_buffer(void *buf, size_t size);
