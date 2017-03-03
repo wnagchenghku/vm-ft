@@ -21,7 +21,9 @@ FILE *log_fp;
 
 proxy_node* proxy;
 
-int dare_main(proxy_node* proxy, const char* config_path)
+const char* config_path = "../rdma-paxos/target/nodes.local.cfg";
+
+int dare_main(proxy_node* proxy, int is_primary)
 {
     int rc; 
     dare_server_input_t *input = (dare_server_input_t*)malloc(sizeof(dare_server_input_t));
@@ -32,10 +34,7 @@ int dare_main(proxy_node* proxy, const char* config_path)
     input->srv_type = SRV_TYPE_START;
     input->sm_type = CLT_KVS;
 
-    char hostname[128];
-    gethostname(hostname, sizeof(hostname));
-    size_t hostname_len = strlen(hostname);
-    input->server_idx = (uint8_t)atoi(&hostname[hostname_len - 1]);
+    input->server_idx = (is_primary == 1) ? 1 : 0;
 
     input->group_size = 3;
     char *group_size = getenv("group_size");
@@ -261,9 +260,7 @@ static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,vo
     return;
 }
 
-const char* config_path = "../rdma-paxos/target/nodes.local.cfg";
-
-proxy_node* proxy_init(const char* proxy_log_path)
+proxy_node* proxy_init(const char* proxy_log_path, int is_primary)
 {
     proxy = (proxy_node*)malloc(sizeof(proxy_node));
 
@@ -274,7 +271,7 @@ proxy_node* proxy_init(const char* proxy_log_path)
 
     memset(proxy,0,sizeof(proxy_node));
 
-    dare_main(proxy, config_path);
+    dare_main(proxy, is_primary);
     
     if(proxy_read_config(proxy,config_path)){
         err_log("PROXY : Configuration File Reading Error.\n");

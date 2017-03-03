@@ -2978,10 +2978,7 @@ static void set_memory_options(uint64_t *ram_slots, ram_addr_t *maxram_size,
 }
 
 int main(int argc, char **argv, char **envp)
-{
-    char* proxy_log_dir = NULL;
-    proxy_init(proxy_log_dir);
-    
+{   
     int i;
     int snapshot, linux_boot;
     const char *initrd_filename;
@@ -3852,6 +3849,11 @@ int main(int argc, char **argv, char **envp)
             case QEMU_OPTION_name:
                 opts = qemu_opts_parse_noisily(qemu_find_opts("name"),
                                                optarg, true);
+                
+                int is_primary = (optarg == "primary") ? 1 : 0;
+                char* proxy_log_dir = NULL;
+                proxy_init(proxy_log_dir, is_primary);
+                
                 if (!opts) {
                     exit(1);
                 }
