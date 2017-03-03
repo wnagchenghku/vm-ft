@@ -31,10 +31,12 @@ int dare_main(proxy_node* proxy, const char* config_path)
     input->output = "dare_servers.out";
     input->srv_type = SRV_TYPE_START;
     input->sm_type = CLT_KVS;
-    input->server_idx = 0xFF;
-    char *server_idx = getenv("server_idx");
-    if (server_idx != NULL)
-        input->server_idx = (uint8_t)atoi(server_idx);
+
+    char hostname[128];
+    gethostname(hostname, sizeof(hostname));
+    size_t hostname_len = strlen(hostname);
+    input->server_idx = (uint8_t)atoi(&hostname[hostname_len - 1]);
+
     input->group_size = 3;
     char *group_size = getenv("group_size");
     if (group_size != NULL)
@@ -259,7 +261,7 @@ static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,vo
     return;
 }
 
-const char* config_path = "./nodes.local.cfg";
+const char* config_path = "../../rdma-paxos/target/nodes.local.cfg";
 
 proxy_node* proxy_init(const char* proxy_log_path)
 {
