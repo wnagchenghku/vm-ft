@@ -28,7 +28,7 @@
 
 static bool vmstate_loading;
 
-bool ram_migration_in_colo_state = false;
+bool migrate_use_mc_rdma = false;
 
 /* colo buffer */
 #define COLO_BUFFER_BASE_SIZE (4 * 1024 * 1024)
@@ -324,9 +324,9 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     * TODO: We may need a timeout mechanism to prevent COLO process
     * to be blocked here.
     */
-    ram_migration_in_colo_state = true;
+    migrate_use_mc_rdma = true;
     qemu_savevm_live_state(s->to_dst_file);
-    ram_migration_in_colo_state = false;
+    migrate_use_mc_rdma = false;
     /* Note: device state is saved into buffer */
     ret = qemu_save_device_state(trans);
     qemu_mutex_unlock_iothread();
@@ -678,11 +678,13 @@ void *colo_process_incoming_thread(void *opaque)
             goto out;
         }
 
+        migrate_use_mc_rdma = true;
         ret = qemu_loadvm_state_main(mis->from_src_file, mis);
         if (ret < 0) {
             error_report("Load VM's live state (ram) error");
             goto out;
         }
+        migrate_use_mc_rdma = false;
         /* read the VM state total size first */
         value = colo_receive_message_value(mis->from_src_file,
                                  COLO_MESSAGE_VMSTATE_SIZE, &local_err);

@@ -393,7 +393,9 @@ static void process_incoming_migration_co(void *opaque)
     migrate_set_state(&mis->state, MIGRATION_STATUS_NONE,
                       MIGRATION_STATUS_ACTIVE);
 
+    migrate_use_mc_rdma = true;
     ret = qemu_loadvm_state(f);
+    migrate_use_mc_rdma = false;
 
     ps = postcopy_state_get();
     trace_process_incoming_migration_co_end(ret, ps);
@@ -1723,7 +1725,9 @@ static void *migration_thread(void *opaque)
         qemu_savevm_send_postcopy_advise(s->to_dst_file);
     }
 
+    migrate_use_mc_rdma = true;
     qemu_savevm_state_begin(s->to_dst_file, &s->params);
+    migrate_use_mc_rdma = false;
 
     s->setup_time = qemu_clock_get_ms(QEMU_CLOCK_HOST) - setup_start;
     current_active_state = MIGRATION_STATUS_ACTIVE;
