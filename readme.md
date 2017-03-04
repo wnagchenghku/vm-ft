@@ -98,3 +98,9 @@ like Primary side
       'arguments': {'capabilities': [ {'capability': 'x-colo', 'state': true } ] } }
 { 'execute': 'migrate', 'arguments': {'uri': 'tcp:10.22.1.3:8888' } }
 ```
+
+- (5) Optionally, enable debug mode
+```
+{'execute': 'trace-event-set-state', 'arguments': {'name': 'qemu_rdma*', 'enable': true} }
+{'execute': 'trace-event-set-state', 'arguments': {'name': 'rdma*', 'enable': true} }
+```

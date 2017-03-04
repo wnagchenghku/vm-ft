@@ -621,11 +621,11 @@ void *colo_process_incoming_thread(void *opaque)
      */
     qemu_file_set_blocking(mis->from_src_file, true);
 
-    ret = colo_init_ram_cache();
-    if (ret < 0) {
-        error_report("Failed to initialize ram cache");
-        goto out;
-    }
+    // ret = colo_init_ram_cache();
+    // if (ret < 0) {
+    //     error_report("Failed to initialize ram cache");
+    //     goto out;
+    // }
 
     buffer = qsb_create(NULL, COLO_BUFFER_BASE_SIZE);
     if (buffer == NULL) {
@@ -715,7 +715,7 @@ void *colo_process_incoming_thread(void *opaque)
         qemu_mutex_lock_iothread();
         qemu_system_reset(VMRESET_SILENT);
         vmstate_loading = true;
-        //colo_flush_ram_cache();
+        // colo_flush_ram_cache();
         ret = qemu_load_device_state(fb);
         if (ret < 0) {
             error_report("COLO: load device state failed");
