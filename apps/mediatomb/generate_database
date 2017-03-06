@@ -1,16 +1,15 @@
 #!/bin/bash
 video_src=wide-20040607-small.avi
-cd $COLO/apps/mediatomb/
+APP_ROOT=`pwd`
 rm -rf .mediatomb
 IP=""
 if [ ! $1 ];
 then
-IP="127.0.0.1"
+IP="10.22.1.15"
 else
 IP=$1
 fi
 echo "Generating mediatomb database on IP $IP..."
-echo "./e.g., ./$0 10.0.3.111"
 # Start server to prepare
 if [ ! -f mediatomb-sample.avi ];
 then
