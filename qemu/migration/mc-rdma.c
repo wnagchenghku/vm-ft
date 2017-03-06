@@ -34,6 +34,8 @@
 
 #define MC_RDMA_WRID_CHUNK_MASK (~MC_RDMA_WRID_BLOCK_MASK & ~MC_RDMA_WRID_TYPE_MASK)
 
+#define MC_MIGRATION_CAPABILITY_RDMA_PIN_ALL 1
+
 enum {
     MC_RDMA_WRID_NONE = 0,
     MC_RDMA_WRID_RDMA_WRITE = 1,
@@ -159,6 +161,7 @@ struct cm_con_data_t
     uint32_t qp_num;
     uint16_t lid;
     uint8_t gid[16];
+    uint32_t capability_flags;
 } __attribute__ ((packed));
 
 typedef struct MC_RDMAContext {
@@ -1093,6 +1096,8 @@ retry:
                     return -EIO;
                 }
 
+                mc_acct_update_position(sge.length, true);
+
                 return 1;
             }
 
@@ -1189,6 +1194,7 @@ retry:
     }
 
     set_bit(chunk, block->transit_bitmap);
+    mc_acct_update_position(sge.length, false);
     rdma->total_writes++;
 
     return 0;
@@ -2178,6 +2184,13 @@ static int connect_qp(void)
     local_con_data.lid = htons(rdma->port_attr.lid);
     memcpy(local_con_data.gid, &my_gid, 16);
     fprintf(stdout, "\nLocal LID = 0x%x\n", rdma->port_attr.lid);
+
+    uint32_t rdma_capability = 0;
+    if (config.server_name && rdma->pin_all) {
+        rdma_capability |= MC_RDMA_CAPABILITY_PIN_ALL;
+    }
+    local_con_data.capability_flags = htonl(rdma_capability);
+
     if (sock_sync_data(rdma->sock, sizeof (struct cm_con_data_t), (char*)&local_con_data, (char*)&tmp_con_data) < 0)
     {
         fprintf(stderr, "failed to exchange connection data between sides\n");
@@ -2187,6 +2200,12 @@ static int connect_qp(void)
     remote_con_data.qp_num = ntohl(tmp_con_data.qp_num);
     remote_con_data.lid = ntohs(tmp_con_data.lid);
     memcpy(remote_con_data.gid, tmp_con_data.gid, 16);
+    if (!config.server_name) {
+        remote_con_data.capability_flags = ntohl(tmp_con_data.capability_flags);
+        if (remote_con_data.capability_flags & MC_RDMA_CAPABILITY_PIN_ALL) {
+            rdma->pin_all = true;
+        }
+    }
 
     rdma->remote_props = remote_con_data;
     fprintf(stdout, "Remote QP number = 0x%x\n", remote_con_data.qp_num);
@@ -2450,6 +2469,8 @@ int mc_start_outgoing_migration(const char *mc_host_port)
         fprintf(stderr, "failed to establish TCP connection to server %s, port %d\n", config.server_name, config.tcp_port);
 
     fprintf(stdout, "TCP connection was established\n");
+
+    rdma->pin_all = MC_MIGRATION_CAPABILITY_RDMA_PIN_ALL;
 
     if (resources_create())
         error_report("failed to create resources\n");
