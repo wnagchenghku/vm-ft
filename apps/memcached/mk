@@ -1,0 +1,22 @@
+APP_VER=1.4.21
+BEN_VER=1.0.18
+APP_DIR=`pwd`
+# working folder
+cd $APP_DIR
+# remove folders
+rm -rf memcached-$APP_VER
+rm -rf install
+rm -rf libmemcached-$BEN_VER
+rm -rf benchmark
+# download and extract
+if [ ! -f memcached-$APP_VER.tar.gz ]; then
+wget http://www.memcached.org/files/memcached-$APP_VER.tar.gz
+fi
+tar zxvf memcached-$APP_VER.tar.gz
+# build
+cd memcached-$APP_VER
+mkdir ../install
+./configure --prefix=$APP_DIR/install
+make -j `nproc`
+make install
+

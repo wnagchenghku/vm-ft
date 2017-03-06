@@ -1,0 +1,15 @@
+#!/bin/bash
+APP_ROOT=`pwd`
+VER=5.1.72
+rm -rf mysql-$VER
+rm -rf mysql-install
+if [ ! -f mysql-$VER.tar.gz ]; then
+wget http://downloads.mysql.com/archives/get/file/mysql-$VER.tar.gz
+fi
+tar xzvf mysql-$VER.tar.gz
+cd mysql-$VER
+./configure --prefix=$APP_ROOT/../mysql-install
+make -j `nproc`
+make install
+cd ..
+
