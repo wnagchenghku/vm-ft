@@ -23,7 +23,7 @@ proxy_node* proxy;
 
 const char* config_path = "../rdma-paxos/target/nodes.local.cfg";
 
-int dare_main(proxy_node* proxy, int is_primary)
+int dare_main(proxy_node* proxy, uint8_t role)
 {
     int rc; 
     dare_server_input_t *input = (dare_server_input_t*)malloc(sizeof(dare_server_input_t));
@@ -34,7 +34,7 @@ int dare_main(proxy_node* proxy, int is_primary)
     input->srv_type = SRV_TYPE_START;
     input->sm_type = CLT_KVS;
 
-    input->server_idx = (is_primary == 1) ? 1 : 0;
+    input->server_idx = role;
 
     input->group_size = 3;
     char *group_size = getenv("group_size");
@@ -253,7 +253,7 @@ static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,vo
     return;
 }
 
-proxy_node* proxy_init(const char* proxy_log_path, int is_primary)
+proxy_node* proxy_init(const char* proxy_log_path, uint8_t role)
 {
     proxy = (proxy_node*)malloc(sizeof(proxy_node));
 
@@ -310,7 +310,7 @@ proxy_node* proxy_init(const char* proxy_log_path, int is_primary)
         err_log("PROXY: Cannot init the lock\n");
     }
 
-    dare_main(proxy, is_primary);
+    dare_main(proxy, role);
 
     return proxy;
 
