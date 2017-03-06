@@ -238,6 +238,24 @@ Dynamic section at offset 0xe08 contains 26 entries:
  0x0000000000000000 (NULL)               0x0
 ```
 
+## Position-Independent Code (PIC)
+## PIC Data References
+The compiler creates a table called the *global offset table* (GOT) at the beginning of the data segment. The GOT contains an entry for each global data object that is referenced by the object module. The compiler also generates a relocation record for each entry in the GOT. At load time, the dynamic linker relocates each entry in the GOT so that it contains the appropriate absolute address. Each object module that references global data has its own GOT.
+
+### PIC Function Calls
+ELF compilation systems use an interesting technique, called *lazy binding*, that defer the binding of procedure addresses until the first time the procedure is called. There is a nontrival run-time overhead the first time the procedure is called, but each call thereafter only costs a single instruction and a memory reference for the indirection.
+
+Lay binding is implemented with a compact yet somewhat complex interaction between two data structure: the GOT and the *procedure linkage table* (PLT). If an object module calls any functions that are defined in shared libraries, then it has own GOT and PLT. The GOT is part of the `.data` section. The PLT is part of the `.text` section.
+
+Figure below shows the format of the GOT for the example program `main2.o`. The first three GOT entries are special: GOT[0] contains the address of the `.dynamic` segment, which contains information that the dynamic linker uses to bind procedure addresses, such as the location of the symbol table and relocation information. GOT[1] contains some information that defines this module. GOT[2] contains an entry point into the lazy binding code of the dynamic linker.
+
+Each procedure that is defined in a shared library and called by `main2.o` gets an entry in the GOT, starting with entry GOT[3]. For the example program, we have shown the GOT netries for `printf`, which is defined in `libc.so`, and `addvec`, which is defined in `libvector.so`.
+
+Figure below shows the PLT for our example program `p2`. The PLT is an array of 16 byte entries. Each called procedure has an entry in the PLT, starting at PLT[1]. In the figure, PLT[1] corresponds to `printf` and PLT[2] corresponds to `addvec`.
+
+Initially, after the program has been dynamically linked and begins executing, procedures `printf` and `addvec` are bound to the first instruction in their respective PLT entries. For example, the call to `addvec` has the form
+
+
 ## QEMU configure
 ```
 configure options:
