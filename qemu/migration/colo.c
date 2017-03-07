@@ -25,6 +25,7 @@
 
 #include "output-buffer.h"
 #include "mc-rdma.h"
+#include "rsm-interface.h"
 
 static bool vmstate_loading;
 
@@ -393,6 +394,10 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         goto out;
     }
 
+    proxy_stop_consensus();
+    uint64_t sync_consensus = get_proxy_sync_consensus();
+    mc_send_message_value(COLO_MESSAGE_SYNC_PROXY_CONSENSUS, sync_consensus, &local_err);
+
     qemu_mutex_lock_iothread();
     /*
     * Only save VM's live state, which not including device state.
@@ -468,6 +473,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
     ret = 0;
 
+    proxy_resume_consensus();
     mc_start_buffer();
 
     /* Resume primary guest */
@@ -576,9 +582,9 @@ static void colo_process_checkpoint(MigrationState *s)
             goto out;
         }
 
-        if (colo_compare_result()) {
-            goto checkpoint_begin;
-        }
+        // if (colo_compare_result()) {
+        //     goto checkpoint_begin;
+        // }
         current_time = qemu_clock_get_ms(QEMU_CLOCK_HOST);
         if ((current_time - checkpoint_time <
             s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY]) &&
@@ -797,6 +803,10 @@ void *colo_process_incoming_thread(void *opaque)
         // colo_receive_check_message(mis->from_src_file,
         //                    COLO_MESSAGE_VMSTATE_SEND, &local_err);
         mc_receive_check_message(COLO_MESSAGE_VMSTATE_SEND, &local_err);
+
+        uint64_t sync_consensus = mc_receive_message_value(COLO_MESSAGE_SYNC_PROXY_CONSENSUS, &local_err);
+
+        proxy_wait_sync_consensus(sync_consensus);
 
         if (local_err) {
             goto out;

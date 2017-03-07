@@ -38,6 +38,8 @@
 #define QEMU_VM_COMMAND              0x08
 #define QEMU_VM_SECTION_FOOTER       0x7e
 
+extern int DEFAULT_MIGRATE_X_CHECKPOINT_DELAY;
+
 struct MigrationParams {
     bool blk;
     bool shared;

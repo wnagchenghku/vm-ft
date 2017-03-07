@@ -12,6 +12,7 @@ int proxy_read_config(struct proxy_node_t* cur_node,const char* config_path){
     }
 
     config_lookup_int(&config_file,"req_log",&cur_node->req_log);
+    config_lookup_int(&config_file,"checkpoint_delay",&cur_node->checkpoint_delay);
 
     const char* db_name;
     if(!config_lookup_string(&config_file,"db_name",&db_name)){

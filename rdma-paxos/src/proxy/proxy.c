@@ -121,9 +121,14 @@ int dare_main(proxy_node* proxy, uint8_t role)
     return 0;
 }
 
+int stop_consensus;
+
 static void leader_handle_submit_req(void* buf, ssize_t data_size)
 {
     assert(data_size <= IO_BUF_SIZE);
+
+    while(stop_consensus);
+
     pthread_spin_lock(&tailq_lock);
     uint64_t cur_rec = ++proxy->cur_rec;
 
@@ -163,6 +168,26 @@ void proxy_on_mirror(uint8_t *buf, int len)
 {
     leader_handle_submit_req(buf, len);
     return;
+}
+
+void proxy_stop_consensus(void)
+{
+    stop_consensus = 1;
+}
+
+void proxy_resume_consensus(void)
+{
+    stop_consensus = 0;
+}
+
+uint64_t proxy_get_sync_consensus(void)
+{
+   return proxy->sync_req_id;
+}
+
+void proxy_wait_sync_consensus(uint64_t sync_consensus)
+{
+    while(proxy->sync_req_id < sync_consensus);
 }
 
 static void update_highest_rec(void*arg)
@@ -254,7 +279,7 @@ static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,vo
     return;
 }
 
-proxy_node* proxy_init(const char* proxy_log_path, uint8_t role)
+proxy_node* proxy_init(const char* proxy_log_path, uint8_t role, int *checkpoint_delay)
 {
     proxy = (proxy_node*)malloc(sizeof(proxy_node));
 
@@ -269,6 +294,7 @@ proxy_node* proxy_init(const char* proxy_log_path, uint8_t role)
         err_log("PROXY : Configuration File Reading Error.\n");
         goto proxy_exit_error;
     }
+    *checkpoint_delay = proxy->checkpoint_delay;
 
     int build_log_ret = 0;
     if(proxy_log_path==NULL){
