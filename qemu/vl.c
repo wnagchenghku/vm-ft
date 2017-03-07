@@ -4057,7 +4057,7 @@ int main(int argc, char **argv, char **envp)
     }
 
     char* proxy_log_dir = NULL;
-    proxy_init(proxy_log_dir, role, &DEFAULT_MIGRATE_X_CHECKPOINT_DELAY);
+    proxy_init(proxy_log_dir, role);
 
     /*
      * Clear error location left behind by the loop.

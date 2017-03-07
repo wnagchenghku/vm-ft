@@ -279,7 +279,7 @@ static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,vo
     return;
 }
 
-proxy_node* proxy_init(const char* proxy_log_path, uint8_t role, int *checkpoint_delay)
+proxy_node* proxy_init(const char* proxy_log_path, uint8_t role)
 {
     proxy = (proxy_node*)malloc(sizeof(proxy_node));
 
@@ -294,7 +294,6 @@ proxy_node* proxy_init(const char* proxy_log_path, uint8_t role, int *checkpoint
         err_log("PROXY : Configuration File Reading Error.\n");
         goto proxy_exit_error;
     }
-    *checkpoint_delay = proxy->checkpoint_delay;
 
     int build_log_ret = 0;
     if(proxy_log_path==NULL){

@@ -63,8 +63,7 @@ bool migrate_use_mc_rdma = false;
 /* The delay time (in ms) between two COLO checkpoints
  * Note: Please change this default value to 10000 when we support hybrid mode.
  */
-// #define DEFAULT_MIGRATE_X_CHECKPOINT_DELAY 200 * 100
-int DEFAULT_MIGRATE_X_CHECKPOINT_DELAY;
+#define DEFAULT_MIGRATE_X_CHECKPOINT_DELAY 200 * 100
 
 static NotifierList migration_state_notifiers =
     NOTIFIER_LIST_INITIALIZER(migration_state_notifiers);

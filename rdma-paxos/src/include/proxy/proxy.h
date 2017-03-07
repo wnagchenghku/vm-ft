@@ -48,7 +48,6 @@ typedef struct proxy_node_t{
 
     int mirror_clientfd;
     uint64_t sync_req_id;
-    int checkpoint_delay;
 }proxy_node;
 
 typedef struct proxy_msg_header_t{
