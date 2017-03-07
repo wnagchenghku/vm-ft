@@ -1,0 +1,8 @@
+APP_ROOT=`pwd`
+tar xzvf tokyocabinet-1.4.28.tar.gz
+mkdir install
+sudo apt-get install zlib1g-dev
+sudo apt-get install libbz2-1.0 libbz2-dev
+./configure --prefix=$APP_ROOT/install
+sudo make
+sudo make install

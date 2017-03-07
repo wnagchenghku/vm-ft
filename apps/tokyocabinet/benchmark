@@ -1,0 +1,16 @@
+require 'rubygems'
+require 'tokyotyrant'
+require 'uuidtools'
+require 'benchmark'
+results = File.new("/tmp/tokyoload.csv", "w")
+rdb = TokyoTyrant::RDB::new
+rdb.open("localhost", 1978)
+rdb.vanish
+(1..10000).each do |batch|
+results.puts batch.to_s+"\t"+Benchmark.realtime {
+(1..1000).each do |row|
+rdb.put(UUIDTools::UUID.random_create.to_i.to_s(36), Marshal.dump({"batch" => batch, "row" => row }))
+end
+}.to_s
+results.flush
+end
