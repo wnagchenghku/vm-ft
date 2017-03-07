@@ -13,7 +13,7 @@ struct proxy_node_t;
 extern "C" {
 #endif
 
-	struct proxy_node_t* proxy_init(const char* proxy_log_path, uint8_t role, int *checkpoint_delay);
+	struct proxy_node_t* proxy_init(const char* proxy_log_path, uint8_t role);
 	void proxy_on_mirror(uint8_t *buf, int len);
 	int is_leader(void);
 	void proxy_stop_consensus(void);
