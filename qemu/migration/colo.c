@@ -196,6 +196,7 @@ static void mc_send_message(COLOMessage msg, Error **errp)
     if (ret != 0) {
         error_setg_errno(errp, -ret, "Can't send COLO CTRL message");
     }
+    trace_colo_send_message(COLOMessage_lookup[msg]);
 }
 
 static void colo_send_message_value(QEMUFile *f, COLOMessage msg,
@@ -256,6 +257,16 @@ static COLOMessage colo_receive_message(QEMUFile *f, Error **errp)
     return msg;
 }
 
+static COLOMessage mc_receive_message(void)
+{
+    COLOMessage msg;
+
+    mc_rdma_get_colo_ctrl_buffer(&msg, sizeof(msg));
+
+    trace_colo_receive_message(COLOMessage_lookup[msg]);
+    return msg;
+}
+
 static void colo_receive_check_message(QEMUFile *f, COLOMessage expect_msg,
                                        Error **errp)
 {
@@ -277,7 +288,8 @@ static void mc_receive_check_message(COLOMessage expect_msg, Error **errp)
 {
     COLOMessage msg;
 
-    mc_rdma_get_colo_ctrl_buffer(&msg, sizeof(msg));
+    msg = mc_receive_message();
+
     if (msg != expect_msg) {
         error_setg(errp, "Unexpected COLO CTRL message %d, expected %d",
                           msg, expect_msg);
@@ -310,7 +322,6 @@ static uint64_t mc_receive_message_value(uint32_t expect_msg, Error **errp)
 {
     Error *local_err = NULL;
     uint64_t value;
-    int ret;
 
     mc_receive_check_message(expect_msg, &local_err);
     if (local_err) {
@@ -652,7 +663,7 @@ static void mc_wait_handle_message(int *checkpoint_request, Error **errp)
 {
     COLOMessage msg;
 
-    mc_rdma_get_colo_ctrl_buffer(&msg, sizeof(msg));
+    msg = mc_receive_message();
 
     switch (msg) {
     case COLO_MESSAGE_CHECKPOINT_REQUEST:
