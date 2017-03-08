@@ -2310,6 +2310,7 @@ int mc_rdma_put_colo_ctrl_buffer(void *buf, uint32_t size)
                                    .num_sge = 1,
                                 };
 
+    assert(sge.length <= MC_RDMA_CONTROL_MAX_BUFFER);
     memcpy(wr->control, &head, sizeof(MC_RDMAControlHeader));
     mc_control_to_network((void *) wr->control);
 
