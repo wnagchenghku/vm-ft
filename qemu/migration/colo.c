@@ -188,6 +188,16 @@ static void colo_send_message(QEMUFile *f, COLOMessage msg,
     trace_colo_send_message(COLOMessage_lookup[msg]);
 }
 
+static void mc_send_message(COLOMessage msg, Error **errp)
+{
+    int ret;
+
+    ret = mc_rdma_put_colo_ctrl_buffer(&msg, sizeof(msg));
+    if (ret != 0) {
+        error_setg_errno(errp, -ret, "Can't send COLO CTRL message");
+    }
+}
+
 static void colo_send_message_value(QEMUFile *f, COLOMessage msg,
                                     uint64_t value, Error **errp)
 {
@@ -275,8 +285,11 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     Error *local_err = NULL;
     int ret = -1;
 
-    colo_send_message(s->to_dst_file, COLO_MESSAGE_CHECKPOINT_REQUEST,
-                      &local_err);
+    // colo_send_message(s->to_dst_file, COLO_MESSAGE_CHECKPOINT_REQUEST,
+    //                   &local_err);
+
+    mc_send_message(COLO_MESSAGE_CHECKPOINT_REQUEST, &local_err);
+
     if (local_err) {
         goto out;
     }
@@ -582,6 +595,33 @@ static void colo_wait_handle_message(QEMUFile *f, int *checkpoint_request,
     }
 }
 
+static void mc_wait_handle_message(int *checkpoint_request, Error **errp)
+{
+    COLOMessage msg;
+
+    mc_rdma_get_colo_ctrl_buffer(&msg, sizeof(msg));
+
+    switch (msg) {
+    case COLO_MESSAGE_CHECKPOINT_REQUEST:
+        *checkpoint_request = 1;
+        break;
+    case COLO_MESSAGE_GUEST_SHUTDOWN:
+        qemu_mutex_lock_iothread();
+        vm_stop_force_state(RUN_STATE_COLO);
+        replication_stop_all(false, NULL);
+        qemu_system_shutdown_request_core();
+        qemu_mutex_unlock_iothread();
+        /* the main thread will exit and terminate the whole
+        * process, do we need some cleanup?
+        */
+        qemu_thread_exit(0);
+    default:
+        *checkpoint_request = 0;
+        error_setg(errp, "Got unknown COLO message: %d", msg);
+        break;
+    }
+}
+
 static int colo_prepare_before_load(QEMUFile *f)
 {
     int ret;
@@ -657,7 +697,10 @@ void *colo_process_incoming_thread(void *opaque)
     while (mis->state == MIGRATION_STATUS_COLO) {
         int request;
 
-        colo_wait_handle_message(mis->from_src_file, &request, &local_err);
+        // colo_wait_handle_message(mis->from_src_file, &request, &local_err);
+
+        mc_wait_handle_message(&request);
+
         if (local_err) {
             goto out;
         }
