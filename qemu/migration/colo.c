@@ -422,8 +422,11 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         goto out;
     }
 
-    qsb_put_buffer(s->to_dst_file, buffer, size);
-    qemu_fflush(s->to_dst_file);
+    uint8_t device_state[MC_RDMA_CONTROL_MAX_BUFFER];
+    mc_qsb_put_buffer(device_state, buffer, size);
+    mc_rdma_put_colo_ctrl_buffer(device_state, size);
+    // qsb_put_buffer(s->to_dst_file, buffer, size);
+    // qemu_fflush(s->to_dst_file);
     ret = qemu_file_get_error(s->to_dst_file);
     if (ret < 0) {
         goto out;
@@ -809,8 +812,17 @@ void *colo_process_incoming_thread(void *opaque)
             goto out;
         }
 
+        uint8_t device_state[MC_RDMA_CONTROL_MAX_BUFFER];
+        total_size = mc_rdma_get_colo_ctrl_buffer(device_state, value);
+        if (total_size != value) {
+            error_report("Got %lu VMState data, less than expected %lu",
+                         total_size, value);
+            ret = -EINVAL;
+            goto out;
+        }
         /* read vm device state into colo buffer */
-        total_size = qsb_fill_buffer(buffer, mis->from_src_file, value);
+        total_size = mc_qsb_fill_buffer(buffer, device_state, value);
+        // total_size = qsb_fill_buffer(buffer, mis->from_src_file, value);
         if (total_size != value) {
             error_report("Got %lu VMState data, less than expected %lu",
                          total_size, value);

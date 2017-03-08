@@ -386,6 +386,21 @@ void qsb_put_buffer(QEMUFile *f, QEMUSizedBuffer *qsb, size_t size)
     }
 }
 
+void mc_qsb_put_buffer(uint8_t *buf, QEMUSizedBuffer *qsb, size_t size)
+{
+    size_t l;
+    int i, buf_index = 0;
+
+    for (i = 0; i < qsb->n_iov && size > 0; i++) {
+        l = MIN(qsb->iov[i].iov_len, size);
+
+        memcpy(buf + buf_index, qsb->iov[i].iov_base, l);
+        buf_index += l;
+
+        size -= l;
+    }
+}
+
 /*
  * Read 'size' bytes of data from the file into qsb.
  * always fill from pos 0 and used after qsb_create().
@@ -419,6 +434,43 @@ size_t qsb_fill_buffer(QEMUSizedBuffer *qsb, QEMUFile *f, size_t size)
             if (readone == 0) {
                 return qsb->used;
             }
+            buf += readone;
+            doneone += readone;
+            pending -= readone;
+            qsb->used += readone;
+        }
+    }
+    return qsb->used;
+}
+
+size_t mc_qsb_fill_buffer(QEMUSizedBuffer *qsb, uint8_t *src, size_t size)
+{
+    ssize_t rc = qsb_grow(qsb, size);
+    ssize_t pending = size;
+    int i, index = 0;
+    uint8_t *buf = NULL;
+
+    qsb->used = 0;
+
+    if (rc < 0) {
+        return rc;
+    }
+
+    for (i = 0; i < qsb->n_iov && pending > 0; i++) {
+        size_t doneone = 0;
+        /* read until iov full */
+        while (doneone < qsb->iov[i].iov_len && pending > 0) {
+            size_t readone = 0;
+
+            buf = qsb->iov[i].iov_base;
+
+            if (index >= size) {
+                return qsb->used;
+            }
+            memcpy(buf, src + index, MIN(qsb->iov[i].iov_len - doneone, pending));
+            readone = MIN(qsb->iov[i].iov_len - doneone, pending);
+            index += readone;
+
             buf += readone;
             doneone += readone;
             pending -= readone;
