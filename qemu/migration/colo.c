@@ -219,6 +219,24 @@ static void colo_send_message_value(QEMUFile *f, COLOMessage msg,
     }
 }
 
+static void mc_send_message_value(COLOMessage msg, uint64_t value, Error **errp)
+{
+    Error *local_err = NULL;
+    int ret;
+
+    mc_send_message(msg, &local_err);
+    if (local_err) {
+        error_propagate(errp, local_err);
+        return;
+    }
+
+    ret = mc_rdma_put_colo_ctrl_buffer(&value, sizeof(value));
+    if (ret < 0) {
+        error_setg_errno(errp, -ret, "Failed to send value for message:%s",
+                         COLOMessage_lookup[msg]);
+    }
+}
+
 static COLOMessage colo_receive_message(QEMUFile *f, Error **errp)
 {
     COLOMessage msg;
@@ -255,6 +273,17 @@ static void colo_receive_check_message(QEMUFile *f, COLOMessage expect_msg,
     }
 }
 
+static void mc_receive_check_message(COLOMessage expect_msg, Error **errp)
+{
+    COLOMessage msg;
+
+    mc_rdma_get_colo_ctrl_buffer(&msg, sizeof(msg));
+    if (msg != expect_msg) {
+        error_setg(errp, "Unexpected COLO CTRL message %d, expected %d",
+                          msg, expect_msg);
+    }
+}
+
 static uint64_t colo_receive_message_value(QEMUFile *f, uint32_t expect_msg,
                                            Error **errp)
 {
@@ -274,6 +303,23 @@ static uint64_t colo_receive_message_value(QEMUFile *f, uint32_t expect_msg,
         error_setg_errno(errp, -ret, "Failed to get value for COLO message: %s",
                          COLOMessage_lookup[expect_msg]);
     }
+    return value;
+}
+
+static uint64_t mc_receive_message_value(uint32_t expect_msg, Error **errp)
+{
+    Error *local_err = NULL;
+    uint64_t value;
+    int ret;
+
+    mc_receive_check_message(expect_msg, &local_err);
+    if (local_err) {
+        error_propagate(errp, local_err);
+        return 0;
+    }
+
+    mc_rdma_get_colo_ctrl_buffer(&value, sizeof(value));
+
     return value;
 }
 
@@ -326,7 +372,8 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         goto out;
     }
 
-    colo_send_message(s->to_dst_file, COLO_MESSAGE_VMSTATE_SEND, &local_err);
+    // colo_send_message(s->to_dst_file, COLO_MESSAGE_VMSTATE_SEND, &local_err);
+    mc_send_message(COLO_MESSAGE_VMSTATE_SEND, &local_err);
     if (local_err) {
         goto out;
     }
@@ -351,8 +398,10 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
     /* we send the total size of the vmstate first */
     size = qsb_get_length(buffer);
-    colo_send_message_value(s->to_dst_file, COLO_MESSAGE_VMSTATE_SIZE,
-                            size, &local_err);
+    // colo_send_message_value(s->to_dst_file, COLO_MESSAGE_VMSTATE_SIZE,
+    //                         size, &local_err);
+    mc_send_message_value(COLO_MESSAGE_VMSTATE_SIZE, size, &local_err);
+
     if (local_err) {
         goto out;
     }
@@ -364,14 +413,18 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         goto out;
     }
 
-    colo_receive_check_message(s->rp_state.from_dst_file,
-                       COLO_MESSAGE_VMSTATE_RECEIVED, &local_err);
+    // colo_receive_check_message(s->rp_state.from_dst_file,
+    //                    COLO_MESSAGE_VMSTATE_RECEIVED, &local_err);
+    mc_receive_check_message(COLO_MESSAGE_VMSTATE_RECEIVED, &local_err);
+
     if (local_err) {
         goto out;
     }
 
-    colo_receive_check_message(s->rp_state.from_dst_file,
-                       COLO_MESSAGE_VMSTATE_LOADED, &local_err);
+    // colo_receive_check_message(s->rp_state.from_dst_file,
+    //                    COLO_MESSAGE_VMSTATE_LOADED, &local_err);
+    mc_receive_check_message(COLO_MESSAGE_VMSTATE_LOADED, &local_err);
+
     if (local_err) {
         goto out;
     }
@@ -715,8 +768,10 @@ void *colo_process_incoming_thread(void *opaque)
         trace_colo_vm_state_change("run", "stop");
         qemu_mutex_unlock_iothread();
 
-        colo_receive_check_message(mis->from_src_file,
-                           COLO_MESSAGE_VMSTATE_SEND, &local_err);
+        // colo_receive_check_message(mis->from_src_file,
+        //                    COLO_MESSAGE_VMSTATE_SEND, &local_err);
+        mc_receive_check_message(COLO_MESSAGE_VMSTATE_SEND, &local_err);
+
         if (local_err) {
             goto out;
         }
@@ -729,8 +784,11 @@ void *colo_process_incoming_thread(void *opaque)
         }
         migrate_use_mc_rdma = false;
         /* read the VM state total size first */
-        value = colo_receive_message_value(mis->from_src_file,
-                                 COLO_MESSAGE_VMSTATE_SIZE, &local_err);
+        // value = colo_receive_message_value(mis->from_src_file,
+        //                          COLO_MESSAGE_VMSTATE_SIZE, &local_err);
+        
+        value = mc_receive_message_value(COLO_MESSAGE_VMSTATE_SIZE, &local_err);
+
         if (local_err) {
             goto out;
         }
@@ -744,8 +802,9 @@ void *colo_process_incoming_thread(void *opaque)
             goto out;
         }
 
-        colo_send_message(mis->to_src_file, COLO_MESSAGE_VMSTATE_RECEIVED,
-                     &local_err);
+        // colo_send_message(mis->to_src_file, COLO_MESSAGE_VMSTATE_RECEIVED,
+        //              &local_err);
+        mc_send_message(COLO_MESSAGE_VMSTATE_RECEIVED,&local_err);
         if (local_err) {
             goto out;
         }
@@ -789,8 +848,9 @@ void *colo_process_incoming_thread(void *opaque)
             goto out;
         }
 
-        colo_send_message(mis->to_src_file, COLO_MESSAGE_VMSTATE_LOADED,
-                     &local_err);
+        // colo_send_message(mis->to_src_file, COLO_MESSAGE_VMSTATE_LOADED,
+        //              &local_err);
+        mc_send_message(COLO_MESSAGE_VMSTATE_LOADED,&local_err);
         if (local_err) {
             goto out;
         }
