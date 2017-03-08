@@ -123,6 +123,7 @@ int dare_main(proxy_node* proxy, uint8_t role)
 
 static void leader_handle_submit_req(void* buf, ssize_t data_size)
 {
+    assert(data_size <= IO_BUF_SIZE);
     pthread_spin_lock(&tailq_lock);
     uint64_t cur_rec = ++proxy->cur_rec;
 

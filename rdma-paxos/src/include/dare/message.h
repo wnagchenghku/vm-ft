@@ -2,9 +2,11 @@
 #define MESSAGE_H
 #include <sys/queue.h>
 
+#define IO_BUF_SIZE 32768
+
 struct tailq_cmd_t {
     uint16_t    len;
-    uint8_t cmd[1024];
+    uint8_t cmd[IO_BUF_SIZE];
 };
 typedef struct tailq_cmd_t tailq_cmd_t;
 
