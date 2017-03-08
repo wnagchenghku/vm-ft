@@ -398,6 +398,11 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     migrate_use_mc_rdma = true;
     qemu_savevm_live_state(s->to_dst_file);
     migrate_use_mc_rdma = false;
+
+    /* flush QEMU_VM_EOF and RAM_SAVE_FLAG_EOS so that
+     * colo_process_incoming_thread can step out of qemu_loadvm_state_main
+     */
+    qemu_fflush(s->to_dst_file);
     /* Note: device state is saved into buffer */
     ret = qemu_save_device_state(trans);
     qemu_mutex_unlock_iothread();

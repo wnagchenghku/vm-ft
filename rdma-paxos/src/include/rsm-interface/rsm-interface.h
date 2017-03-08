@@ -5,11 +5,15 @@
 
 struct proxy_node_t;
 
+#define STANDBY_BACKUP 0
+#define MAJOR_BACKUP   1
+#define LEADER         2
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-	struct proxy_node_t* proxy_init(const char* proxy_log_path, int is_primary);
+	struct proxy_node_t* proxy_init(const char* proxy_log_path, uint8_t role);
 	void proxy_on_mirror(uint8_t *buf, int len);
 	int is_leader(void);
 	

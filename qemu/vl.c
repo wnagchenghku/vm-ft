@@ -3074,6 +3074,8 @@ int main(int argc, char **argv, char **envp)
 
     autostart = 1;
 
+    uint8_t role = STANDBY_BACKUP;
+
     /* first pass of option parsing */
     optind = 1;
     while (optind < argc) {
@@ -3849,10 +3851,11 @@ int main(int argc, char **argv, char **envp)
             case QEMU_OPTION_name:
                 opts = qemu_opts_parse_noisily(qemu_find_opts("name"),
                                                optarg, true);
-                int is_primary = (strcmp(optarg, "primary") == 0) ? 1 : 0;
-                char* proxy_log_dir = NULL;
-                proxy_init(proxy_log_dir, is_primary);
-                
+                if (strcmp(optarg, "primary") == 0) {
+                    role = LEADER;
+                } else if (strcmp(optarg, "secondary") == 0) {
+                    role = MAJOR_BACKUP;
+                }
                 if (!opts) {
                     exit(1);
                 }
@@ -4052,6 +4055,10 @@ int main(int argc, char **argv, char **envp)
             }
         }
     }
+
+    char* proxy_log_dir = NULL;
+    proxy_init(proxy_log_dir, role);
+
     /*
      * Clear error location left behind by the loop.
      * Best done right after the loop.  Do not insert code here!
