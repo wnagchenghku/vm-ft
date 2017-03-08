@@ -699,7 +699,7 @@ void *colo_process_incoming_thread(void *opaque)
 
         // colo_wait_handle_message(mis->from_src_file, &request, &local_err);
 
-        mc_wait_handle_message(&request);
+        mc_wait_handle_message(&request, &local_err);
 
         if (local_err) {
             goto out;
