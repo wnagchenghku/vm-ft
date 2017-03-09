@@ -1005,7 +1005,7 @@ static int mc_rdma_exchange_recv(MC_RDMAContext *rdma, MC_RDMAControlHeader *hea
     return 0;
 }
 
-static int mc_rdma_write_one(MC_RDMAContext *rdma,
+static int mc_rdma_write_one(QEMUFile *f, MC_RDMAContext *rdma,
                                int current_index, uint64_t current_addr,
                                uint64_t length)
 {
@@ -1201,7 +1201,7 @@ retry:
 }
 
 
-static int mc_rdma_write_flush(MC_RDMAContext *rdma)
+static int mc_rdma_write_flush(QEMUFile *f, MC_RDMAContext *rdma)
 {
     int ret;
 
@@ -1209,7 +1209,7 @@ static int mc_rdma_write_flush(MC_RDMAContext *rdma)
         return 0;
     }
 
-    ret = mc_rdma_write_one(rdma,
+    ret = mc_rdma_write_one(f, rdma,
             rdma->current_index, rdma->current_addr, rdma->current_length);
 
     if (ret < 0) {
@@ -1272,7 +1272,7 @@ static inline int mc_rdma_buffer_mergable(MC_RDMAContext *rdma,
     return 1;
 }
 
-static int mc_rdma_write(MC_RDMAContext *rdma,
+static int mc_rdma_write(QEMUFile *f, MC_RDMAContext *rdma,
                            uint64_t block_offset, uint64_t offset,
                            uint64_t len)
 {
@@ -1283,7 +1283,7 @@ static int mc_rdma_write(MC_RDMAContext *rdma,
 
     /* If we cannot merge it, we flush the current buffer first. */
     if (!mc_rdma_buffer_mergable(rdma, current_addr, len)) {
-        ret = mc_rdma_write_flush(rdma);
+        ret = mc_rdma_write_flush(f, rdma);
         if (ret) {
             return ret;
         }
@@ -1305,7 +1305,7 @@ static int mc_rdma_write(MC_RDMAContext *rdma,
 
     /* flush it if buffer is too large */
     if (rdma->current_length >= MC_RDMA_MERGE_MAX) {
-        return mc_rdma_write_flush(rdma);
+        return mc_rdma_write_flush(f, rdma);
     }
 
     return 0;
@@ -1334,11 +1334,11 @@ static void *mc_rdma_data_init(void)
     return rdma;
 }
 
-static int mc_rdma_drain_cq(MC_RDMAContext *rdma)
+static int mc_rdma_drain_cq(QEMUFile *f, MC_RDMAContext *rdma)
 {
     int ret;
 
-    if (mc_rdma_write_flush(rdma) < 0) {
+    if (mc_rdma_write_flush(f, rdma) < 0) {
         return -EIO;
     }
 
@@ -1369,7 +1369,7 @@ size_t mc_rdma_save_page(QEMUFile *f, void *opaque,
          * is full, or the page doen't belong to the current chunk,
          * an actual RDMA write will occur and a new chunk will be formed.
          */
-        ret = mc_rdma_write(rdma, block_offset, offset, size);
+        ret = mc_rdma_write(f, rdma, block_offset, offset, size);
         if (ret < 0) {
             error_report("rdma migration: write MC_ERROR! %d", ret);
             goto err;
@@ -1706,8 +1706,8 @@ int mc_rdma_registration_stop(QEMUFile *f, void *opaque, uint64_t flags, void *d
     MC_RDMAControlHeader head = { .len = 0, .repeat = 1 };
     int ret = 0;
 
-    //qemu_fflush(f);
-    ret = mc_rdma_drain_cq(rdma);
+    qemu_fflush(f);
+    ret = mc_rdma_drain_cq(f, rdma);
 
     if (ret < 0) {
         goto err;
