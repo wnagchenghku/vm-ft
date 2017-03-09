@@ -2291,7 +2291,7 @@ connect_qp_exit:
     return rc;
 }
 
-int mc_rdma_put_colo_ctrl_buffer(void *buf, uint32_t size)
+int mc_rdma_put_colo_ctrl_buffer(uint32_t size)
 {
     int ret = 0;
     MC_RDMAControlHeader head;
@@ -2313,9 +2313,6 @@ int mc_rdma_put_colo_ctrl_buffer(void *buf, uint32_t size)
     assert(sge.length <= MC_RDMA_CONTROL_MAX_BUFFER);
     memcpy(wr->control, &head, sizeof(MC_RDMAControlHeader));
     mc_control_to_network((void *) wr->control);
-
-    memcpy(wr->control + sizeof(MC_RDMAControlHeader), buf, head.len);
-
 
     ret = ibv_post_send(rdma->colo_ctrl_qp, &send_wr, &bad_wr);
 
@@ -2341,7 +2338,16 @@ int mc_rdma_put_colo_ctrl_buffer(void *buf, uint32_t size)
     return 0;
 }
 
-ssize_t mc_rdma_get_colo_ctrl_buffer(void *buf, size_t size)
+uint8_t *mc_rdma_get_colo_ctrl_buffer_ptr(void)
+{
+    MC_RDMAWorkRequestData *wr = &rdma->colo_ctrl_wr_data;
+
+    uint8_t *ptr = wr->control + sizeof(MC_RDMAControlHeader);
+
+    return ptr;
+}
+
+ssize_t mc_rdma_get_colo_ctrl_buffer(size_t size)
 {
     MC_RDMAControlHeader head;
     struct ibv_recv_wr *bad_wr;
@@ -2378,18 +2384,7 @@ ssize_t mc_rdma_get_colo_ctrl_buffer(void *buf, size_t size)
     mc_network_to_control((void *) rdma->colo_ctrl_wr_data.control);
     memcpy(&head, rdma->colo_ctrl_wr_data.control, sizeof(MC_RDMAControlHeader));
 
-    rdma->colo_ctrl_wr_data.control_len = head.len;
-    rdma->colo_ctrl_wr_data.control_curr =
-        rdma->colo_ctrl_wr_data.control + sizeof(MC_RDMAControlHeader);
-
-    size_t len = 0;
-    if (rdma->colo_ctrl_wr_data.control_len) {
-
-        len = rdma->colo_ctrl_wr_data.control_len;
-        memcpy(buf, rdma->colo_ctrl_wr_data.control_curr, len);
-    }
-
-    return len;
+    return head.len;
 }
 
 static void mc_accept_incoming_migration(void *arg)

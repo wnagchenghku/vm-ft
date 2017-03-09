@@ -169,6 +169,8 @@ void colo_do_failover(MigrationState *s)
     }
 }
 
+uint8_t *rdma_buffer;
+
 static void colo_send_message(QEMUFile *f, COLOMessage msg,
                               Error **errp)
 {
@@ -192,7 +194,8 @@ static void mc_send_message(COLOMessage msg, Error **errp)
 {
     int ret;
 
-    ret = mc_rdma_put_colo_ctrl_buffer(&msg, sizeof(msg));
+    *(COLOMessage*)rdma_buffer = msg;
+    ret = mc_rdma_put_colo_ctrl_buffer(sizeof(msg));
     if (ret != 0) {
         error_setg_errno(errp, -ret, "Can't send COLO CTRL message");
     }
@@ -231,7 +234,8 @@ static void mc_send_message_value(COLOMessage msg, uint64_t value, Error **errp)
         return;
     }
 
-    ret = mc_rdma_put_colo_ctrl_buffer(&value, sizeof(value));
+    *(uint64_t*)rdma_buffer = value;
+    ret = mc_rdma_put_colo_ctrl_buffer(sizeof(value));
     if (ret < 0) {
         error_setg_errno(errp, -ret, "Failed to send value for message:%s",
                          COLOMessage_lookup[msg]);
@@ -260,8 +264,8 @@ static COLOMessage colo_receive_message(QEMUFile *f, Error **errp)
 static COLOMessage mc_receive_message(void)
 {
     COLOMessage msg;
-
-    mc_rdma_get_colo_ctrl_buffer(&msg, sizeof(msg));
+    mc_rdma_get_colo_ctrl_buffer(sizeof(msg));
+    msg = *(COLOMessage*)rdma_buffer;
 
     trace_colo_receive_message(COLOMessage_lookup[msg]);
     return msg;
@@ -329,7 +333,9 @@ static uint64_t mc_receive_message_value(uint32_t expect_msg, Error **errp)
         return 0;
     }
 
-    mc_rdma_get_colo_ctrl_buffer(&value, sizeof(value));
+    mc_rdma_get_colo_ctrl_buffer(sizeof(value));
+
+    value = *(uint64_t*)rdma_buffer;
 
     return value;
 }
@@ -422,9 +428,8 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         goto out;
     }
 
-    uint8_t *device_state = g_malloc(size);
-    mc_qsb_put_buffer(device_state, buffer, size);
-    mc_rdma_put_colo_ctrl_buffer(device_state, size);
+    mc_qsb_put_buffer(rdma_buffer, buffer, size);
+    mc_rdma_put_colo_ctrl_buffer(size);
     // qsb_put_buffer(s->to_dst_file, buffer, size);
     // qemu_fflush(s->to_dst_file);
     ret = qemu_file_get_error(s->to_dst_file);
@@ -517,6 +522,8 @@ static void colo_process_checkpoint(MigrationState *s)
 
         }
     }
+
+    rdma_buffer = mc_rdma_get_colo_ctrl_buffer_ptr();
     
     failover_init_state();
 
@@ -715,6 +722,8 @@ void *colo_process_incoming_thread(void *opaque)
     Error *local_err = NULL;
     int ret;
 
+    rdma_buffer = mc_rdma_get_colo_ctrl_buffer_ptr();
+
     qemu_sem_init(&mis->colo_incoming_sem, 0);
 
     migrate_set_state(&mis->state, MIGRATION_STATUS_ACTIVE,
@@ -812,8 +821,7 @@ void *colo_process_incoming_thread(void *opaque)
             goto out;
         }
 
-        uint8_t *device_state = g_malloc(value);
-        total_size = mc_rdma_get_colo_ctrl_buffer(device_state, value);
+        total_size = mc_rdma_get_colo_ctrl_buffer(value);
         if (total_size != value) {
             error_report("Got %lu VMState data, less than expected %lu",
                          total_size, value);
@@ -821,7 +829,7 @@ void *colo_process_incoming_thread(void *opaque)
             goto out;
         }
         /* read vm device state into colo buffer */
-        total_size = mc_qsb_fill_buffer(buffer, device_state, value);
+        total_size = mc_qsb_fill_buffer(buffer, rdma_buffer, value);
         // total_size = qsb_fill_buffer(buffer, mis->from_src_file, value);
         if (total_size != value) {
             error_report("Got %lu VMState data, less than expected %lu",
