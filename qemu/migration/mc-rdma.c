@@ -1123,7 +1123,7 @@ retry:
                     return -EIO;
                 }
 
-                mc_acct_update_position(sge.length, true);
+                acct_update_position(f, sge.length, true);
 
                 return 1;
             }
@@ -1221,7 +1221,7 @@ retry:
     }
 
     set_bit(chunk, block->transit_bitmap);
-    mc_acct_update_position(sge.length, false);
+    acct_update_position(f, sge.length, false);
     rdma->total_writes++;
 
     return 0;
