@@ -447,7 +447,7 @@ size_t mc_qsb_fill_buffer(QEMUSizedBuffer *qsb, uint8_t *src, size_t size)
 {
     ssize_t rc = qsb_grow(qsb, size);
     ssize_t pending = size;
-    int i, index = 0;
+    int i, src_index = 0;
     uint8_t *buf = NULL;
 
     qsb->used = 0;
@@ -464,12 +464,12 @@ size_t mc_qsb_fill_buffer(QEMUSizedBuffer *qsb, uint8_t *src, size_t size)
 
             buf = qsb->iov[i].iov_base;
 
-            if (index >= size) {
+            if (src_index >= size) {
                 return qsb->used;
             }
-            memcpy(buf, src + index, MIN(qsb->iov[i].iov_len - doneone, pending));
+            memcpy(buf, src + src_index, MIN(qsb->iov[i].iov_len - doneone, pending));
             readone = MIN(qsb->iov[i].iov_len - doneone, pending);
-            index += readone;
+            src_index += readone;
 
             buf += readone;
             doneone += readone;
