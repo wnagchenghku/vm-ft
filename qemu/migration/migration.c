@@ -37,6 +37,7 @@
 #include "migration/colo.h"
 
 #include "mc-rdma.h"
+bool migrate_use_mc_rdma = false;
 
 #define MAX_THROTTLE  (32 << 20)      /* Migration transfer speed throttling */
 

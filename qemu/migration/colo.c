@@ -28,8 +28,6 @@
 
 static bool vmstate_loading;
 
-bool migrate_use_mc_rdma = false;
-
 /* colo buffer */
 #define COLO_BUFFER_BASE_SIZE (4 * 1024 * 1024)
 
