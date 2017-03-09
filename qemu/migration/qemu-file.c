@@ -34,6 +34,7 @@
 #include "trace.h"
 
 #include "mc-rdma.h"
+#include "migration/colo.h"
 
 /*
  * Stop a file from being read/written - not all backing files can do this
@@ -143,6 +144,14 @@ void ram_control_before_iterate(QEMUFile *f, uint64_t flags)
 {
     int ret = 0;
 
+    if (migrate_use_mc_rdma) {
+        ret = mc_rdma_registration_start(f, f->opaque, flags, NULL);
+        if (ret < 0) {
+            qemu_file_set_error(f, ret);
+        }
+        return;
+    }
+
     if (f->ops->before_ram_iterate) {
         ret = f->ops->before_ram_iterate(f, f->opaque, flags, NULL);
         if (ret < 0) {
@@ -165,6 +174,14 @@ void ram_control_after_iterate(QEMUFile *f, uint64_t flags)
 {
     int ret = 0;
 
+    if (migrate_use_mc_rdma) {
+        ret = mc_rdma_registration_stop(f, f->opaque, flags, NULL);
+        if (ret < 0) {
+            qemu_file_set_error(f, ret);
+        }
+        return;
+    }
+
     if (f->ops->after_ram_iterate) {
         ret = f->ops->after_ram_iterate(f, f->opaque, flags, NULL);
         if (ret < 0) {
@@ -186,6 +203,14 @@ void mc_ram_control_after_iterate(QEMUFile *f, uint64_t flags)
 void ram_control_load_hook(QEMUFile *f, uint64_t flags, void *data)
 {
     int ret = -EINVAL;
+
+    if (migrate_use_mc_rdma) {
+        ret = mc_rdma_load_hook(f, f->opaque, flags, data);
+        if (ret < 0) {
+            qemu_file_set_error(f, ret);
+        }
+        return;
+    }
 
     if (f->ops->hook_ram_load) {
         ret = f->ops->hook_ram_load(f, f->opaque, flags, data);
@@ -218,8 +243,25 @@ size_t ram_control_save_page(QEMUFile *f, ram_addr_t block_offset,
                              ram_addr_t offset, size_t size,
                              uint64_t *bytes_sent)
 {
+    int ret;
+    if (migrate_use_mc_rdma)
+    {
+        ret = mc_rdma_save_page(f, f->opaque, block_offset,
+                                    offset, size, bytes_sent);
+
+        if (ret != RAM_SAVE_CONTROL_DELAYED) {
+            if (bytes_sent && *bytes_sent > 0) {
+                qemu_update_position(f, *bytes_sent);
+            } else if (ret < 0) {
+                qemu_file_set_error(f, ret);
+            }
+        }
+
+        return ret;
+    }
+
     if (f->ops->save_page) {
-        int ret = f->ops->save_page(f, f->opaque, block_offset,
+        ret = f->ops->save_page(f, f->opaque, block_offset,
                                     offset, size, bytes_sent);
 
         if (ret != RAM_SAVE_CONTROL_DELAYED) {

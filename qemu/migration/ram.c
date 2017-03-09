@@ -781,10 +781,6 @@ static int ram_save_page(QEMUFile *f, PageSearchStatus *pss,
     bytes_xmit = 0;
     ret = ram_control_save_page(f, block->offset,
                            offset, TARGET_PAGE_SIZE, &bytes_xmit);
-    if (migrate_use_mc_rdma) {
-        ret = mc_ram_control_save_page(f, block->offset,
-                                    offset, TARGET_PAGE_SIZE, &bytes_xmit);
-    }
 
     if (bytes_xmit) {
         *bytes_transferred += bytes_xmit;
@@ -969,10 +965,6 @@ static int ram_save_compressed_page(QEMUFile *f, PageSearchStatus *pss,
     bytes_xmit = 0;
     ret = ram_control_save_page(f, block->offset,
                                 offset, TARGET_PAGE_SIZE, &bytes_xmit);
-    if (migrate_use_mc_rdma) {
-        ret = mc_ram_control_save_page(f, block->offset,
-                                    offset, TARGET_PAGE_SIZE, &bytes_xmit);
-    }
 
     if (bytes_xmit) {
         *bytes_transferred += bytes_xmit;
@@ -2033,13 +2025,7 @@ static int ram_save_setup(QEMUFile *f, void *opaque)
     rcu_read_unlock();
 
     ram_control_before_iterate(f, RAM_CONTROL_SETUP);
-    if (migrate_use_mc_rdma) {
-        mc_ram_control_before_iterate(f, RAM_CONTROL_SETUP);
-    }
     ram_control_after_iterate(f, RAM_CONTROL_SETUP);
-    if (migrate_use_mc_rdma) {
-        mc_ram_control_after_iterate(f, RAM_CONTROL_SETUP);
-    }
 
     qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
 
@@ -2121,9 +2107,6 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
     }
 
     ram_control_before_iterate(f, RAM_CONTROL_FINISH);
-    if (migrate_use_mc_rdma) {
-        mc_ram_control_before_iterate(f, RAM_CONTROL_FINISH);
-    }
 
     /* try transferring iterative blocks of memory */
 
@@ -2141,9 +2124,6 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
 
     flush_compressed_data(f);
     ram_control_after_iterate(f, RAM_CONTROL_FINISH);
-    if (migrate_use_mc_rdma) {
-        mc_ram_control_after_iterate(f, RAM_CONTROL_FINISH);
-    }
     
 
     rcu_read_unlock();
@@ -2603,10 +2583,6 @@ static int ram_load(QEMUFile *f, void *opaque, int version_id)
                     }
                     ram_control_load_hook(f, RAM_CONTROL_BLOCK_REG,
                                           block->idstr);
-                    if (migrate_use_mc_rdma) {
-                        mc_ram_control_load_hook(f, RAM_CONTROL_BLOCK_REG,
-                                                block->idstr);
-                    }
                 } else {
                     error_report("Unknown ramblock \"%s\", cannot "
                                  "accept migration", id);
@@ -2650,9 +2626,6 @@ static int ram_load(QEMUFile *f, void *opaque, int version_id)
         default:
             if (flags & RAM_SAVE_FLAG_HOOK) {
                 ram_control_load_hook(f, RAM_CONTROL_HOOK, NULL);
-                if (migrate_use_mc_rdma) {
-                    mc_ram_control_load_hook(f, RAM_CONTROL_HOOK, NULL);
-                }
             } else {
                 error_report("Unknown combination of migration flags: %#x",
                              flags);
