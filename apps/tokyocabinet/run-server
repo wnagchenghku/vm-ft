@@ -1,0 +1,1 @@
+sudo ttserver -host 127.0.0.1 -dmn -pid /tmp/ttserver.pid -log /tmp/ttserver.log /tmp/test.tct

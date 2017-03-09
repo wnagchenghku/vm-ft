@@ -6,6 +6,7 @@ APP_DIR=`pwd`
 cd $APP_DIR
 rm -rf redis-$APP_VER
 rm -rf install
+mkdir install
 if [ ! -f redis-$APP_VER.tar.gz ]; then
 wget http://download.redis.io/releases/redis-$APP_VER.tar.gz
 fi

@@ -1,0 +1,6 @@
+APP_ROOT=`pwd`
+tar tokyotyrant-1.1.41.tar.gz
+cd tokyotyrant-1.1.41
+./configure --prefix=$APP_ROOT/install --with-tc=$APP_ROOT/../../install
+sudo make
+sudo make install

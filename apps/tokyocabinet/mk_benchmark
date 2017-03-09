@@ -1,0 +1,19 @@
+sudo apt-get install rubygems-integration
+sudo apt-get install ruby-all-dev
+sudo apt-get install libtokyocabinet-dev
+sudo gem install uuidtools
+APP_ROOT=`pwd`
+mkdir ruby_tt
+mkdir ruby_tc
+cd ruby_tt
+#wget http://fallabs.com/tokyotyrant/rubypkg/tokyotyrant-ruby-1.12.tar.gz
+#tar tokyotyrant-ruby-1.12.tar.gz
+cd tokyotyrant-ruby-1.12
+ruby install.rb
+cd ..
+cd ruby_tc
+#wget https://downloads.sourceforge.net/project/tokyocabinet/tokyocabinet-ruby/1.26/tokyocabinet-ruby-1.26.tar.gz?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Ftokyocabinet%2Ffiles%2Ftokyocabinet-ruby%2F1.26%2F&ts=1488873223&use_mirror=master
+#mv tokyocabinet-ruby/1.26/tokyocabinet-ruby-1.26.tar.gz?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Ftokyocabinet%2Ffiles%2Ftokyocabinet-ruby%2F1.26%2F&ts=1488873223&use_mirror=master ruby.tar.gz
+#tar tokyocabinet-ruby-1.26.tar.gz
+cd tokyocabinet-ruby-1.26
+ruby exconf.rb
