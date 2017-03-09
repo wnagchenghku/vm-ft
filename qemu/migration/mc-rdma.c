@@ -620,6 +620,27 @@ static uint64_t mc_rdma_make_wrid(uint64_t wr_id, uint64_t index,
     return result;
 }
 
+static void mc_rdma_signal_unregister(MC_RDMAContext *rdma, uint64_t index,
+                                        uint64_t chunk, uint64_t wr_id)
+{
+    if (rdma->unregistrations[rdma->unregister_next] != 0) {
+        error_report("rdma migration: queue is full");
+    } else {
+        MC_RDMALocalBlock *block = &(rdma->local_ram_blocks.block[index]);
+
+        if (!test_and_set_bit(chunk, block->unregister_bitmap)) {
+
+            rdma->unregistrations[rdma->unregister_next++] =
+                    mc_rdma_make_wrid(wr_id, index, chunk);
+
+            if (rdma->unregister_next == MC_RDMA_SIGNALED_SEND_MAX) {
+                rdma->unregister_next = 0;
+            }
+        } else {
+        }
+    }
+}
+
 static uint64_t mc_rdma_poll(MC_RDMAContext *rdma, uint64_t *wr_id_out,
                                uint32_t *byte_len)
 {
@@ -669,6 +690,9 @@ static uint64_t mc_rdma_poll(MC_RDMAContext *rdma, uint64_t *wr_id_out,
         }
 
         if (!rdma->pin_all) {
+#ifdef RDMA_UNREGISTRATION_EXAMPLE
+            mc_rdma_signal_unregister(rdma, index, chunk, wc.wr_id);
+#endif
         }
     } else {
     }
@@ -1050,6 +1074,9 @@ retry:
     chunk_end = mc_ram_chunk_end(block, chunk + chunks);
 
     if (!rdma->pin_all) {
+#ifdef RDMA_UNREGISTRATION_EXAMPLE
+        mc_rdma_unregister_waiting(rdma);
+#endif
     }
 
     while (test_bit(chunk, block->transit_bitmap)) {
@@ -1386,6 +1413,38 @@ size_t mc_rdma_save_page(QEMUFile *f, void *opaque,
         if (bytes_sent) {
             *bytes_sent = 1;
         }
+    } else {
+        uint64_t index, chunk;
+
+        /* TODO: Change QEMUFileOps prototype to be signed: size_t => long
+        if (size < 0) {
+            ret = mc_rdma_drain_cq(f, rdma);
+            if (ret < 0) {
+                fprintf(stderr, "rdma: failed to synchronously drain"
+                                " completion queue before unregistration.\n");
+                goto err;
+            }
+        }
+        */
+
+        ret = mc_rdma_search_ram_block(rdma, block_offset,
+                                         offset, size, &index, &chunk);
+
+        if (ret) {
+            error_report("ram block search failed");
+            goto err;
+        }
+
+        mc_rdma_signal_unregister(rdma, index, chunk, 0);
+
+        /*
+         * TODO: Synchronous, guaranteed unregistration (should not occur during
+         * fast-path). Otherwise, unregisters will process on the next call to
+         * mc_rdma_drain_cq()
+        if (size < 0) {
+            mc_rdma_unregister_waiting(rdma);
+        }
+        */
     }
 
     while (1) {
