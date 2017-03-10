@@ -13,14 +13,15 @@ mkdir database
 
 cd clamav-$VER
 ./configure --prefix=$APP_ROOT\install \
-	--with-dbdir=$$APP_ROOT/apps/clamav/install/database
+	--with-dbdir=$APP_ROOT/apps/clamav/install/database
 make -j`nproc`
 make install
 
-cd $MSMR_ROOT/apps/clamav
-sed '/Example/d' install/etc/freshclam.conf.sample > freshclam.conf
-sed '/Example/d' install/etc/clamd.conf.sample > clamd.conf
-CURPATH=`echo $MSMR_ROOT`/apps/clamav
+cd $APP_ROOT
+sed '/Example/d' $APP_ROOT/install/etc/freshclam.conf.sample > freshclam.conf
+sed '/Example/d' $APP_ROOT/install/etc/clamd.conf.sample > clamd.conf
+chown -R `whoami`:`whoami` $APP_ROOT/install/etc/freshclamd.conf
+CURPATH=`echo $APP_ROOT`
 DBPATH=$CURPATH/database
 echo "DatabaseDirectory $DBPATH" >> freshclam.conf
 echo "LogFile $CURPATH/server.log" >> clamd.conf
