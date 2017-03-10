@@ -182,11 +182,13 @@ void proxy_resume_consensus(void)
 
 uint64_t proxy_get_sync_consensus(void)
 {
-   return proxy->sync_req_id;
+    SYS_LOG(proxy,"Get Synchronization Consensus %"PRIu64"\n",proxy->sync_req_id);
+    return proxy->sync_req_id;
 }
 
 void proxy_wait_sync_consensus(uint64_t sync_consensus)
 {
+    SYS_LOG(proxy,"Wait Synchronization Consensus %"PRIu64"\n",sync_consensus);
     while(proxy->sync_req_id < sync_consensus);
 }
 
@@ -309,6 +311,20 @@ proxy_node* proxy_init(const char* proxy_log_path, uint8_t role)
     }
 
     if(!build_log_ret){
+        //if(proxy->sys_log || proxy->stat_log){
+            char* sys_log_path = (char*)malloc(sizeof(char)*strlen(proxy_log_path)+50);
+            memset(sys_log_path,0,sizeof(char)*strlen(proxy_log_path)+50);
+            //err_log("%s.\n",proxy_log_path);
+            if(NULL!=sys_log_path){
+                sprintf(sys_log_path,"%s/node-proxy-sys.log",proxy_log_path);
+                //err_log("%s.\n",sys_log_path);
+                proxy->sys_log_file = fopen(sys_log_path,"w");
+                free(sys_log_path);
+            }
+            if(NULL==proxy->sys_log_file && (proxy->sys_log || proxy->stat_log)){
+                err_log("PROXY : System Log File Cannot Be Created.\n");
+            }
+        //}
         //if(proxy->req_log){
             char* req_log_path = (char*)malloc(sizeof(char)*strlen(proxy_log_path)+50);
             memset(req_log_path,0,sizeof(char)*strlen(proxy_log_path)+50);
@@ -322,7 +338,7 @@ proxy_node* proxy_init(const char* proxy_log_path, uint8_t role)
                 err_log("PROXY : Client Request Log File Cannot Be Created.\n");
             }
         //}
-    }
+    }    
 
     TAILQ_INIT(&tailhead);
     LIST_INIT(&listhead);

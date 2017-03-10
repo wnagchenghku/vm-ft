@@ -40,11 +40,14 @@ typedef struct proxy_node_t{
     nc_t pair_count;
 	
     // log option
+    int sys_log;
+    int stat_log;
     int req_log;
 
-	FILE* req_log_file;
-	char* db_name;
-	db* db_ptr;
+    FILE* req_log_file;
+    FILE* sys_log_file;
+    char* db_name;
+    db* db_ptr;
 
     int mirror_clientfd;
     uint64_t sync_req_id;

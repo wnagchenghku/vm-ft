@@ -12,6 +12,8 @@ int proxy_read_config(struct proxy_node_t* cur_node,const char* config_path){
     }
 
     config_lookup_int(&config_file,"req_log",&cur_node->req_log);
+    config_lookup_int(&config_file,"sys_log",&cur_node->sys_log);
+    config_lookup_int(&config_file,"stat_log",&cur_node->stat_log);
 
     const char* db_name;
     if(!config_lookup_string(&config_file,"db_name",&db_name)){
