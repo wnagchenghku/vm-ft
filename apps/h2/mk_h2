@@ -1,0 +1,51 @@
+#!/bin/bash
+APP_ROOT=`pwd`
+unzip h2-2016-10-31.zip
+tar zxvf tpcw.tar.gz
+cd apache-tomcat-7.0.75/webapps/
+mv ../../tpcw1.0 .
+cd tpcw1.0/
+mkdir WEB-INF
+mkdir WEB-INF/lib
+mkdir WEB-INF/classes
+cd populate/
+sed -i 's/COM.ibm.db2.jdbc.app.DB2Driver/org.h2.Driver/g' TPCW_Populate.java
+sed -i 's/jdbc:db2:tpcw2/jdbc:h2:~\/test/g' TPCW_Populate.java
+sed -i 's/DriverManager.getConnection(dbName)/DriverManager.getConnection(dbName,"sa","")/g' TPCW_Populate.java
+cp APP_ROOT/h2/bin/h2-1.4.193.jar .
+#manually add h2-1.4.193.jar to CLASSPATH(JAVASETING.md)
+#or javac -cp `pwd`/h2-1.3.176.jar TPCW_Populate.java
+make
+java TPCW_Populate
+cd ../ImgGen/ImgFiles
+make
+sudo apt-get install perl
+cd ../../populate/
+#change $DEST_DIR in populate_images
+cd ..
+cp images/img*/* images/
+cd servlets
+sed -i 's/;\$sessionid\$/;jsessionid=/g' *
+sed -i 's/COM.ibm.db2.jdbc.app.DB2Driver/org.h2.Driver/g' TPCW_Database.java
+sed -i 's/jdbc:db2:tpcw2/jdbc:h2:~\/test/g' TPCW_Database.java
+sed -i 's/DriverManager.getConnection(jdbcPath)/DriverManager.getConnection(jdbcPath,"sa","")/g' TPCW_Database.java
+sed -i 's/CURRENT TIMESTAMP/CURRENT_TIMESTAMP/g' TPCW_Database.java
+sed -i 's/CURRENT DATE/CURRENT_DATE/g' TPCW_Database.java
+sed -i "4 i TPCW_HOME=$APP_ROOT/apache-tomcat-7.0.75/webapps/tpcw1.0" Makefile 
+mkdir ../classes
+make
+cd ../classes
+cp ../../classes/* .
+cp ../../servlet/* .
+cd ..
+sed -i 's/;\$sessionid\$/;jsessionid=/g' rbe/RBE.java
+javac -source 1.3 rbe/*.java
+sed -i 's/;\$sessionid\$/;jsessionid=/g' RBE.java
+cd ../WEB-INF/classes
+chmod a+x web_xml_generate
+./web_xml_generatecd 
+cd ../../tpcw1.0/
+java -mx512M rbe.RBE -EB rbe.EBTPCW1Factory 30 -OUT run1.m -RU 100 -MI
+1000 -RD 100 -WWW http://localhost:8080/tpcw1.0 -CUST 144000 -ITEM 10000 -TT 1.0
+
+

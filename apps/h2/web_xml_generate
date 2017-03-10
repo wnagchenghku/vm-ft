@@ -1,0 +1,35 @@
+#!/bin/bash
+FILE=`pwd`/apache-tomcat-7.0.75/webapps/tpcw1.0/web.xml
+echo '<web-app xmlns="http://java.sun.com/xml/ns/javaee"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
+                      http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"
+  version="3.0"
+  metadata-complete="true">
+' >> $FILE
+for file in `ls TPCW*.class`
+do
+	filename=`echo $file | cut -d'.' -f 1`
+	echo "<servlet>" >> $FILE
+	echo "<servlet-name>" >> $FILE	
+	echo $filename >> $FILE
+	echo "</servlet-name>" >> $FILE
+	echo "<servlet-class>" >> $FILE
+	echo $filename >> $FILE
+	echo "</servlet-class>" >> $FILE
+	echo "</servlet>" >> $FILE
+done
+for file in `ls TPCW*.class`
+do
+        filename=`echo $file | cut -d'.' -f 1`
+	filemap=/servlet/$filename
+        echo "<servlet-mapping>" >> $FILE
+        echo "<servlet-name>" >> $FILE
+        echo $filename >> $FILE
+        echo "</servlet-name>" >> $FILE
+        echo "<url-pattern>" >> $FILE
+        echo $filemap >> $FILE
+        echo "</url-pattern>" >> $FILE
+        echo "</servlet-mapping>" >> $FILE
+done
+echo '</web-app>' >> $FILE
