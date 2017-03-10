@@ -12,7 +12,7 @@ tar zxvf clamav-$VER.tar.gz
 mkdir database
 
 cd clamav-$VER
-./configure --prefix=$APP_ROOT\install \
+./configure --prefix=$APP_ROOT/install \
 	--with-dbdir=$APP_ROOT/apps/clamav/install/database
 make -j`nproc`
 make install

@@ -20,3 +20,5 @@ sed -i "84 i PATH=$PATH:$APP_ROOT/install/sbin"
 service nginx status  # to poll for current status
 service nginx stop    # to stop any servers if any
 service nginx start   # to start the server
+cd $APP_ROOT/install/
+sudo chown -R www-data:www-data html/
