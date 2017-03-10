@@ -121,13 +121,9 @@ int dare_main(proxy_node* proxy, uint8_t role)
     return 0;
 }
 
-int stop_consensus;
-
 static void leader_handle_submit_req(void* buf, ssize_t data_size)
 {
     assert(data_size <= IO_BUF_SIZE);
-
-    while(stop_consensus);
 
     pthread_spin_lock(&tailq_lock);
     uint64_t cur_rec = ++proxy->cur_rec;
@@ -168,16 +164,6 @@ void proxy_on_mirror(uint8_t *buf, int len)
 {
     leader_handle_submit_req(buf, len);
     return;
-}
-
-void proxy_stop_consensus(void)
-{
-    stop_consensus = 1;
-}
-
-void proxy_resume_consensus(void)
-{
-    stop_consensus = 0;
 }
 
 uint64_t proxy_get_sync_consensus(void)

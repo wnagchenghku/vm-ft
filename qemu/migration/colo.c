@@ -389,9 +389,11 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     }
 
     // colo_send_message(s->to_dst_file, COLO_MESSAGE_VMSTATE_SEND, &local_err);
-    proxy_stop_consensus();
-    uint64_t sync_consensus = proxy_get_sync_consensus();
-    mc_send_message_value(COLO_MESSAGE_VMSTATE_SEND, sync_consensus, &local_err);
+    /*
+     * qemu_mutex_lock_iothread() blocks the io thread for reading new network
+     * packets
+     */
+    mc_send_message(COLO_MESSAGE_VMSTATE_SEND, &local_err);
     if (local_err) {
         goto out;
     }
@@ -471,7 +473,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
     ret = 0;
 
-    proxy_resume_consensus();
     mc_start_buffer();
 
     /* Resume primary guest */
@@ -800,9 +801,7 @@ void *colo_process_incoming_thread(void *opaque)
 
         // colo_receive_check_message(mis->from_src_file,
         //                    COLO_MESSAGE_VMSTATE_SEND, &local_err);
-        uint64_t sync_consensus = mc_receive_message_value(COLO_MESSAGE_VMSTATE_SEND, &local_err);
-
-        proxy_wait_sync_consensus(sync_consensus);
+        mc_receive_check_message(COLO_MESSAGE_VMSTATE_SEND, &local_err);
 
         if (local_err) {
             goto out;
