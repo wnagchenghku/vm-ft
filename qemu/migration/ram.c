@@ -2120,12 +2120,15 @@ static void printbitmap(unsigned long *bmap){
 int backup_prepare_bitmap(void){
     rcu_read_lock();
     
-
+    int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
     //address_space_sync_dirty_bitmap(&address_space_memory);    
     migration_bitmap_sync();
 
     unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
     printbitmap(bitmap);
+
+    bitmap_zero(bitmap, ram_bitmap_pages);
+
 
     rcu_read_unlock();
 
