@@ -1605,7 +1605,7 @@ poll_vote_requests()
     uint64_t old_sid = data.ctrl_data->sid; SID_SET_L(old_sid);
     uint64_t best_sid = old_sid;
     for (i = 0; i < size; i++) {
-        if (i == data.config.idx) continue;
+        if (i <= data.config.idx) continue;
         request = &(data.ctrl_data->vote_req[i]);
         if (request->sid != 0) {
             text(log_fp, "Vote request from:"); PRINT_SID_(request->sid); 
