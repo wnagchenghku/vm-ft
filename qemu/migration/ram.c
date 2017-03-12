@@ -2745,7 +2745,7 @@ out_locked:
 }
 
 void rdma_backup_init(void){
-    ram_cache_enable = true;
+    //ram_cache_enable = true;
     int64_t ram_cache_pages = last_ram_offset() >> TARGET_PAGE_BITS;
     migration_bitmap_rcu = g_new0(struct BitmapRcu, 1);
     migration_bitmap_rcu->bmap = bitmap_new(ram_cache_pages);

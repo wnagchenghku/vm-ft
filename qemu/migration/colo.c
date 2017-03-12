@@ -850,18 +850,30 @@ void *colo_process_incoming_thread(void *opaque)
             error_report("Load VM's live state (ram) error");
             goto out;
         }
+
+        printf("*******get out loadvm state main\n");
+        fflush(stdout);
+
         migrate_use_mc_rdma = false;
         /* read the VM state total size first */
         // value = colo_receive_message_value(mis->from_src_file,
         //                          COLO_MESSAGE_VMSTATE_SIZE, &local_err);
         
         value = mc_receive_message_value(COLO_MESSAGE_VMSTATE_SIZE, &local_err);
+        printf("*******after receive message value\n");
+        fflush(stdout);
+
+
+
 
         if (local_err) {
             goto out;
         }
 
         total_size = mc_rdma_get_colo_ctrl_buffer(value);
+        printf("*******after mc_rdma_get_colo_ctrl_buffer\n");
+        fflush(stdout);
+
         if (total_size != value) {
             error_report("Got %lu VMState data, less than expected %lu",
                          total_size, value);
@@ -870,6 +882,11 @@ void *colo_process_incoming_thread(void *opaque)
         }
         /* read vm device state into colo buffer */
         total_size = mc_qsb_fill_buffer(buffer, rdma_buffer, value);
+        printf("*******after mc_qsb_fill_buffer\n");
+        fflush(stdout);
+
+
+        
         // total_size = qsb_fill_buffer(buffer, mis->from_src_file, value);
         if (total_size != value) {
             error_report("Got %lu VMState data, less than expected %lu",
