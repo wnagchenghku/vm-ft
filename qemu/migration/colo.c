@@ -793,6 +793,8 @@ void *colo_process_incoming_thread(void *opaque)
     }
 
     while (mis->state == MIGRATION_STATUS_COLO) {
+        printf("****************inside Loop\n\n\n\n");
+    fflush(stdout);
         int request;
 
         // colo_wait_handle_message(mis->from_src_file, &request, &local_err);
