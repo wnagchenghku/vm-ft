@@ -2123,7 +2123,7 @@ int backup_prepare_bitmap(void){
 
     address_space_sync_dirty_bitmap(&address_space_memory);    
     unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
-    //printbitmap(bitmap);
+    printbitmap(bitmap);
 
     rcu_read_unlock();
 

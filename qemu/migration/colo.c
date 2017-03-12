@@ -813,7 +813,7 @@ void *colo_process_incoming_thread(void *opaque)
         //TODO: receive primary's bitmap
         //TODO: Send itself's bitmap. 
 
-        //backup_prepare_bitmap();
+        backup_prepare_bitmap();
 
 
 
