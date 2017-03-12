@@ -102,7 +102,7 @@ like Primary side
 - (5) Optionally, enable debug mode
 ```
 {'execute': 'trace-event-set-state', 'arguments': {'name': 'qemu_rdma*', 'enable': true} }
-(find more in generated-events.c)
+(info trace-events)
 
 { "execute": "migrate-set-parameters" , "arguments": { "x-checkpoint-delay": 20000 } }
 ```
