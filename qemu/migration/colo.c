@@ -935,6 +935,9 @@ void *colo_process_incoming_thread(void *opaque)
     }
 
 out:
+    printf("****************inside out\n\n\n\n");
+    fflush(stdout);
+
      vmstate_loading = false;
     /* Throw the unreported error message after exited from loop */
     if (local_err) {
@@ -956,7 +959,8 @@ out:
     * incoming thread, so here it is not necessary to lock here again,
     * or there will be a deadlock error.
     */
-    printf("before calling release**********\n");
+    printf("before calling release**********\n\n\n\n\n");
+    fflush(stdout);
     colo_release_ram_cache();
 
     /* Hope this not to be too long to loop here */
