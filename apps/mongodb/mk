@@ -4,6 +4,7 @@ NUMCPU=`nproc`
 # working folder
 cd $APP_DIR
 # remove folders
+sudo apt-get install scons
 rm -rf mongodb-src-r$APP_VER
 rm -rf install
 rm -rf ycsb-0.1.4

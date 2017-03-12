@@ -10,7 +10,7 @@ wget http://downloads.mysql.com/archives/get/file/mysql-$VER.tar.gz
 fi
 tar xzvf mysql-$VER.tar.gz
 cd mysql-$VER
-./configure --prefix=../mysql-install
+./configure --prefix=$APP_ROOT/mysql-install
 make -j `nproc`
 make install
 cd ..

@@ -3,6 +3,7 @@ BEN_VER=1.0.18
 APP_DIR=`pwd`
 # working folder
 cd $APP_DIR
+sudo apt-get install libevent-dev
 # remove folders
 rm -rf memcached-$APP_VER
 rm -rf install

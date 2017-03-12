@@ -10,7 +10,7 @@ rm -rf install-php
 sudo apt-get install libxml2-dev
 # download and extract
 if [ ! -f httpd-$HTTPD_VER.tar.gz ]; then
-wgethttps://archive.apache.org/dist/httpd/httpd-HTTPD_VER.tar.gz
+wget https://archive.apache.org/dist/httpd/httpd-$HTTPD_VER.tar.gz
 fi
 tar zxvf httpd-$HTTPD_VER.tar.gz
 cd $APP_DIR/httpd-$HTTPD_VER
@@ -25,18 +25,18 @@ make install
 # build php
 cd $APP_DIR
 if [ ! -f php-$PHP_VER.tar.gz ]; then
-wget ftp://ftp.ntu.edu.tw/tmp/php/distributions/php-PHP_VER.tar.gz
+wget ftp://ftp.ovh.net/made-in-ovh/maj-ovh/php-5.4.0.tar.gz
 fi
 tar zxvf php-$PHP_VER.tar.gz
 cd php-$PHP_VER
-./configure --prefix=$APP_DIR/install-php --with-apxs2=$APP_DIR/apache/install/bin/apxs --disable-dom --disable-simplexml
+./configure --prefix=$APP_DIR/install-php --with-apxs2=$APP_DIR/install/bin/apxs --disable-dom --disable-simplexml
 make -j `nproc`
 make install
 # ServerLimit is a hard limit on the number of active child processes, and must be greater than
 # or equal to the MaxClients directive divided by the ThreadsPerChild directive.
 # change conf file
-cd $APP_DIR/apache/install/conf
-sed -i "s/Listen 80/Listen 7000/g" httpd.conf
+cd $APP_DIR/install/conf
+sed -i "s/Listen 80/Listen 7002/g" httpd.conf
 echo "ServerName 10.22.1.15" >> httpd.conf
 echo "ServerLimit 1" >> httpd.conf
 echo "ThreadsPerChild 8" >> httpd.conf

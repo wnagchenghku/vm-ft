@@ -1,5 +1,5 @@
 #!/bin/bash
-
+APP_ROOT=`pwd`
 if [ ! $1 ];
 then
         echo "Usage: $0 <mongdb server port>"
@@ -15,7 +15,6 @@ fi
 #fi
 
 
-cd $MSMR_ROOT/apps/clamav/
 sed '/TCPSocket/d' clamd.conf > client.conf
 echo "TCPSocket $1" >> client.conf
 
