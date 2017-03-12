@@ -755,7 +755,7 @@ void *colo_process_incoming_thread(void *opaque)
      */
     qemu_file_set_blocking(mis->from_src_file, true);
 
-
+    //XS: backup init global variables; 
     rdma_backup_init();
 
 
@@ -810,7 +810,7 @@ void *colo_process_incoming_thread(void *opaque)
         //TODO: receive primary's bitmap
         //TODO: Send itself's bitmap. 
 
-        backup_prepare_bitmap();
+        //backup_prepare_bitmap();
 
 
 
