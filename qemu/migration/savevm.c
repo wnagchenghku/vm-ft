@@ -1867,6 +1867,10 @@ qemu_loadvm_section_part_end(QEMUFile *f, MigrationIncomingState *mis)
 
 int qemu_loadvm_state_main(QEMUFile *f, MigrationIncomingState *mis)
 {
+    printf("*********inside loadvmstate main\n");
+    fflush(stdout);
+
+
     uint8_t section_type;
     int ret;
 

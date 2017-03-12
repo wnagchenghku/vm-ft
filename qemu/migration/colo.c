@@ -794,7 +794,8 @@ void *colo_process_incoming_thread(void *opaque)
 
     while (mis->state == MIGRATION_STATUS_COLO) {
         printf("****************inside Loop\n\n\n\n");
-    fflush(stdout);
+        fflush(stdout);
+        
         int request;
 
         // colo_wait_handle_message(mis->from_src_file, &request, &local_err);
@@ -830,6 +831,10 @@ void *colo_process_incoming_thread(void *opaque)
         vm_stop_force_state(RUN_STATE_COLO);
         trace_colo_vm_state_change("run", "stop");
         qemu_mutex_unlock_iothread();
+
+        printf("****************before\n\n\n\n");
+        fflush(stdout);
+
 
         // colo_receive_check_message(mis->from_src_file,
         //                    COLO_MESSAGE_VMSTATE_SEND, &local_err);
