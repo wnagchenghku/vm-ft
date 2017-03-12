@@ -338,7 +338,8 @@ static uint64_t mc_receive_message_value(uint32_t expect_msg, Error **errp)
 
     return value;
 }
-
+//XS: primary do checkpoint
+//start doing the cehckpoint
 static int colo_do_checkpoint_transaction(MigrationState *s,
                                           QEMUSizedBuffer *buffer)
 {
@@ -723,7 +724,7 @@ static int colo_prepare_before_load(QEMUFile *f)
     }
     return ret;
 }
-
+//XS: backup thread
 void *colo_process_incoming_thread(void *opaque)
 {
     MigrationIncomingState *mis = opaque;
@@ -804,6 +805,11 @@ void *colo_process_incoming_thread(void *opaque)
 
         //TODO: receive primary's bitmap
         //TODO: Send itself's bitmap. 
+
+        backup_prepare_bitmap();
+
+
+
 
         if (local_err) {
             goto out;

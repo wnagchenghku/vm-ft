@@ -42,6 +42,7 @@
 #include "exec/ram_addr.h"
 #include "qemu/rcu_queue.h"
 #include "migration/colo.h"
+#include "mc-rdma.h"
 
 #ifdef DEBUG_MIGRATION_RAM
 #define DPRINTF(fmt, ...) \
@@ -2088,14 +2089,75 @@ static int ram_save_iterate(QEMUFile *f, void *opaque)
     return pages_sent;
 }
 
+
+
+//XS: print bitmap encoded in long
+static char* long_to_binary(long l){
+    static char b[65];
+    b[0]='\0';
+    unsigned long z; 
+    for (z = 1UL << 63; z > 0; z >>= 1 ){
+        strcat(b, ((l & z) == z) ? "1" : "0");
+    }
+    return b;
+}
+
+
+//XS: Printf the bitmap
+static void printbitmap(unsigned long *bmap){
+    int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
+    long len =  BITS_TO_LONGS(ram_bitmap_pages);
+    fprintf(stderr, "len: %d ", len);
+    int i;
+    for (i=0; i< len; i++){
+        fprintf(stderr, "[%d]: %s\n", i, long_to_binary(bmap[i]));
+    }
+
+}
+
+
+
+int backup_prepare_bitmap(){
+    rcu_read_lock();
+    
+
+    migration_bitmap_sync();
+    unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
+    printbitmap(bitmap);
+    
+    rcu_read_unlock();
+
+}
+
+
+
+
 /* Called with iothread lock */
+//XS: the major function while doing migration. 
 static int ram_save_complete(QEMUFile *f, void *opaque)
 {
     rcu_read_lock();
 
+
+    //XS: this line will fit in the bitmap. 
     if (!migration_in_postcopy(migrate_get_current())) {
         migration_bitmap_sync();
     }
+
+    //XS: TRY to transfer the dirty bitmap; 
+    // int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
+    // long len =  BITS_TO_LONGS(ram_bitmap_pages);
+    // unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap
+    // memcpy(rdma_buffer, bitmap, len * sizeof(unsigned long)); 
+    // ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
+    // if (ret <= 0){
+    //     printf("Failed to send bitmap from primary to backup\n");
+    // }
+
+
+
+
+
 
     ram_control_before_iterate(f, RAM_CONTROL_FINISH);
 

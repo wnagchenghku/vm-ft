@@ -1065,6 +1065,8 @@ void qemu_savevm_state_complete_precopy(QEMUFile *f, bool iterable_only)
 
         save_section_header(f, se, QEMU_VM_SECTION_END);
 
+        //XS: function pointer
+        // Points to ram_save_complete
         ret = se->ops->save_live_complete_precopy(f, se->opaque);
         trace_savevm_section_end(se->idstr, se->section_id, ret);
         save_section_footer(f, se);
