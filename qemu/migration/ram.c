@@ -2748,7 +2748,7 @@ void rdma_backup_init(void){
     migration_bitmap_rcu = g_new0(struct BitmapRcu, 1);
     migration_bitmap_rcu->bmap = bitmap_new(ram_cache_pages);
     migration_dirty_pages = 0;
-    //memory_global_dirty_log_start();
+    memory_global_dirty_log_start();
 }
 
 
