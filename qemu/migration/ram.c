@@ -2118,14 +2118,14 @@ static void printbitmap(unsigned long *bmap){
 
 
 int backup_prepare_bitmap(void){
-    rcu_read_lock();
+    //rcu_read_lock();
     
 
     address_space_sync_dirty_bitmap(&address_space_memory);    
     unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
     printbitmap(bitmap);
 
-    rcu_read_unlock();
+    //rcu_read_unlock();
 
 }
 
