@@ -756,10 +756,10 @@ void *colo_process_incoming_thread(void *opaque)
     qemu_file_set_blocking(mis->from_src_file, true);
 
     //XS: backup init global variables; 
-    //rdma_backup_init();
+    rdma_backup_init();
 
 
-    ret = colo_init_ram_cache();
+    //ret = colo_init_ram_cache();
     // if (ret < 0) {
     //     error_report("Failed to initialize ram cache");
     //     goto out;

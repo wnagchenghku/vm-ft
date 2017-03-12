@@ -2718,6 +2718,7 @@ int colo_init_ram_cache(void)
         memcpy(block->colo_cache, block->host, block->used_length);
     }
     rcu_read_unlock();
+
     ram_cache_enable = true;
     /*
     * Record the dirty pages that sent by PVM, we use this dirty bitmap together
@@ -2744,6 +2745,7 @@ out_locked:
 }
 
 void rdma_backup_init(void){
+    ram_cache_enable = true;
     int64_t ram_cache_pages = last_ram_offset() >> TARGET_PAGE_BITS;
     migration_bitmap_rcu = g_new0(struct BitmapRcu, 1);
     migration_bitmap_rcu->bmap = bitmap_new(ram_cache_pages);
