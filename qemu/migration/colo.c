@@ -756,7 +756,7 @@ void *colo_process_incoming_thread(void *opaque)
     qemu_file_set_blocking(mis->from_src_file, true);
 
     //XS: backup init global variables; 
-    rdma_backup_init();
+    //rdma_backup_init();
 
 
     //ret = colo_init_ram_cache();
@@ -886,7 +886,7 @@ void *colo_process_incoming_thread(void *opaque)
         fflush(stdout);
 
 
-        
+
         // total_size = qsb_fill_buffer(buffer, mis->from_src_file, value);
         if (total_size != value) {
             error_report("Got %lu VMState data, less than expected %lu",
