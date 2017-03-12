@@ -2150,14 +2150,21 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
     }
 
     //XS: TRY to transfer the dirty bitmap; 
-    // int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
-    // long len =  BITS_TO_LONGS(ram_bitmap_pages);
-    // unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap
-    // memcpy(rdma_buffer, bitmap, len * sizeof(unsigned long)); 
-    // ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
-    // if (ret <= 0){
-    //     printf("Failed to send bitmap from primary to backup\n");
-    // }
+    int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
+    long len =  BITS_TO_LONGS(ram_bitmap_pages);
+    unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap
+    memcpy(rdma_buffer, bitmap, len * sizeof(unsigned long)); 
+    ssize_t ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
+    if (ret <= 0){
+        printf("Failed to send bitmap from primary to backup\n");
+    }
+    printf("RDMA sent length %lu\n", ret);
+
+    //XS: receive the bitmap from backup. 
+    ret = mc_rdma_get_colo_ctrl_buffer();
+    printf("RDMA received length %lu\n", ret);
+    unsigned long *backup_bitmap = (unsigned long *) rdma_buffer;
+    
 
 
 
