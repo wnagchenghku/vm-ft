@@ -2117,14 +2117,14 @@ static void printbitmap(unsigned long *bmap){
 
 
 
-int backup_prepare_bitmap(){
+int backup_prepare_bitmap(void){
     rcu_read_lock();
     
 
-    migration_bitmap_sync();
+    address_space_sync_dirty_bitmap(&address_space_memory);    
     unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
     printbitmap(bitmap);
-    
+
     rcu_read_unlock();
 
 }
@@ -2742,6 +2742,17 @@ out_locked:
     rcu_read_unlock();
     return -errno;
 }
+
+void rdma_backup_init(void){
+    int64_t ram_cache_pages = last_ram_offset() >> TARGET_PAGE_BITS;
+    migration_bitmap_rcu = g_new0(struct BitmapRcu, 1);
+    migration_bitmap_rcu->bmap = bitmap_new(ram_cache_pages);
+    migration_dirty_pages = 0;
+    memory_global_dirty_log_start();
+
+}
+
+
 
 void colo_release_ram_cache(void)
 {

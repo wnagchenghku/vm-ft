@@ -755,6 +755,10 @@ void *colo_process_incoming_thread(void *opaque)
      */
     qemu_file_set_blocking(mis->from_src_file, true);
 
+
+    rdma_backup_init();
+
+
     // ret = colo_init_ram_cache();
     // if (ret < 0) {
     //     error_report("Failed to initialize ram cache");
@@ -885,7 +889,9 @@ void *colo_process_incoming_thread(void *opaque)
         qemu_system_reset(VMRESET_SILENT);
         vmstate_loading = true;
         // colo_flush_ram_cache();
-        ret = qemu_load_device_state(fb);
+        //XS: GUESS CPU
+        ret = qemu_load_device_state(fb); 
+
         if (ret < 0) {
             error_report("COLO: load device state failed");
             qemu_mutex_unlock_iothread();
