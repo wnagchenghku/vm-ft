@@ -347,6 +347,15 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     Error *local_err = NULL;
     int ret = -1;
 
+
+
+
+    /**
+    1. memcpy 
+    2. rdma_buffer = start address (optional)
+    3. ret = mc_rdma_put_colo_ctrl_buffer(sizeof(msg));
+    **/
+
     // colo_send_message(s->to_dst_file, COLO_MESSAGE_CHECKPOINT_REQUEST,
     //                   &local_err);
 
@@ -783,7 +792,18 @@ void *colo_process_incoming_thread(void *opaque)
 
         // colo_wait_handle_message(mis->from_src_file, &request, &local_err);
 
+
+    // Ret: len; 
+    // COLOMessage msg;
+    // ret = mc_rdma_get_colo_ctrl_buffer();
+    // msg = rdma_buffer;
+
+
+
         mc_wait_handle_message(&request, &local_err);
+
+        //TODO: receive primary's bitmap
+        //TODO: Send itself's bitmap. 
 
         if (local_err) {
             goto out;
