@@ -956,6 +956,7 @@ out:
     * incoming thread, so here it is not necessary to lock here again,
     * or there will be a deadlock error.
     */
+    printf("before calling release**********\n");
     colo_release_ram_cache();
 
     /* Hope this not to be too long to loop here */
