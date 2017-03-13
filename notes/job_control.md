@@ -11,7 +11,7 @@ CTRL-Z
 [1]+  Stopped                 fred
 $ bob &
 [2]     bob &
-runn a command in the background with an ampersand (&)
+run a command in the background with an ampersand (&)
 $ fg %fred
 fred resumes in the foreground...
 ```
