@@ -11,6 +11,11 @@ CTRL-Z
 [1]+  Stopped                 fred
 $ bob &
 [2]     bob &
+runn a command in the background with an ampersand (&)
 $ fg %fred
 fred resumes in the foreground...
 ```
+
+When you run a shell session, all the process you run at the command line are child processes of that shell. If you log out or your session crashes or otherwise ends unexpectedly, SIGHUP kill signals will be sent to its child processes (including background processes) to end them too.
+
+You can get around this by telling the process(es) that you want kept alive to ignore SIGHUP signals. There are two ways to do this: by using the `nohup` command to run the command in an environment where it will ignore termination signals.
