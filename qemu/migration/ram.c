@@ -2116,7 +2116,7 @@ static void printbitmap(unsigned long *bmap){
 }
 
 
-
+//XS: backup thread's for preparing and comparing bitmap
 int backup_prepare_bitmap(void){
     rcu_read_lock();
     
@@ -2127,11 +2127,53 @@ int backup_prepare_bitmap(void){
     unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
     printbitmap(bitmap);
 
+    ssize_t ret; 
+    ret = mc_rdma_get_colo_ctrl_buffer();
+    printf("[Bitmap] RDMA received length %lu\n", ret);
+    
+
+    memcpy(rdma_buffer, bitmap, len * sizeof(unsigned long)); 
+    ssize_t ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
+    if (ret <= 0){
+        printf("Failed to send bitmap from backup to primary\n");
+    }
+    printf("[Bitmap] RDMA sent length %lu\n", ret);
+
+
+
+
+    //TODO: compute hash based on xor
+
+
+
+
+
+
     bitmap_zero(bitmap, ram_bitmap_pages);
 
 
     rcu_read_unlock();
 
+}
+
+
+
+static int64_t slow_bitmap_count(unsigned long *bmap, int64_t nbits){
+    unsigned long mask; 
+    int64_t i; 
+    int offset; 
+    int64_t count = 0;
+    for (i =0; i * 64 < nbits; ++i){
+        mask = 0x8000000000000000;
+        for (offset = 0; offset <64 && i*64 +offset < nbits; offset++){
+
+            if (mask & bmap[i]){
+                count ++;
+            }
+            mask >>= 1; 
+        }
+    }
+    return count; 
 }
 
 
@@ -2158,17 +2200,37 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
     if (ret <= 0){
         printf("Failed to send bitmap from primary to backup\n");
     }
-    printf("RDMA sent length %lu\n", ret);
+    printf("[Bitmap] RDMA sent length %lu\n", ret);
 
     //XS: receive the bitmap from backup. 
     ret = mc_rdma_get_colo_ctrl_buffer();
-    printf("RDMA received length %lu\n", ret);
+    printf("[Bitmap] RDMA received length %lu\n", ret);
     unsigned long *backup_bitmap = (unsigned long *) rdma_buffer;
     
+    /******
+    Bitmap AND backup_bitmap => Both dirty
+    Bitmap XOR backup_bitmap => Just one dirty
+
+    */
+    printf("Primary Bitmap count%"PRId64"\n", slow_bitmap_count(bitmap, ram_bitmap_pages));
+    printf("Backup Bitmap count%"PRId64"\n", slow_bitmap_count(bakcup_bitmap, ram_bitmap_pages));
 
 
+    //XS_FIXIT: This is slow, a global variable may be better, otherwise malloc each time is slow
+    unsigned long *and_bitmap = bitmap_new(ram_bitmap_pages);
+    ret = bitmap_and(and_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
+    if (ret <= 0){
+        printf("\n\nFailed to do the and operation on the bitmap\n\n");
+    }
+    printf("And Bitmap count%"PRId64"\n", slow_bitmap_count(and_bitmap, ram_bitmap_pages));
 
 
+    unsigned long *xor_bitmap = bitmap_new(ram_bitmap_pages);
+    ret = bitmap_xor(xor_bitmap, bitmap, backup_bitmap, ram_bitmap_pages)
+    if (ret <= 0){
+        printf("\n\nFailed to do the xor operation on the bitmap\n\n");
+    }
+    printf("XOR Bitmap count%"PRId64"\n", slow_bitmap_count(xor_bitmap, ram_bitmap_pages));
 
 
     ram_control_before_iterate(f, RAM_CONTROL_FINISH);
