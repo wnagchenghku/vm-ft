@@ -2221,7 +2221,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
 
         printf("\n before memcpy\n");
         fflush(stdout);
-        memcpy(rdma_buffer, bitmap, len * sizeof(unsigned long)); 
+        memcpy(rdma_buffer, bitmap, 1); 
         printf("\n after memcpy before put\n");
         fflush(stdout);
 
