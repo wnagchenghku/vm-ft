@@ -29,6 +29,9 @@
 
 static bool vmstate_loading;
 
+bool colo_first_sync; 
+
+
 /* colo buffer */
 #define COLO_BUFFER_BASE_SIZE (4 * 1024 * 1024)
 
@@ -415,7 +418,9 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     * to be blocked here.
     */
     migrate_use_mc_rdma = true;
+    colo_first_sync = false;
     qemu_savevm_live_state(s->to_dst_file);
+    colo_first_sync = true;
     migrate_use_mc_rdma = false;
 
     /* flush QEMU_VM_EOF and RAM_SAVE_FLAG_EOS so that
