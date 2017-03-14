@@ -788,6 +788,7 @@ static int ram_save_page(QEMUFile *f, PageSearchStatus *pss,
 
     /* In doubt sent page as normal */
     bytes_xmit = 0;
+    //XS: send one page to backup. 
     ret = ram_control_save_page(f, block->offset,
                            offset, TARGET_PAGE_SIZE, &bytes_xmit);
 
@@ -795,6 +796,7 @@ static int ram_save_page(QEMUFile *f, PageSearchStatus *pss,
         *bytes_transferred += bytes_xmit;
         pages = 1;
     }
+    
 
     XBZRLE_cache_lock();
 
