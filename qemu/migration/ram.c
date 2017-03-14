@@ -2171,10 +2171,10 @@ int backup_prepare_bitmap(void){
 
     memcpy(rdma_buffer, bitmap, len * sizeof(unsigned long)); 
     ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
-    if (ret <= 0){
+    if (ret < 0){
         printf("Failed to send bitmap from backup to primary\n");
     }
-    printf("[Bitmap] RDMA sent length %lu\n", ret);
+    //printf("[Bitmap] RDMA sent length %lu\n", ret);
 
 
 
@@ -2221,25 +2221,25 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
         
 
-        printf("\n before memcpy\n");
-        fflush(stdout);
+        // printf("\n before memcpy\n");
+        // fflush(stdout);
         memcpy(rdma_buffer, bitmap, len * sizeof(unsigned long)); 
         //int tmp = 4;
         //memcpy(rdma_buffer, &tmp, sizeof(tmp));
-        printf("\n after memcpy before put\n");
-        fflush(stdout);
+        // printf("\n after memcpy before put\n");
+        // fflush(stdout);
 
 
 
         ssize_t ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
-        if (ret <= 0){
+        if (ret < 0){
             printf("Failed to send bitmap from primary to backup\n");
         }
-        printf("\n after put\n");
-        fflush(stdout);
+        // printf("\n after put\n");
+        // fflush(stdout);
 
 
-        printf("[Bitmap] RDMA sent length %lu\n", ret);
+        //printf("[Bitmap] RDMA sent length %lu\n", ret);
 
         //XS: receive the bitmap from backup. 
         ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
@@ -2270,6 +2270,11 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         //     printf("\n\nFailed to do the xor operation on the bitmap\n\n");
         // }
         printf("XOR Bitmap count%"PRId64"\n", slow_bitmap_count(xor_bitmap, ram_bitmap_pages));
+
+
+        unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
+        bitmap_or(or_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
+        printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
     }
 
     ram_control_before_iterate(f, RAM_CONTROL_FINISH);
