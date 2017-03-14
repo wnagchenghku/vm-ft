@@ -46,7 +46,7 @@
 #include "migration/colo.h"
 #include "mc-rdma.h"
 
-uint8_t *rdma_buffer;
+static uint8_t *rdma_buffer;
 
 
 
@@ -2820,6 +2820,9 @@ int colo_init_ram_cache(void)
     migration_dirty_pages = 0;
     memory_global_dirty_log_start();
 
+    rdma_buffer = mc_rdma_get_colo_ctrl_buffer_ptr();
+
+    
     return 0;
 
 out_locked:
