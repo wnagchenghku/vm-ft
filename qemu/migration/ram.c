@@ -26,8 +26,6 @@
  * THE SOFTWARE.
  */
 
-uint8_t *rdma_buffer;
-
 
 #include "qemu/osdep.h"
 #include <zlib.h>
@@ -47,6 +45,11 @@ uint8_t *rdma_buffer;
 #include "qemu/rcu_queue.h"
 #include "migration/colo.h"
 #include "mc-rdma.h"
+
+uint8_t *rdma_buffer;
+
+
+
 
 #ifdef DEBUG_MIGRATION_RAM
 #define DPRINTF(fmt, ...) \
@@ -2239,7 +2242,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
 
 
     unsigned long *xor_bitmap = bitmap_new(ram_bitmap_pages);
-    bitmap_xor(xor_bitmap, bitmap, backup_bitmap, ram_bitmap_pages)
+    bitmap_xor(xor_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
     // if (ret <= 0){
     //     printf("\n\nFailed to do the xor operation on the bitmap\n\n");
     // }
