@@ -48,7 +48,7 @@
 
 static uint8_t *rdma_buffer;
 
-extern bool colo_first_sync; 
+extern bool colo_not_first_sync; 
 
 
 
@@ -2211,8 +2211,8 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
     //XS: TRY to transfer the dirty bitmap; 
     printf("\n Before going into checking of first sync\n");
     fflush(stdout);
-    if (colo_first_sync == false){
-        printf("\n Before going into checking of first sync\n");
+    if (colo_not_first_sync == true){
+        printf("\n getting into checking of first sync\n");
         fflush(stdout);
         int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
         long len =  BITS_TO_LONGS(ram_bitmap_pages);

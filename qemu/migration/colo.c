@@ -29,7 +29,7 @@
 
 static bool vmstate_loading;
 
-bool colo_first_sync; 
+bool colo_not_first_sync; 
 
 
 /* colo buffer */
@@ -417,10 +417,14 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     * TODO: We may need a timeout mechanism to prevent COLO process
     * to be blocked here.
     */
+    printf("Called qemu transaction\n");
+    fflush(stdout);
+
+
     migrate_use_mc_rdma = true;
-    colo_first_sync = false;
+    colo_not_first_sync = true;
     qemu_savevm_live_state(s->to_dst_file);
-    colo_first_sync = true;
+    colo_not_first_sync = false;
     migrate_use_mc_rdma = false;
 
     /* flush QEMU_VM_EOF and RAM_SAVE_FLAG_EOS so that
