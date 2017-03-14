@@ -796,7 +796,7 @@ static int ram_save_page(QEMUFile *f, PageSearchStatus *pss,
         *bytes_transferred += bytes_xmit;
         pages = 1;
     }
-    
+
 
     XBZRLE_cache_lock();
 
@@ -2162,22 +2162,32 @@ int backup_prepare_bitmap(void){
     //address_space_sync_dirty_bitmap(&address_space_memory);    
     migration_bitmap_sync();
 
-    unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
+    unsigned long *backup_bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
     
-    printbitmap(bitmap);
+    printbitmap(backup_bitmap);
 
     ssize_t ret; 
     ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
     printf("[Bitmap] RDMA received length %lu\n", ret);
     
 
-    memcpy(rdma_buffer, bitmap, len * sizeof(unsigned long)); 
+    memcpy(rdma_buffer, backup_bitmap, len * sizeof(unsigned long)); 
     ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
     if (ret < 0){
         printf("Failed to send bitmap from backup to primary\n");
     }
     //printf("[Bitmap] RDMA sent length %lu\n", ret);
 
+    unsigned long *primary_bitmap = (unsigned long*) rdma_buffer;
+
+
+
+    unsigned long *and_bitmap = bitmap_new(ram_bitmap_pages);
+    bitmap_and(and_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
+    // if (ret <= 0){
+    //     printf("\n\nFailed to do the and operation on the bitmap\n\n");
+    // }
+    printf("And Bitmap count%"PRId64"\n", slow_bitmap_count(and_bitmap, ram_bitmap_pages));
 
 
 
