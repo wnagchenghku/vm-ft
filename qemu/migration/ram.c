@@ -2193,12 +2193,17 @@ int backup_prepare_bitmap(void){
     printf("And Bitmap count%"PRId64"\n", slow_bitmap_count(and_bitmap, ram_bitmap_pages));
 
 
-
+    compute_hash_list(and_bitmap, ram_bitmap_pages);
 
 
     //TODO: compute hash based on xor_bitmapr   
+    hash_list *hlist = get_hash_list_pointer(); 
 
-
+    memcpy(rdma_buffer, hlist->hashes, hlist->len * HASH_SIZE); 
+    ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
+    if (ret < 0){
+        printf("Failed to send hashes from backup to primary\n");
+    }
 
 
 
@@ -2296,6 +2301,17 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
 
 
         compute_hash_list(and_bitmap, ram_bitmap_pages);
+
+        hash_list *hlist = get_hash_list_pointer();
+        ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * HASH_SIZE);
+
+        hash_list *backup_hashlist = (hash_list *) malloc (sizeof hash_list);
+        backup_hashlist -> hashes = (hash_t *) rdma_buffer;
+        backup_hashlist -> len = ret / HASH_SIZE;
+        printf("\nReceived hash list of len %lu\n", backup_hashlist);
+        //TODO: compare
+
+
 
     }
 

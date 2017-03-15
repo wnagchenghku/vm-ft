@@ -114,7 +114,9 @@ static int compare_complete_thread;
 
 
 
-
+hash_list* get_hash_list_pointer(void){
+	return hlist;
+}
 
 
 
@@ -178,7 +180,7 @@ static void *compute_thread_func(void *arg){
 		unsigned long workload = dirty_count / nthread + 1;
 		unsigned long job_start = t * workload; 
 		unsigned long job_end;
-		printf("[MT] Thread %d wakedup, workload = %lu\n", t, workload);
+		
 
 		if ( t == (nthread -1)) {
 			job_end = dirty_count -1; 
@@ -190,7 +192,7 @@ static void *compute_thread_func(void *arg){
 		for (i = job_start; i <= job_end; i++){
 			compute_hash(i);
 		}
-		printf("[MT] Thread %d finished\n", t);
+		printf("[MT] Thread %d finished, workload = %lu\n", t, workload);
 		pthread_spin_lock(&finished_lock);
 		finished_thread++;
 		pthread_spin_unlock(&finished_lock);
@@ -352,7 +354,7 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 		pthread_mutex_unlock(&compute_locks[i]);
 	}
 	while(finished_thread < nthread){
-		printf("finished %d\n", finished_thread);
+		//printf("finished %d\n", finished_thread);
 	}
 	printf("compute hashlist finished, will return \n");
 

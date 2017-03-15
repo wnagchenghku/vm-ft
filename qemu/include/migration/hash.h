@@ -38,7 +38,7 @@ typedef struct hash_list hash_list;
 
 
 
-
+hash_list* get_hash_list_pointer(void);
 //Init global variables (locks, conds), call it once is enought
 void hash_init(void);
 
