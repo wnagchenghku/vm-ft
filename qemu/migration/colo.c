@@ -537,6 +537,7 @@ static void colo_process_checkpoint(MigrationState *s)
 {
 
     hash_init();
+    printf("\nHASH INIT CALLED\n");
     QEMUSizedBuffer *buffer = NULL;
     int64_t current_time, checkpoint_time = qemu_clock_get_ms(QEMU_CLOCK_HOST);
     Error *local_err = NULL;
@@ -746,6 +747,7 @@ static int colo_prepare_before_load(QEMUFile *f)
 void *colo_process_incoming_thread(void *opaque)
 {
     hash_init();
+    printf("\nHASH INIT CALLED\n");
     MigrationIncomingState *mis = opaque;
     QEMUFile *fb = NULL;
     QEMUSizedBuffer *buffer = NULL; /* Cache incoming device state */

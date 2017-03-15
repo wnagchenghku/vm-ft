@@ -42,9 +42,9 @@ typedef struct hash_list hash_list;
 //Init global variables (locks, conds), call it once is enought
 void hash_init(void);
 
-void build_merkle_tree (unsigned long *xor_bitmap, unsigned long len);
+void build_merkle_tree (unsigned long *bitmap, unsigned long len);
 
-void compute_hash_list (unsigned long *xor_bitmap, unsigned long len);
+void compute_hash_list (unsigned long *bitmap, unsigned long len);
 
 void compare_hash_list(hash_list *hlist);
 

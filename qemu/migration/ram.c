@@ -45,6 +45,7 @@
 #include "qemu/rcu_queue.h"
 #include "migration/colo.h"
 #include "mc-rdma.h"
+#include "migration/hash.h"
 
 static uint8_t *rdma_buffer;
 
@@ -2196,7 +2197,7 @@ int backup_prepare_bitmap(void){
 
 
     //TODO: compute hash based on xor_bitmapr   
-        
+
 
 
 
@@ -2292,6 +2293,10 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
         bitmap_or(or_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
         printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
+
+
+        compute_hash_list(and_bitmap, ram_bitmap_pages);
+
     }
 
     ram_control_before_iterate(f, RAM_CONTROL_FINISH);
