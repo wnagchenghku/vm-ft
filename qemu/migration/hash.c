@@ -1,15 +1,41 @@
-#include <stdlib.h>
-#include <stdint.h>
-#include <pthread.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <inttypes.h>
-#include "migration/vmft/hash.h"
+// #include <stdlib.h>
+// #include <stdint.h>
+// #include <pthread.h>
+// #include <stdio.h>
+// #include <unistd.h>
+// #include <inttypes.h>
+// #include <string.h>
+// #include <stdint.h>
+// #include <inttypes.h>
 
+
+
+
+
+#include "qemu/osdep.h"
+#include <zlib.h>
+#include "qapi-event.h"
+#include "qemu/cutils.h"
+#include "qemu/bitops.h"
+#include "qemu/bitmap.h"
+#include "qemu/timer.h"
+#include "qemu/main-loop.h"
+#include "migration/migration.h"
+#include "migration/postcopy-ram.h"
+#include "exec/address-spaces.h"
+#include "migration/page_cache.h"
+#include "qemu/error-report.h"
+#include "trace.h"
+#include "exec/ram_addr.h"
+#include "qemu/rcu_queue.h"
+#include "migration/colo.h"
+#include "mc-rdma.h"
+
+#include "migration/hash.h"
 
 #define nthread 20
 
-#define ALGO_TEST
+//#define ALGO_TEST
 
 //#define USE_MERKLE_TREE 
 
@@ -34,7 +60,7 @@ static hash_t hashofpage(uint8_t *data, int len){
 
 
 static hash_t hashofhash(hash_t *a, hash_t *b){
-	hash_t ret;
+	//hash_t ret;
 	hash_sum_t sum = 0;
 	hash_t answer = 0;
 	sum = (*a + *b);
@@ -47,32 +73,16 @@ static hash_t hashofhash(hash_t *a, hash_t *b){
 
 
 
-struct merkle_tree_t {
-	hash_t *tree;
-	uint64_t tree_size;
-	uint8_t full;
-	uint64_t full_part_last_index; 
-	uint64_t first_leaf_index; 
-	uint64_t last_level_leaf_count;
-};
-
-typedef struct merkle_tree_t merkle_tree_t; 
-
-struct hash_list {
-	hash_t *hashes;
-	uint64_t len; 
-};
-
-typedef struct hash_list hash_list;
-
 
 /*******
 Global Variables. 
 ********/
 
 //Currently using multiple pthread_variable to do 
-
-static pthread_t *ts; 
+/*
+Variable used by the computer threads
+*/
+static pthread_t *compute_ts; 
 static int indices[nthread];
 static pthread_mutex_t *compute_locks; 
 static pthread_cond_t *compute_conds;
@@ -89,10 +99,30 @@ static unsigned long dirty_count;
 static merkle_tree_t *mtree; 
 static hash_list *hlist;  
 
+/* For compare threads 
 
-#ifdef ALGO_TEST
+*/
+static pthread_t *compare_ts; 
+static hash_list *remote_hlist; 
+static pthread_mutex_t *compare_locks; 
+static pthread_cond_t *compare_conds;
+static pthread_spinlock_t compare_spin_lock;
+static uint64_t diverse_count; 
+static int compare_complete_thread; 
+
+
+
+
+
+
+
+
+
+
+
+
 static uint8_t *fake_page; 
-#endif
+
 
 static int finished_thread; 
 static pthread_spinlock_t finished_lock;
@@ -108,8 +138,23 @@ static inline unsigned long index_to_node (unsigned long i){
 }
 
 
-static inline uint8_t* get_page_addr(unsigned long index){
+static uint8_t* get_page_addr(uint64_t page_index){
+	//return fake_page;
+	RAMBlock *block; 
+	//uint64_t offset; 
+
+
+	QLIST_FOREACH_RCU(block, &ram_list.blocks, next){
+		unsigned long base = block->offset >> TARGET_PAGE_BITS;
+		//XS: TODO used length or max length. 
+		unsigned long max = base + (block -> used_length >> TARGET_PAGE_BITS);
+		if (page_index >= base && page_index <= max){
+			return block->host + (page_index << TARGET_PAGE_BITS) - base ;
+		} 
+	}
+	printf("\n\n***!!!overflow, check your logic !!***\n\n");
 	return fake_page;
+
 }
 
 static inline void compute_hash(unsigned long i){
@@ -122,7 +167,7 @@ static inline void compute_hash(unsigned long i){
 
 
 
-void *compute_thread_func(void *arg){
+static void *compute_thread_func(void *arg){
 	int t = *(int *)arg; //The thread index of the thread
 	while(1){
 		pthread_mutex_lock(&compute_locks[t]);
@@ -148,31 +193,82 @@ void *compute_thread_func(void *arg){
 		finished_thread++;
 		pthread_spin_unlock(&finished_lock);
 	}
+	return NULL; 
 
 }
 
 
 
-void hash_init(unsigned long len){
+static void *compare_thread_func(void *arg){
+	int t = *(int *)arg; //The thread index of the thread
+	while(1){
+		pthread_mutex_lock(&compare_locks[t]);
+		pthread_cond_wait(&compare_conds[t], &compare_locks[t]);
+		pthread_mutex_unlock(&compare_locks[t]);
+		uint64_t workload = hlist -> len / nthread + 1;
+		uint64_t job_start = t * workload; 
+		uint64_t job_end = (t+1) * workload - 1 ; 
+		if (t + 1 == nthread){
+			job_end = hlist -> len -1;
+		}
+		uint64_t i; 
+		for (i = job_start; i <= job_end; i++){
+			if (memcmp(&(remote_hlist->hashes[i]), &(hlist->hashes[i]), HASH_SIZE) != 0){
+				pthread_spin_lock(&compare_spin_lock);
+				diverse_count++;
+				//TOOD: transfer the page
+				pthread_spin_unlock(&compare_spin_lock);
+			}
+		}
+		pthread_spin_lock(&compare_spin_lock);
+		compare_complete_thread++;
+		//TOOD: transfer the page
+		pthread_spin_unlock(&compare_spin_lock);
+
+	}
+	return NULL;
+}
+
+
+void hash_init(void){
+
+
+	int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
 
 	int i; 
 
-	ts = (pthread_t *) malloc (nthread * sizeof(pthread_t));
+	compute_ts = (pthread_t *) malloc (nthread * sizeof(pthread_t));
 	compute_locks = (pthread_mutex_t *) malloc(nthread * sizeof(pthread_mutex_t));
 	compute_conds = (pthread_cond_t *)malloc (nthread * sizeof(pthread_cond_t));
 	pthread_spin_init (&finished_lock, 0);
+
+
+	compare_ts = (pthread_t *) malloc (nthread * sizeof(pthread_t));
+	compare_locks = (pthread_mutex_t *) malloc(nthread * sizeof(pthread_mutex_t));
+	compare_conds = (pthread_cond_t *)malloc (nthread * sizeof(pthread_cond_t));
+	pthread_spin_init (&compare_spin_lock, 0); 
+
+
 
 	for (i = 0; i < nthread; i++){
 		pthread_mutex_init(&compute_locks[i], NULL);
 		pthread_cond_init(&compute_conds[i], NULL);
 		indices[i] = i;
-		pthread_create(&ts[i], NULL, compute_thread_func, (void *)&indices[i]);
-	}
-	dirty_indices = (unsigned long *) malloc(len * sizeof(unsigned long));
+		pthread_create(&compute_ts[i], NULL, compute_thread_func, (void *)&indices[i]);
 
-	#ifdef ALGO_TEST
+		pthread_mutex_init(&compare_locks[i], NULL);
+		pthread_cond_init(&compare_conds[i], NULL);
+		pthread_create(&compare_ts[i], NULL, compare_thread_func, (void*)&indices[i]);
+
+
+	}
+
+
+	dirty_indices = (unsigned long *) malloc(ram_bitmap_pages * sizeof(unsigned long));
+
+
 	fake_page = (uint8_t *) malloc (4096);
-	#endif
+
 }
 
 static void update_dirty_indices(unsigned long *bitmap, unsigned long len){
@@ -206,17 +302,17 @@ void build_merkle_tree (unsigned long *bmap, unsigned long len){
 	// the tree height 
 
 
-	mtree-> tree_size = 1 << (tree_height) - 1 + 2 * (len - 1 << (tree_height-1));
+	mtree-> tree_size = (1 << (tree_height)) - 1 + 2 * (len - (1 << (tree_height-1)));
 	mtree-> tree = (hash_t *) malloc (mtree->tree_size * sizeof(hash_t));
-	if (len - 1 << (tree_height-1) == 0) {
+	if (len - (1 << (tree_height-1)) == 0) {
 		mtree -> full = 1; 
 	}
 	else {
 		mtree -> full = 0;
 	}
 	mtree -> first_leaf_index = (mtree-> tree_size - 1) / 2 ;
-	mtree -> full_part_last_index = 1 << (tree_height) - 2; 
-	mtree -> last_level_leaf_count =  2 * (len - 1 << (tree_height-1));
+	mtree -> full_part_last_index = (1 << (tree_height)) - 2; 
+	mtree -> last_level_leaf_count =  2 * (len - (1 << (tree_height-1)));
 
 
 	int i ;
@@ -227,7 +323,7 @@ void build_merkle_tree (unsigned long *bmap, unsigned long len){
 	}
 	while(finished_thread < nthread){
 	}
-	unsigned long j;
+	long j;
 	for ( j= mtree->first_leaf_index-1 ; j >= 0; j--){
 		mtree->tree[j]=hashofhash(&(mtree->tree[2*j +1]), &(mtree->tree[2*j + 2]));
 	}
@@ -246,8 +342,6 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 	hlist -> len =  dirty_count;
 
 	
-	
-
 	int i; 
 	for (i = 0; i<nthread; i++){
 		pthread_mutex_lock(&compute_locks[i]);
@@ -258,32 +352,24 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 	}
 }
 
-unsigned long *remote_hlist; 
-static pthread_mutex_t *compare_locks; 
-static pthread_cond_t *compare_conds;
 
 
-void *compare_thread_func(void *arg){
-	int t = *(int *)arg; //The thread index of the thread
-	while(1){
-		pthread_mutex_lock(&compare_locks[t]);
-		pthread_cond_wait(&compare_conds[t], &compare_locks[t]);
-		pthread_mutex_unlock(&compare_locks[t]);
-		uint64_t workload = hlist -> len / nthread + 1;
-		uint64_t job_start = t * workload; 
-		uint64_t job_end = (t+1) * workload - 1 ; 
-		if (t + 1 == nthread){
-			job_end = hlist -> len -1;
-		}
-		uint64_t i; 
-		for (i = job_start; i <= job_end; i++){
-			if (mem)
-		}
+
+void compare_hash_list(hash_list *hlist){
+	compare_complete_thread = 0;
+	remote_hlist = hlist; 
+	int i ; 
+	for (i = 0; i<nthread; i++){
+		pthread_mutex_lock(&compute_locks[i]);
+		pthread_cond_broadcast(&compute_conds[i]);
+		pthread_mutex_unlock(&compute_locks[i]);
+	}
+	while (compare_complete_thread < nthread) {
 
 	}
-}
 
-void compare_hash_list(unsigned long )
+	printf("Compared %"PRIu64 " pages, same = %" PRIu64" same rate = %"PRIu64"%%\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) / hlist->len);
+}
 
 // int main(char* argv[], int argc){
 // 	unsigned long xor_bitmap[2];

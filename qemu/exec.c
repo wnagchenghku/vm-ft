@@ -1343,6 +1343,7 @@ error:
 #endif
 
 /* Called with the ramlist lock held.  */
+//XS: maybe useful
 static ram_addr_t find_ram_offset(ram_addr_t size)
 {
     RAMBlock *block, *next_block;

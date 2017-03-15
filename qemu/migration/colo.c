@@ -27,6 +27,8 @@
 #include "mc-rdma.h"
 #include "rsm-interface.h"
 
+#include "migration/hash.h"
+
 static bool vmstate_loading;
 
 bool colo_not_first_sync; 
@@ -529,8 +531,12 @@ static int colo_prepare_before_save(MigrationState *s)
     return ret;
 }
 
+
+//XS: primary thread;
 static void colo_process_checkpoint(MigrationState *s)
 {
+
+    hash_init();
     QEMUSizedBuffer *buffer = NULL;
     int64_t current_time, checkpoint_time = qemu_clock_get_ms(QEMU_CLOCK_HOST);
     Error *local_err = NULL;
@@ -655,6 +661,9 @@ out:
 
 void migrate_start_colo_process(MigrationState *s)
 {
+
+
+
     qemu_mutex_unlock_iothread();
     qemu_sem_init(&s->colo_sem, 0);
     migrate_set_state(&s->state, MIGRATION_STATUS_ACTIVE,
@@ -736,6 +745,7 @@ static int colo_prepare_before_load(QEMUFile *f)
 //XS: backup thread
 void *colo_process_incoming_thread(void *opaque)
 {
+    hash_init();
     MigrationIncomingState *mis = opaque;
     QEMUFile *fb = NULL;
     QEMUSizedBuffer *buffer = NULL; /* Cache incoming device state */

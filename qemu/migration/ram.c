@@ -1295,6 +1295,7 @@ static int ram_save_target_page(MigrationState *ms, QEMUFile *f,
                                            last_stage,
                                            bytes_transferred);
         } else {
+            //xs: Used to save page
             res = ram_save_page(f, pss, last_stage,
                                 bytes_transferred);
         }
@@ -1335,6 +1336,7 @@ static int ram_save_target_page(MigrationState *ms, QEMUFile *f,
  * @bytes_transferred: increase it with the number of transferred bytes
  * @dirty_ram_abs: Address of the start of the dirty page in ram_addr_t space
  */
+// XS: used to save pages.
 static int ram_save_host_page(MigrationState *ms, QEMUFile *f,
                               PageSearchStatus *pss,
                               bool last_stage,
@@ -2191,14 +2193,17 @@ int backup_prepare_bitmap(void){
 
 
 
-    //TODO: compute hash based on xor
+
+
+    //TODO: compute hash based on xor_bitmapr   
+        
 
 
 
 
 
 
-    bitmap_zero(bitmap, ram_bitmap_pages);
+    bitmap_zero(backup_bitmap, ram_bitmap_pages);
 
 
     rcu_read_unlock();
