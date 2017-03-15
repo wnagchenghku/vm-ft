@@ -333,6 +333,7 @@ void build_merkle_tree (unsigned long *bmap, unsigned long len){
 
 void compute_hash_list(unsigned long *bmap, unsigned long len){
 	dirty_count = 0;
+	finished_thread = 0;
 	update_dirty_indices(bmap, len);
 
 	if (hlist != NULL){
@@ -351,7 +352,11 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 		pthread_mutex_unlock(&compute_locks[i]);
 	}
 	while(finished_thread < nthread){
+		printf("finished %d\n", finished_thread);
 	}
+	printf("compute hashlist finished, will return \n");
+
+
 }
 
 
