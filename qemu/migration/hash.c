@@ -74,8 +74,8 @@ Global Variables.
 
 static pthread_t *ts; 
 static int indices[nthread];
-static pthread_mutex_t *locks; 
-static pthread_cond_t *conds;
+static pthread_mutex_t *compute_locks; 
+static pthread_cond_t *compute_conds;
 
 //static unsigned long *bitmap;
 
@@ -125,9 +125,9 @@ static inline void compute_hash(unsigned long i){
 void *compute_thread_func(void *arg){
 	int t = *(int *)arg; //The thread index of the thread
 	while(1){
-		pthread_mutex_lock(&locks[t]);
-		pthread_cond_wait(&conds[t], &locks[t]);
-		pthread_mutex_unlock(&locks[t]);
+		pthread_mutex_lock(&compute_locks[t]);
+		pthread_cond_wait(&compute_conds[t], &compute_locks[t]);
+		pthread_mutex_unlock(&compute_locks[t]);
 	
 
 		unsigned long workload = dirty_count / nthread + 1;
@@ -158,13 +158,13 @@ void hash_init(unsigned long len){
 	int i; 
 
 	ts = (pthread_t *) malloc (nthread * sizeof(pthread_t));
-	locks = (pthread_mutex_t *) malloc(nthread * sizeof(pthread_mutex_t));
-	conds = (pthread_cond_t *)malloc (nthread * sizeof(pthread_cond_t));
+	compute_locks = (pthread_mutex_t *) malloc(nthread * sizeof(pthread_mutex_t));
+	compute_conds = (pthread_cond_t *)malloc (nthread * sizeof(pthread_cond_t));
 	pthread_spin_init (&finished_lock, 0);
 
 	for (i = 0; i < nthread; i++){
-		pthread_mutex_init(&locks[i], NULL);
-		pthread_cond_init(&conds[i], NULL);
+		pthread_mutex_init(&compute_locks[i], NULL);
+		pthread_cond_init(&compute_conds[i], NULL);
 		indices[i] = i;
 		pthread_create(&ts[i], NULL, compute_thread_func, (void *)&indices[i]);
 	}
@@ -221,9 +221,9 @@ void build_merkle_tree (unsigned long *bmap, unsigned long len){
 
 	int i ;
 	for (i = 0; i<nthread; i++){
-		pthread_mutex_lock(&locks[i]);
-		pthread_cond_broadcast(&conds[i]);
-		pthread_mutex_unlock(&locks[i]);
+		pthread_mutex_lock(&compute_locks[i]);
+		pthread_cond_broadcast(&compute_conds[i]);
+		pthread_mutex_unlock(&compute_locks[i]);
 	}
 	while(finished_thread < nthread){
 	}
@@ -250,14 +250,38 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 
 	int i; 
 	for (i = 0; i<nthread; i++){
-		pthread_mutex_lock(&locks[i]);
-		pthread_cond_broadcast(&conds[i]);
-		pthread_mutex_unlock(&locks[i]);
+		pthread_mutex_lock(&compute_locks[i]);
+		pthread_cond_broadcast(&compute_conds[i]);
+		pthread_mutex_unlock(&compute_locks[i]);
 	}
 	while(finished_thread < nthread){
 	}
 }
 
+unsigned long *remote_hlist; 
+static pthread_mutex_t *compare_locks; 
+static pthread_cond_t *compare_conds;
+
+
+void *compare_thread_func(void *arg){
+	int t = *(int *)arg; //The thread index of the thread
+	while(1){
+		pthread_mutex_lock(&compare_locks[t]);
+		pthread_cond_wait(&compare_conds[t], &compare_locks[t]);
+		pthread_mutex_unlock(&compare_locks[t]);
+		uint64_t workload = hlist -> len / nthread + 1;
+		uint64_t job_start = t * workload; 
+		uint64_t job_end = (t+1) * workload - 1 ; 
+		if (t + 1 == nthread){
+			job_end = hlist -> len -1;
+		}
+		uint64_t i; 
+		for (i = job_start; i <= job_end; i++){
+			if (mem)
+		}
+
+	}
+}
 
 void compare_hash_list(unsigned long )
 
