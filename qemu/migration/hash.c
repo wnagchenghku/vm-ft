@@ -178,6 +178,8 @@ static void *compute_thread_func(void *arg){
 		unsigned long workload = dirty_count / nthread + 1;
 		unsigned long job_start = t * workload; 
 		unsigned long job_end;
+		printf("[MT] Thread %d wakedup, workload = %lu\n", t, workload);
+
 		if ( t == (nthread -1)) {
 			job_end = dirty_count -1; 
 		}
@@ -188,7 +190,7 @@ static void *compute_thread_func(void *arg){
 		for (i = job_start; i <= job_end; i++){
 			compute_hash(i);
 		}
-
+		printf("[MT] Thread %d finished\n", t);
 		pthread_spin_lock(&finished_lock);
 		finished_thread++;
 		pthread_spin_unlock(&finished_lock);
@@ -278,7 +280,7 @@ static void update_dirty_indices(unsigned long *bitmap, unsigned long len){
 		mask = 0x8000000000000000;
 		for (offset = 0; offset <64; offset++){
 
-			if (mask & bitmap[i]){
+			if (mask & bitmap[i]){	
 				dirty_indices[dirty_count]=i*64 + offset; 
 				dirty_count++;
 			}
@@ -341,7 +343,7 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 	hlist -> hashes = (hash_t *) malloc(dirty_count * sizeof(hash_t));
 	hlist -> len =  dirty_count;
 
-	
+	printf("\n\nBefore waking up compute threads, dirty_count = %lu\n\n", hlist->len);
 	int i; 
 	for (i = 0; i<nthread; i++){
 		pthread_mutex_lock(&compute_locks[i]);
