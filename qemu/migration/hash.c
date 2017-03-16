@@ -353,10 +353,16 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 		pthread_cond_broadcast(&compute_conds[i]);
 		pthread_mutex_unlock(&compute_locks[i]);
 	}
-	while(finished_thread < nthread){
-		printf("finished %d\n", finished_thread);
-	}
 	
+	while(1){
+		pthread_spin_lock(&finished_lock);
+		if (finished_thread == nthread){
+			break;
+		}
+		pthread_spin_unlock(&finished_lock);
+		usleep(100);
+	}
+
 	printf("compute hashlist finished, will return \n");
 
 
