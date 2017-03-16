@@ -2206,7 +2206,7 @@ int backup_prepare_bitmap(void){
     //TODO: compute hash based on xor_bitmapr   
     hash_list *hlist = get_hash_list_pointer(); 
 
-    printf("\n before memcpy\n");
+    printf("\n before memcpy, size = %ld\n", hlist->len * HASH_SIZE);
     fflush(stdout);
 
     memcpy(rdma_buffer, hlist->hashes, hlist->len * HASH_SIZE); 
