@@ -340,6 +340,7 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 	update_dirty_indices(bmap, len);
 
 	if (hlist != NULL){
+		free(hlist->hashes);
 		free(hlist);
 	}
 
