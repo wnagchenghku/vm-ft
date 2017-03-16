@@ -2174,7 +2174,7 @@ int backup_prepare_bitmap(void){
     printf("[Bitmap] RDMA received length %lu\n", ret);
     
     //FIXIT: slow; 
-    unsigned long *primary_bitmap = (unsigned long) malloc(ret);
+    unsigned long *primary_bitmap = (unsigned long*) malloc(ret);
     memcpy(primary_bitmap, rdma_buffer, ret);
 
 
