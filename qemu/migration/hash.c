@@ -179,8 +179,7 @@ static void *compute_thread_func(void *arg){
 		unsigned long workload = dirty_count / nthread;
 		unsigned long job_start = t * workload; 
 		unsigned long job_end;
-		printf("[compute] Thread %d started, workload from:  %lu to :%lu\n", t, job_start, job_end);
-
+		
 
 		if ( t == (nthread -1)) {
 			job_end = dirty_count -1; 
@@ -188,6 +187,8 @@ static void *compute_thread_func(void *arg){
 		else {
 			job_end  = (t+1) * workload -1;  
 		}
+		printf("[compute] Thread %d started, workload from:  %lu to :%lu\n", t, job_start, job_end);
+
 		unsigned long i; 
 		for (i = job_start; i <= job_end; i++){
 			compute_hash(i);
