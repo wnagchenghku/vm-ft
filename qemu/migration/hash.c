@@ -147,11 +147,11 @@ static uint8_t* get_page_addr(uint64_t page_index){
 
 
 	QLIST_FOREACH_RCU(block, &ram_list.blocks, next){
-		unsigned long base = block->offset >> TARGET_PAGE_BITS;
+		unsigned long first_page = block->offset >> TARGET_PAGE_BITS;
 		//XS: TODO used length or max length. 
-		unsigned long max = base + (block->used_length >> TARGET_PAGE_BITS);
-		if (page_index >= base && page_index < max){
-			return block->host + ((page_index-base) << TARGET_PAGE_BITS)  ;
+		unsigned long last_page = ((block->offset + block->max_length) >> TARGET_PAGE_BITS)-1;
+		if (page_index >= first_page && page_index <= last_page ){
+			return block->host + ((page_index-first_page) << TARGET_PAGE_BITS)  ;
 		} 
 	}
 	printf("\n\n***!!!overflow, check your logic !!***\n\n");
