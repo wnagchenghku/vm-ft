@@ -14,4 +14,6 @@ cd mysql-$VER
 make -j `nproc`
 make install
 cd ..
+sed -e "s/3306/7000/g" ./mysql-install/share/mysql/my-large.cnf > ./my.cnf
+./mysql-install/bin/mysql_install_db --defaults-file=./my.cnf
 
