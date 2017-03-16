@@ -279,9 +279,10 @@ void hash_init(void){
 static void update_dirty_indices(unsigned long *bitmap, unsigned long len){
 	unsigned long mask; 
 	int i, offset; 
+	int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
 	for (i =0; i * 64 < len; ++i){
 		mask = 0x8000000000000000;
-		for (offset = 0; offset <64; offset++){
+		for (offset = 0; offset <64 && i*64 +offset < ram_bitmap_pages; offset++){
 
 			if (mask & bitmap[i]){	
 				dirty_indices[dirty_count]=i*64 + offset; 
