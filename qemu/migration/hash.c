@@ -224,6 +224,7 @@ static void *compare_thread_func(void *arg){
 				pthread_spin_unlock(&compare_spin_lock);
 			}
 		}
+		printf("[compare] Thread %d finished, workload = %lu\n", t, workload);
 		pthread_spin_lock(&compare_spin_lock);
 		compare_complete_thread++;
 		//TOOD: transfer the page
@@ -372,20 +373,28 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 
 
 
-void compare_hash_list(hash_list *hlist){
+void compare_hash_list(hash_list *rhlist){
 	compare_complete_thread = 0;
-	remote_hlist = hlist; 
+	diverse_count = 0;
+	remote_hlist = rhlist; 
 	int i ; 
+	printf("before waking up compare hashlist\n");
 	for (i = 0; i<nthread; i++){
 		pthread_mutex_lock(&compute_locks[i]);
 		pthread_cond_broadcast(&compute_conds[i]);
 		pthread_mutex_unlock(&compute_locks[i]);
 	}
-	while (compare_complete_thread < nthread) {
-
+	while (1) {
+		pthread_spin_lock(&compare_spin_lock);
+		if (compare_complete_thread == nthread){
+			pthread_spin_unlock(&compare_spin_lock);
+			break;
+		}
+		pthread_spin_unlock(&compare_spin_lock);
+		usleep(100);
 	}
 
-	printf("Compared %"PRIu64 " pages, same = %" PRIu64" same rate = %"PRIu64"%%\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) / hlist->len);
+	printf("Compared %"PRIu64 " pages, same = %" PRIu64" same rate = %"PRIu64"%%\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len);
 }
 
 // int main(char* argv[], int argc){

@@ -2336,6 +2336,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         printf("\nReceived hash list of len %lu\n", backup_hashlist->len);
         //TODO: compare
 
+        compare_hash_list(backup_hashlist);
 
 
     }
