@@ -276,9 +276,27 @@ unsigned long * get_divergent_bitmap(void){
 }
 
 
+static void update_dirty_indices(unsigned long *bitmap, unsigned long nbits){
+	unsigned long mask; 
+	int i, offset; 
+	int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
+	for (i =0; i * 64 < nbits; ++i){
+		mask = 1;
+		for (offset = 0; offset <64 && i*64 +offset < ram_bitmap_pages; offset++){
+
+			if (mask & bitmap[i]){	
+				dirty_indices[dirty_count]=i*64 + offset; 
+				dirty_count++;
+			}
+			mask <<= 1; 
+		}
+	}
+}
+
+
 void hash_init(void){
 
-	printf("\n\n\n\n 2 to char: %s", long_to_binary(2));
+	
 
 	int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
 
@@ -299,6 +317,17 @@ void hash_init(void){
 	bitmap_set(test_bitmap, 1, 1);
 	bitmap_set(test_bitmap, 65, 1);
 	printbitmap(test_bitmap);
+
+	update_dirty_indices(test_bitmap, ram_bitmap_pages);
+
+	printf("\n\n dirty_count = %lu\n", dirty_count);
+	for (i =0 ; i<dirty_count; i++){
+		printf("%lu", dirty_indices[i]);
+	}
+	printf("******\n");
+
+
+
 
 	for (i = 0; i < nthread; i++){
 		pthread_mutex_init(&compute_locks[i], NULL);
@@ -321,22 +350,6 @@ void hash_init(void){
 
 }
 
-static void update_dirty_indices(unsigned long *bitmap, unsigned long len){
-	unsigned long mask; 
-	int i, offset; 
-	int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
-	for (i =0; i * 64 < len; ++i){
-		mask = 0x8000000000000000;
-		for (offset = 0; offset <64 && i*64 +offset < ram_bitmap_pages; offset++){
-
-			if (mask & bitmap[i]){	
-				dirty_indices[dirty_count]=i*64 + offset; 
-				dirty_count++;
-			}
-			mask >>= 1; 
-		}
-	}
-}
 //Construct a complete binary tree as http://mathworld.wolfram.com/images/eps-gif/CompleteBinaryTree_1000.gif
 
 void build_merkle_tree (unsigned long *bmap, unsigned long len){
