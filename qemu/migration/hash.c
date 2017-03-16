@@ -278,6 +278,7 @@ unsigned long * get_divergent_bitmap(void){
 
 void hash_init(void){
 
+	printf("\n\n\n\n 2 to char: %s", long_to_binary(2));
 
 	int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
 
