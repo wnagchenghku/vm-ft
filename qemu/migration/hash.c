@@ -297,6 +297,7 @@ void hash_init(void){
 
 	unsigned long *test_bitmap = bitmap_new(ram_bitmap_pages);
 	bitmap_set(test_bitmap, 1, 1);
+	bitmap_set(test_bitmap, 65, 1);
 	printbitmap(test_bitmap);
 
 	for (i = 0; i < nthread; i++){
