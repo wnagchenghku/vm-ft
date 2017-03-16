@@ -2201,8 +2201,15 @@ int backup_prepare_bitmap(void){
     // }
     printf("And Bitmap count: %"PRId64"\n", slow_bitmap_count(and_bitmap, ram_bitmap_pages));
 
+    unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
+    bitmap_or(or_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
+    printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
 
-    compute_hash_list(and_bitmap, ram_bitmap_pages);
+
+
+
+    //xs: test or bitmap
+    compute_hash_list(or_bitmap, ram_bitmap_pages);
 
 
     //TODO: compute hash based on xor_bitmapr   
@@ -2326,8 +2333,8 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         bitmap_or(or_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
         printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
 
-
-        compute_hash_list(and_bitmap, ram_bitmap_pages);
+        //xs: test or bitmap
+        compute_hash_list(or_bitmap, ram_bitmap_pages);
 
         hash_list *hlist = get_hash_list_pointer();
         ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
