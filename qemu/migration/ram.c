@@ -2305,7 +2305,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         hash_list *hlist = get_hash_list_pointer();
         ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * HASH_SIZE);
 
-        hash_list *backup_hashlist = (hash_list *) malloc (sizeof hash_list);
+        hash_list *backup_hashlist = (hash_list *) malloc (sizeof (hash_list));
         backup_hashlist -> hashes = (hash_t *) rdma_buffer;
         backup_hashlist -> len = ret / HASH_SIZE;
         printf("\nReceived hash list of len %lu\n", backup_hashlist);
