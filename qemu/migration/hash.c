@@ -346,7 +346,7 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 	hlist -> hashes = (hash_t *) malloc(dirty_count * sizeof(hash_t));
 	hlist -> len =  dirty_count;
 
-	printf("\n\nBefore waking up compute threads, dirty_count = %lu\n\n", hlist->len);
+	printf("\n\nBefore waking up compute threads, dirty_count = %lu, hashlist->hashes addr = %p\n\n", hlist->len, hlist->hashes);
 	int i; 
 	for (i = 0; i<nthread; i++){
 		pthread_mutex_lock(&compute_locks[i]);

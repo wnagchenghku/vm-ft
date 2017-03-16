@@ -2213,7 +2213,7 @@ int backup_prepare_bitmap(void){
     fflush(stdout);
 
 
-    memcpy(rdma_buffer, hlist->hashes, hlist->len * HASH_SIZE); 
+    memcpy(rdma_buffer, hlist->hashes, hlist->len * sizeof(hash_t)); 
     
 
 
