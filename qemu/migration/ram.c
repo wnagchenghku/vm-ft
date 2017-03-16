@@ -573,7 +573,15 @@ ram_addr_t migration_bitmap_find_dirty(RAMBlock *rb,
 
     unsigned long next;
 
-    bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
+    if (colo_not_first_sync == true){
+        bitmap = get_divergent_bitmap();
+        
+    }else{
+        bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
+    }
+    
+
+
     if (ram_bulk_stage && nr > base) {
         next = nr + 1;
     } else {
@@ -588,7 +596,14 @@ static inline bool migration_bitmap_clear_dirty(ram_addr_t addr)
 {
     bool ret;
     int nr = addr >> TARGET_PAGE_BITS;
-    unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
+    unsigned long *bitmap;
+
+    if (colo_not_first_sync == true){
+        bitmap = get_divergent_bitmap();
+        
+    }else{
+        bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
+    }
 
     ret = test_and_clear_bit(nr, bitmap);
 
@@ -1144,7 +1159,12 @@ static bool get_queued_page(MigrationState *ms, PageSearchStatus *pss,
          */
         if (block) {
             unsigned long *bitmap;
-            bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
+            if (colo_not_first_sync == true){
+                bitmap = get_divergent_bitmap();
+                
+            }else{
+                bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
+            }
             dirty = test_bit(*ram_addr_abs >> TARGET_PAGE_BITS, bitmap);
             if (!dirty) {
                 trace_get_queued_page_not_dirty(

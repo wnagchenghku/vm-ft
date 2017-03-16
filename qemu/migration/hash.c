@@ -325,7 +325,7 @@ void hash_init(void){
 
 	printf("\n\n dirty_count = %lu\n", dirty_count);
 	for (i =0 ; i<dirty_count; i++){
-		printf("%lu", dirty_indices[i]);
+		printf("%lu\n", dirty_indices[i]);
 	}
 	printf("******\n");
 
