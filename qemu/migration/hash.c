@@ -209,6 +209,9 @@ static void *compute_thread_func(void *arg){
 
 }
 
+unsigned long *divergent_bitmap; 
+
+
 
 
 static void *compare_thread_func(void *arg){
@@ -229,6 +232,8 @@ static void *compare_thread_func(void *arg){
 				pthread_spin_lock(&compare_spin_lock);
 				diverse_count++;
 				//TOOD: transfer the page
+				bitmap_set(divergent_bitmap, dirty_indices[i], 1);
+
 				pthread_spin_unlock(&compare_spin_lock);
 			}
 		}
@@ -240,6 +245,34 @@ static void *compare_thread_func(void *arg){
 
 	}
 	return NULL;
+}
+
+//XS: print bitmap encoded in long
+static char* long_to_binary(long l){
+    static char b[65];
+    b[0]='\0';
+    unsigned long z; 
+    for (z = 1UL << 63; z > 0; z >>= 1 ){
+        strcat(b, ((l & z) == z) ? "1" : "0");
+    }
+    return b;
+}
+
+
+static void printbitmap(unsigned long *bmap){
+    int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
+    long len =  BITS_TO_LONGS(ram_bitmap_pages);
+    fprintf(stderr, "len: %ld ", len);
+    int i;
+    for (i=0; i< len; i++){
+        fprintf(stderr, "[%d]: %s\n", i, long_to_binary(bmap[i]));
+    }
+
+}
+
+
+unsigned long * get_divergent_bitmap(void){
+	return divergent_bitmap;
 }
 
 
@@ -261,7 +294,9 @@ void hash_init(void){
 	compare_conds = (pthread_cond_t *)malloc (nthread * sizeof(pthread_cond_t));
 	pthread_spin_init (&compare_spin_lock, 0); 
 
-
+	unsigned long *test_bitmap = bitmap_new(ram_bitmap_pages);
+	bitmap_set(test_bitmap, 1, 1);
+	printbitmap(test_bitmap);
 
 	for (i = 0; i < nthread; i++){
 		pthread_mutex_init(&compute_locks[i], NULL);
@@ -344,6 +379,9 @@ void build_merkle_tree (unsigned long *bmap, unsigned long len){
 }
 
 void compute_hash_list(unsigned long *bmap, unsigned long len){
+	
+	int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
+
 	dirty_count = 0;
 	finished_thread = 0;
 	update_dirty_indices(bmap, len);
@@ -356,6 +394,13 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 	hlist = (hash_list*) malloc( sizeof (hash_list));
 	hlist -> hashes = (hash_t *) malloc(dirty_count * sizeof(hash_t));
 	hlist -> len =  dirty_count;
+
+	if (divergent_bitmap == NULL){	
+		divergent_bitmap = bitmap_new(ram_bitmap_pages);
+	}else{
+		bitmap_zero(divergent_bitmap, ram_bitmap_pages);
+	}
+
 
 	printf("\n\nBefore waking up compute threads, dirty_count = %lu, hashlist->hashes addr = %p\n\n", hlist->len, hlist->hashes);
 	int i; 

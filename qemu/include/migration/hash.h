@@ -50,4 +50,7 @@ void compare_hash_list(hash_list *hlist);
 
 void print_hash_list(hash_list *list);
 
+unsigned long * get_divergent_bitmap(void);
+
+
 #endif //MEM_COMPARE_HASH_H
