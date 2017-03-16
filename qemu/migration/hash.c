@@ -357,6 +357,7 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 	while(1){
 		pthread_spin_lock(&finished_lock);
 		if (finished_thread == nthread){
+			pthread_spin_unlock(&finished_lock);
 			break;
 		}
 		pthread_spin_unlock(&finished_lock);
