@@ -15,7 +15,7 @@ fi
 tar zxvf mongodb-src-r$APP_VER.tar.gz
 # build
 cd mongodb-src-r$APP_VER
-scons mongod mongo -j $NUMCPU
+scons mongod mongo -j $NUMCPU --disable-warnings-as-errors
 mkdir ../install
 mkdir ../install/bin
 mkdir ../install/data

@@ -14,3 +14,5 @@ java version "1.7.0_75"
 OpenJDK Runtime Environment (IcedTea 2.5.4) (7u75-2.5.4-1~trusty1)
 OpenJDK 64-Bit Server VM (build 24.75-b04, mixed mode)
 
+# Make failed
+add --disable-warnings-as-errors to the end of scons 
