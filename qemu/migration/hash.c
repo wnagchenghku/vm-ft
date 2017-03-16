@@ -142,19 +142,19 @@ static inline unsigned long index_to_node (unsigned long i){
 
 static uint8_t* get_page_addr(uint64_t page_index){
 	//return fake_page;
-	// RAMBlock *block; 
-	// //uint64_t offset; 
+	RAMBlock *block; 
+	//uint64_t offset; 
 
 
-	// QLIST_FOREACH_RCU(block, &ram_list.blocks, next){
-	// 	unsigned long base = block->offset >> TARGET_PAGE_BITS;
-	// 	//XS: TODO used length or max length. 
-	// 	unsigned long max = base + (block -> used_length >> TARGET_PAGE_BITS);
-	// 	if (page_index >= base && page_index <= max){
-	// 		return block->host + (page_index << TARGET_PAGE_BITS) - base ;
-	// 	} 
-	// }
-	// printf("\n\n***!!!overflow, check your logic !!***\n\n");
+	QLIST_FOREACH_RCU(block, &ram_list.blocks, next){
+		unsigned long base = block->offset >> TARGET_PAGE_BITS;
+		//XS: TODO used length or max length. 
+		unsigned long max = base + (block -> used_length >> TARGET_PAGE_BITS);
+		if (page_index >= base && page_index <= max){
+			return block->host + ((page_index-base) << TARGET_PAGE_BITS)  ;
+		} 
+	}
+	printf("\n\n***!!!overflow, check your logic !!***\n\n");
 	return fake_page;
 
 }
