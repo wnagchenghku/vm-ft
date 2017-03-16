@@ -52,8 +52,8 @@ static hash_t hashofpage(uint8_t *data, int len){
         nleft -= HASH_SHIFT;
     }
 
-    sum = (sum >> HASH_SIZE) + (sum & HASH_MASK);	/* add hi 32 to low 32 */
-    sum += (sum >> HASH_SIZE);			/* add carry */
+    sum = (sum >> HASH_BITS) + (sum & HASH_MASK);	/* add hi 32 to low 32 */
+    sum += (sum >> HASH_BITS);			/* add carry */
     answer = ~sum;				/* truncate to 16 bits */
     return(answer);
 } 
@@ -64,7 +64,7 @@ static hash_t hashofhash(hash_t *a, hash_t *b){
 	hash_sum_t sum = 0;
 	hash_t answer = 0;
 	sum = (*a + *b);
-	sum = (sum >> HASH_SIZE) + (sum & HASH_MASK);
+	sum = (sum >> HASH_BITS) + (sum & HASH_MASK);
 	answer = ~sum;
 	return answer;
 
@@ -217,7 +217,7 @@ static void *compare_thread_func(void *arg){
 		}
 		uint64_t i; 
 		for (i = job_start; i <= job_end; i++){
-			if (memcmp(&(remote_hlist->hashes[i]), &(hlist->hashes[i]), HASH_SIZE) != 0){
+			if (memcmp(&(remote_hlist->hashes[i]), &(hlist->hashes[i]), sizeof(hash_t)) != 0){
 				pthread_spin_lock(&compare_spin_lock);
 				diverse_count++;
 				//TOOD: transfer the page

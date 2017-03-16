@@ -2208,7 +2208,7 @@ int backup_prepare_bitmap(void){
     //TODO: compute hash based on xor_bitmapr   
     hash_list *hlist = get_hash_list_pointer(); 
 
-    printf("\n before memcpy, size = %ld\n", hlist->len * HASH_SIZE);
+    printf("\n before memcpy, size = %ld\n", hlist->len * sizeof(hash_t));
     printf("rdma_buffer: %p, hlist->hashes: %p\n", rdma_buffer, hlist->hashes);
     fflush(stdout);
 
@@ -2221,7 +2221,7 @@ int backup_prepare_bitmap(void){
     printf("\n after memcpy\n");
     fflush(stdout);
 
-    ret = mc_rdma_put_colo_ctrl_buffer(hlist->len * HASH_SIZE);
+    ret = mc_rdma_put_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
 
 
     printf("\n after put buffer\n");
@@ -2328,11 +2328,11 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         compute_hash_list(and_bitmap, ram_bitmap_pages);
 
         hash_list *hlist = get_hash_list_pointer();
-        ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * HASH_SIZE);
+        ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
 
         hash_list *backup_hashlist = (hash_list *) malloc (sizeof (hash_list));
         backup_hashlist -> hashes = (hash_t *) rdma_buffer;
-        backup_hashlist -> len = ret / HASH_SIZE;
+        backup_hashlist -> len = ret / sizeof(hash_t);
         printf("\nReceived hash list of len %lu\n", backup_hashlist->len);
         //TODO: compare
 

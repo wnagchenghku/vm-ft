@@ -357,6 +357,7 @@ static unsigned virtqueue_read_next_desc(VirtIODevice *vdev, VRingDesc *desc,
     /* Make sure compiler knows to grab that: we don't want it changing! */
     smp_wmb();
 
+    //XS: meet this problem; 
     if (next >= max) {
         error_report("Desc next is %u", next);
         exit(1);
