@@ -1,0 +1,50 @@
+TABLE_SIZE=2000000
+SQL_SOCK=/tmp/mysql.sock
+rm -rf .db
+killall -9 mysqld mysqld_safe &> /dev/null
+rm -rf $SOL_SOCK
+sleep 1;
+./mysql-install/libexec/mysqld --defaults-file=./my.cnf &
+sleep 1;
+mysql-install/bin/mysql -u root -S $SQL_SOCK -e 'GRANT ALL PRIVILEGES ON *.* TO "root"@"%"';
+mysql-install/bin/mysql -u root -S $SQL_SOCK -e 'FLUSH PRIVILEGES;'
+mysql-install/bin/mysql -u root -S $SQL_SOCK -e 'drop database sysbench_db;'
+sleep 1;
+mysql-install/bin/mysql -u root -S $SQL_SOCK -e 'drop database sysbench_db;'
+sleep 1;
+# need not sleep here
+# "mysql" blocks until the command finishes.
+mysql-install/bin/mysql -u root -S $SQL_SOCK -e 'create database sysbench_db;'
+# Added the initial database contents.
+/usr/bin/sysbench \
+--mysql-host=127.0.0.1 \
+--mysql-port=7006 \
+--mysql-user=root \
+--test=oltp \
+--oltp-table-size=$TABLE_SIZE \
+--oltp-table-name=sbtest \
+--mysql-table-engine=InnoDB \
+--mysql-engine-trx=yes \
+--mysql-db=sysbench_db \
+prepare
+sleep 1
+#LD_LIBRARY_PATH=mysql-install/lib/mysql/ \
+#sysbench-install/bin/sysbench \
+#	--mysql-host=127.0.0.1 \
+#	--mysql-port=7000 \
+#	--mysql-user=root \
+#	--test=oltp \
+#	--oltp-table-size=20000 \
+#	--oltp-table-name=sbtest \
+#	--mysql-table-engine=InnoDB \
+#	--mysql-engine-trx=yes \
+#	--mysql-db=sysbench_db \
+#	prepare
+# CREATE TABLE `sbtest` (
+# `id` int(10) unsigned NOT NULL auto_increment,
+# `k` int(10) unsigned NOT NULL default '0',
+# `c` char(120) NOT NULL default '',
+# `pad` char(60) NOT NULL default '',
+# PRIMARY KEY (`id`),
+# KEY `k` (`k`);
+killall -9 mysqld

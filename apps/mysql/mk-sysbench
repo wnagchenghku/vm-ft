@@ -1,0 +1,23 @@
+SYSBENCH_VER=0.4.12
+APP_ROOT=`pwd`
+if [ ! -f sysbench-$SYSBENCH_VER.tar.gz ]; then
+wget ftp://ftp.dk.netbsd.org/ftp/index/OS/4.3bsd/NetBSD/packages/distfiles/sysbench-$SYSBENCH_VER.tar.gz
+fi
+#wget https://row-cache-for-innodb.googlecode.com/files/sysbench-$SYSBEN_VER.tar.gz
+#wget http://pkgs.fedoraproject.org/repo/pkgs/sysbench/sysbench-0.4.12.tar.gz/3a6d54fdd3fe002328e4458206392b9d/sysbench-$SYSBENCH_VER.tar.gz
+rm -rf sysbench-$SYSBENCH_VER
+rm -rf sysbench-install
+tar zxvf sysbench-$SYSBENCH_VER.tar.gz
+cd sysbench-$SYSBENCH_VER
+./configure \
+--prefix=$PWD/../sysbench-install \
+--with-mysql-includes=$PWD/../mysql-install/include/mysql \
+--with-mysql-libs=$PWD/../mysql-install/lib/mysql
+# "sysbench" needs libmysqlclient_r for unknown reasons
+pushd .
+cd ../mysql-install/lib/mysql
+ln -sf libmysqlclient.so libmysqlclient_r.so
+popd
+make
+# DT - 4/14/2013: Sysbench 0.4.12 fails here; I think libtool needs root.
+make install

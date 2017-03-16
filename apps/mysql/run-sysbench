@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+
+import re
+import os
+import sys
+import argparse
+import subprocess
+import numpy
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description = "Run sysbench")
+    parser.add_argument("-t", default = 1, type = int,
+                        help = "# of threads")
+    parser.add_argument("-p", default = 7006, type = int,
+                        help = "mysqld port")
+    parser.add_argument("-i", default = "127.0.0.1", type = str,
+                        help = "mysqld host ip address")
+    parser.add_argument("-n", default = 100, type = int,
+                        help = "# of requests")
+    parser.add_argument("-r", default = 1, type = int,
+                        help = "# of runs")
+    args = parser.parse_args()
+
+#    cmd = "LD_LIBRARY_PATH=$QEMU_MC/apps/mysql/mysql-install/lib/mysql/"
+#    cmd += " $QEMU_MC/apps/mysql/sysbench-install/bin/sysbench"
+    cmd = "/usr/bin/sysbench "
+    cmd += " --mysql-host=" + args.i
+    cmd += " --mysql-user=root"
+    cmd += " --mysql-port=" + str(args.p)
+    cmd += " --num-threads=" + str(args.t)
+    cmd += " --max-requests=" + str(args.n)
+    cmd += " --test=oltp"
+    cmd += " --oltp-table-size=2000000"
+    cmd += " --oltp-table-name=sbtest"
+    cmd += " --mysql-db=sysbench_db"
+    cmd += " --oltp-test-mode=complex"
+    cmd += " --mysql-engine-trx=yes"
+    cmd += " --mysql-table-engine=InnoDB"
+    cmd += " --oltp-index-updates=200"
+    cmd += " --oltp-non-index-updates=200"
+    cmd += " "
+    cmd += " run"
+
+    results = []
+    for i in range(args.r):
+        print >> sys.stderr, "Run", i
+        output = subprocess.check_output(cmd, shell = True)
+        for line in output.splitlines():
+            what = re.search("transactions:.+\\(([\\d+\\.]+) per sec\\.\\)",
+                             line)
+            if what is not None:
+                result = float(what.group(1))
+                results.append(result)
+                print >> sys.stderr, "# of transactions per sec =", result
+    assert len(results) == args.r
+
+    print results
+    print "mean =", numpy.mean(results)
+    print "stdev =", numpy.std(results)
+    print "min =", numpy.min(results)
+    print "max =", numpy.max(results)
+
