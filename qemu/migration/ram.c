@@ -2207,10 +2207,14 @@ int backup_prepare_bitmap(void){
     hash_list *hlist = get_hash_list_pointer(); 
 
     printf("\n before memcpy, size = %ld\n", hlist->len * HASH_SIZE);
+    printf("rdma_buffer: %p, hlist->hashes: %p\n", rdma_buffer, hlist->hashes);
     fflush(stdout);
+
 
     memcpy(rdma_buffer, hlist->hashes, hlist->len * HASH_SIZE); 
     
+
+
 
     printf("\n after memcpy\n");
     fflush(stdout);
