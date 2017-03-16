@@ -2167,7 +2167,7 @@ int backup_prepare_bitmap(void){
 
     unsigned long *backup_bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
     
-    printbitmap(backup_bitmap);
+    //printbitmap(backup_bitmap);
 
     ssize_t ret; 
     ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
@@ -2200,7 +2200,7 @@ int backup_prepare_bitmap(void){
     //     printf("\n\nFailed to do the and operation on the bitmap\n\n");
     // }
     printf("And Bitmap count: %"PRId64"\n", slow_bitmap_count(and_bitmap, ram_bitmap_pages));
-
+    printbitmap(and_bitmap);
 
 
     unsigned long *xor_bitmap = bitmap_new(ram_bitmap_pages);
@@ -2209,7 +2209,7 @@ int backup_prepare_bitmap(void){
     //     printf("\n\nFailed to do the xor operation on the bitmap\n\n");
     // }
     printf("XOR Bitmap count%"PRId64"\n", slow_bitmap_count(xor_bitmap, ram_bitmap_pages));
-
+    printbitmap(xor_bitmap);
 
 
 
@@ -2217,6 +2217,7 @@ int backup_prepare_bitmap(void){
     bitmap_or(or_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
     printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
 
+     printbitmap(or_bitmap);
 
 
 
