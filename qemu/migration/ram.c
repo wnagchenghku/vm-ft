@@ -2239,6 +2239,8 @@ int backup_prepare_bitmap(void){
 
     rcu_read_unlock();
 
+    return 0;
+
 }
 
 
@@ -2337,6 +2339,10 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         //TODO: compare
 
         compare_hash_list(backup_hashlist);
+        free(and_bitmap);
+        free(xor_bitmap);
+        free(or_bitmap);
+        free(backup_hashlist);
 
 
     }
