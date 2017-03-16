@@ -175,12 +175,12 @@ static void *compute_thread_func(void *arg){
 		pthread_mutex_lock(&compute_locks[t]);
 		pthread_cond_wait(&compute_conds[t], &compute_locks[t]);
 		pthread_mutex_unlock(&compute_locks[t]);
-		printf("[compute] Thread %d started, workload from:  %lu to :%lu\n", t, job_start, job_end);
-
+		
 		unsigned long workload = dirty_count / nthread;
 		unsigned long job_start = t * workload; 
 		unsigned long job_end;
-		
+		printf("[compute] Thread %d started, workload from:  %lu to :%lu\n", t, job_start, job_end);
+
 
 		if ( t == (nthread -1)) {
 			job_end = dirty_count -1; 
@@ -193,7 +193,7 @@ static void *compute_thread_func(void *arg){
 			compute_hash(i);
 		}
 		//printf("[compute] Thread %d finished, workload from:  %lu to :%lu\n", t, job_start, job_end);
-		printf("[compute] Thread %d finished");
+		printf("[compute] Thread %d finished", t);
 		pthread_spin_lock(&finished_lock);
 		finished_thread++;
 		pthread_spin_unlock(&finished_lock);
