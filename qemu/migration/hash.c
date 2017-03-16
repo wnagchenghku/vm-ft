@@ -316,7 +316,10 @@ void hash_init(void){
 	unsigned long *test_bitmap = bitmap_new(ram_bitmap_pages);
 	bitmap_set(test_bitmap, 1, 1);
 	bitmap_set(test_bitmap, 65, 1);
-	printbitmap(test_bitmap);
+	//printbitmap(test_bitmap);
+
+	dirty_indices = (unsigned long *) malloc(ram_bitmap_pages * sizeof(unsigned long));
+
 
 	update_dirty_indices(test_bitmap, ram_bitmap_pages);
 
@@ -343,7 +346,7 @@ void hash_init(void){
 	}
 
 
-	dirty_indices = (unsigned long *) malloc(ram_bitmap_pages * sizeof(unsigned long));
+	
 
 
 	fake_page = (uint8_t *) malloc (4096);
