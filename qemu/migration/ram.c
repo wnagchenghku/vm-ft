@@ -2182,6 +2182,8 @@ int backup_prepare_bitmap(void){
 
 
     memcpy(rdma_buffer, backup_bitmap, len * sizeof(unsigned long)); 
+    printf("rdma_buffer addr: %p\n", rdma_buffer);
+
     ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
     if (ret < 0){
         printf("Failed to send bitmap from backup to primary\n");
