@@ -48,4 +48,6 @@ void compute_hash_list (unsigned long *bitmap, unsigned long len);
 
 void compare_hash_list(hash_list *hlist);
 
+void print_hash_list(hash_list *list);
+
 #endif //MEM_COMPARE_HASH_H
