@@ -177,7 +177,7 @@ static void *compute_thread_func(void *arg){
 		pthread_mutex_unlock(&compute_locks[t]);
 	
 
-		unsigned long workload = dirty_count / nthread + 1;
+		unsigned long workload = dirty_count / nthread;
 		unsigned long job_start = t * workload; 
 		unsigned long job_end;
 		
@@ -209,11 +209,11 @@ static void *compare_thread_func(void *arg){
 		pthread_mutex_lock(&compare_locks[t]);
 		pthread_cond_wait(&compare_conds[t], &compare_locks[t]);
 		pthread_mutex_unlock(&compare_locks[t]);
-		uint64_t workload = hlist -> len / nthread + 1;
+		uint64_t workload = hlist -> len / nthread ;
 		uint64_t job_start = t * workload; 
 		uint64_t job_end = (t+1) * workload - 1 ; 
 		if (t + 1 == nthread){
-			job_end = hlist -> len -1;
+			job_end = (hlist->len) -1;
 		}
 		uint64_t i; 
 		for (i = job_start; i <= job_end; i++){
@@ -224,7 +224,7 @@ static void *compare_thread_func(void *arg){
 				pthread_spin_unlock(&compare_spin_lock);
 			}
 		}
-		printf("[compare] Thread %d finished, workload = %lu\n", t, job_end - job_start + 1);
+		printf("[compare] Thread %d finished, workload from:  %lu to :%lu\n", t, job_start, job_end);
 		pthread_spin_lock(&compare_spin_lock);
 		compare_complete_thread++;
 		//TOOD: transfer the page
