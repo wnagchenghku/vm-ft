@@ -2121,7 +2121,7 @@ static char* long_to_binary(long l){
 static void printbitmap(unsigned long *bmap){
     int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
     long len =  BITS_TO_LONGS(ram_bitmap_pages);
-    fprintf(stderr, "len: %d ", len);
+    fprintf(stderr, "len: %ld ", len);
     int i;
     for (i=0; i< len; i++){
         fprintf(stderr, "[%d]: %s\n", i, long_to_binary(bmap[i]));
@@ -2173,6 +2173,13 @@ int backup_prepare_bitmap(void){
     ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
     printf("[Bitmap] RDMA received length %lu\n", ret);
     
+    //FIXIT: slow; 
+    unsigned long *primary_bitmap = (unsigned long) malloc(ret);
+    memcpy(primary_bitmap, rdma_buffer, ret);
+
+
+
+
 
     memcpy(rdma_buffer, backup_bitmap, len * sizeof(unsigned long)); 
     ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
@@ -2181,7 +2188,7 @@ int backup_prepare_bitmap(void){
     }
     //printf("[Bitmap] RDMA sent length %lu\n", ret);
 
-    unsigned long *primary_bitmap = (unsigned long*) rdma_buffer;
+    //unsigned long *primary_bitmap = (unsigned long*) rdma_buffer;
 
 
 
@@ -2190,7 +2197,7 @@ int backup_prepare_bitmap(void){
     // if (ret <= 0){
     //     printf("\n\nFailed to do the and operation on the bitmap\n\n");
     // }
-    printf("And Bitmap count%"PRId64"\n", slow_bitmap_count(and_bitmap, ram_bitmap_pages));
+    printf("And Bitmap count: %"PRId64"\n", slow_bitmap_count(and_bitmap, ram_bitmap_pages));
 
 
     compute_hash_list(and_bitmap, ram_bitmap_pages);
@@ -2199,8 +2206,20 @@ int backup_prepare_bitmap(void){
     //TODO: compute hash based on xor_bitmapr   
     hash_list *hlist = get_hash_list_pointer(); 
 
+    printf("\n before memcpy\n");
+    fflush(stdout);
+
     memcpy(rdma_buffer, hlist->hashes, hlist->len * HASH_SIZE); 
+    
+
+    printf("\n after memcpy\n");
+    fflush(stdout);
+
     ret = mc_rdma_put_colo_ctrl_buffer(hlist->len * HASH_SIZE);
+
+
+    printf("\n after put buffer\n");
+    fflush(stdout);
     if (ret < 0){
         printf("Failed to send hashes from backup to primary\n");
     }
