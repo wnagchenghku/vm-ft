@@ -380,9 +380,9 @@ void compare_hash_list(hash_list *rhlist){
 	int i ; 
 	printf("before waking up compare hashlist\n");
 	for (i = 0; i<nthread; i++){
-		pthread_mutex_lock(&compute_locks[i]);
-		pthread_cond_broadcast(&compute_conds[i]);
-		pthread_mutex_unlock(&compute_locks[i]);
+		pthread_mutex_lock(&compare_locks[i]);
+		pthread_cond_broadcast(&compare_conds[i]);
+		pthread_mutex_unlock(&compare_locks[i]);
 	}
 	while (1) {
 		pthread_spin_lock(&compare_spin_lock);
