@@ -150,7 +150,7 @@ static uint8_t* get_page_addr(uint64_t page_index){
 		unsigned long base = block->offset >> TARGET_PAGE_BITS;
 		//XS: TODO used length or max length. 
 		unsigned long max = base + (block -> used_length >> TARGET_PAGE_BITS);
-		if (page_index >= base && page_index <= max){
+		if (page_index >= base && page_index < max){
 			return block->host + ((page_index-base) << TARGET_PAGE_BITS)  ;
 		} 
 	}
