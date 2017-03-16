@@ -2308,7 +2308,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         hash_list *backup_hashlist = (hash_list *) malloc (sizeof (hash_list));
         backup_hashlist -> hashes = (hash_t *) rdma_buffer;
         backup_hashlist -> len = ret / HASH_SIZE;
-        printf("\nReceived hash list of len %lu\n", backup_hashlist);
+        printf("\nReceived hash list of len %lu\n", backup_hashlist->len);
         //TODO: compare
 
 
