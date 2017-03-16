@@ -120,12 +120,10 @@ hash_list* get_hash_list_pointer(void){
 
 void print_hash_list(hash_list *list){
 	uint64_t i; 
-	printf("hashlist: ");
 	for (i = 0; i<list->len; i++){
-		printf("%"PRIu64" ", list->hashes[i]);
+		printf("%"PRIu64"\n", list->hashes[i]);
 	}
-	printf("\n");
-
+	printf("*******end of hash list\n");
 }
 
 
