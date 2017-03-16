@@ -149,7 +149,7 @@ static uint8_t* get_page_addr(uint64_t page_index){
 	QLIST_FOREACH_RCU(block, &ram_list.blocks, next){
 		unsigned long base = block->offset >> TARGET_PAGE_BITS;
 		//XS: TODO used length or max length. 
-		unsigned long max = base + (block -> used_length >> TARGET_PAGE_BITS);
+		unsigned long max = base + (block->used_length >> TARGET_PAGE_BITS);
 		if (page_index >= base && page_index < max){
 			return block->host + ((page_index-base) << TARGET_PAGE_BITS)  ;
 		} 
@@ -194,7 +194,7 @@ static void *compute_thread_func(void *arg){
 			compute_hash(i);
 		}
 		//printf("[compute] Thread %d finished, workload from:  %lu to :%lu\n", t, job_start, job_end);
-		printf("[compute] Thread %d finished", t);
+		printf("[compute] Thread %d finished\n", t);
 		pthread_spin_lock(&finished_lock);
 		finished_thread++;
 		pthread_spin_unlock(&finished_lock);

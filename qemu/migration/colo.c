@@ -532,12 +532,20 @@ static int colo_prepare_before_save(MigrationState *s)
 }
 
 
+
+
+
 //XS: primary thread;
 static void colo_process_checkpoint(MigrationState *s)
 {
 
     hash_init();
     printf("\nHASH INIT CALLED\n");
+
+
+  
+
+
     QEMUSizedBuffer *buffer = NULL;
     int64_t current_time, checkpoint_time = qemu_clock_get_ms(QEMU_CLOCK_HOST);
     Error *local_err = NULL;

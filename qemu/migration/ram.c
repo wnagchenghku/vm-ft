@@ -2263,13 +2263,28 @@ int backup_prepare_bitmap(void){
 
 }
 
+static void printblocks(void){
+    RAMBlock *block; 
+    //uint64_t offset; 
+    int tpb = TARGET_PAGE_BITS;
+    printf("TARGET_PAGE_BITS: %d\n",tpb);
+    int i = 0;
+    QLIST_FOREACH_RCU(block, &ram_list.blocks, next){
+        printf("[%d:%s]: offset:%"PRIu64" used_length%"PRIu64" max_length%"PRIu64"\n",i, block->idstr, block->offset, block->used_length, block->max_length);
+        i++;
+    }
 
+}
 
 
 /* Called with iothread lock */
 //XS: the major function while doing migration. 
 static int ram_save_complete(QEMUFile *f, void *opaque)
 {
+
+
+
+    printblocks();
 
     rdma_buffer = mc_rdma_get_colo_ctrl_buffer_ptr();
     rcu_read_lock();
