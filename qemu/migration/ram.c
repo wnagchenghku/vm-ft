@@ -2200,7 +2200,7 @@ int backup_prepare_bitmap(void){
     hash_list *hlist = get_hash_list_pointer(); 
 
     memcpy(rdma_buffer, hlist->hashes, hlist->len * HASH_SIZE); 
-    ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
+    ret = mc_rdma_put_colo_ctrl_buffer(hlist->len * HASH_SIZE);
     if (ret < 0){
         printf("Failed to send hashes from backup to primary\n");
     }
