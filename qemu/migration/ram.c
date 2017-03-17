@@ -573,12 +573,12 @@ ram_addr_t migration_bitmap_find_dirty(RAMBlock *rb,
 
     unsigned long next;
 
-    // if (colo_not_first_sync == true){
-    //     bitmap = get_divergent_bitmap();
+    if (colo_not_first_sync == true){
+        bitmap = get_divergent_bitmap();
         
-    // }else{
+    }else{
         bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
-    // }
+    }
     
 
 
@@ -598,12 +598,12 @@ static inline bool migration_bitmap_clear_dirty(ram_addr_t addr)
     int nr = addr >> TARGET_PAGE_BITS;
     unsigned long *bitmap;
 
-    // if (colo_not_first_sync == true){
-    //     bitmap = get_divergent_bitmap();
+    if (colo_not_first_sync == true){
+        bitmap = get_divergent_bitmap();
         
-    // }else{
+    }else{
         bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
-    // }
+    }
 
     ret = test_and_clear_bit(nr, bitmap);
 
@@ -1418,30 +1418,30 @@ static int ram_find_and_save_block(QEMUFile *f, bool last_stage,
 
     do {
         again = true;
-        printf("[get_queued_page] before\n");
-        fflush(stdout);
+        // printf("[get_queued_page] before\n");
+        // fflush(stdout);
         found = get_queued_page(ms, &pss, &dirty_ram_abs);
-        printf("[get_queued_page] returned found = %d\n", found);
-        fflush(stdout);
+        // printf("[get_queued_page] returned found = %d\n", found);
+        // fflush(stdout);
 
 
         if (!found) {
             /* priority queue empty, so just search for something dirty */
-            printf("[find_dirty_block] before \n");
-            fflush(stdout);
+            // printf("[find_dirty_block] before \n");
+            // fflush(stdout);
             found = find_dirty_block(f, &pss, &again, &dirty_ram_abs);
-            printf("[find_dirty_block] returns found = %d\n", found);
-            fflush(stdout);
+            // printf("[find_dirty_block] returns found = %d\n", found);
+            // fflush(stdout);
         }
 
         if (found) {
-            printf("[ram_save_host_page] before\n");
-            fflush(stdout);
+            // printf("[ram_save_host_page] before\n");
+            // fflush(stdout);
             pages = ram_save_host_page(ms, f, &pss,
                                        last_stage, bytes_transferred,
                                        dirty_ram_abs);
-            printf("[ram_save_host_page] returns pages =  %d\n", pages);
-            fflush(stdout);
+            // printf("[ram_save_host_page] returns pages =  %d\n", pages);
+            // fflush(stdout);
         }
     } while (!pages && again);
 
@@ -2290,6 +2290,10 @@ int backup_prepare_bitmap(void){
     primary_hashlist -> hashes = (hash_t*)rdma_buffer;
 
     compare_hash_list(primary_hashlist);
+
+
+    unsigned long *divergent_bmap = get_divergent_bitmap();
+    printbitmap(divergent_bmap);
 
 
 
