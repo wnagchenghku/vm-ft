@@ -3149,14 +3149,14 @@ void colo_flush_ram_cache(void)
                 offset = host_off;
                 host_dirty++;
                 both_dirty += (host_off == cache_off);
+                printf("here\n");
+                fflush(stdout);
             } else {
                 offset = cache_off;
             }
             dst_host = block->host + offset;
             src_host = block->colo_cache + offset;
             memcpy(dst_host, src_host, TARGET_PAGE_SIZE);
-            printf("here\n");
-            fflush(stdout);
         }
     }
     printf("\n\n\n*****\ncolo result: host_dirty=%"PRIu64" both dirty=%"PRIu64"\n\n*****\n", host_dirty, both_dirty);
