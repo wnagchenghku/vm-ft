@@ -3134,7 +3134,7 @@ void colo_flush_ram_cache(void)
     void *dst_host;
     void *src_host;
     ram_addr_t offset = 0, host_off = 0, cache_off = 0;
-    uint64_t host_dirty = 0, both_dirty = 0;
+    uint64_t host_dirty = 0, both_dirty = 0, primary_dirty=0;
 
     trace_colo_flush_ram_cache_begin(migration_dirty_pages);
     address_space_sync_dirty_bitmap(&address_space_memory);
@@ -3150,8 +3150,8 @@ void colo_flush_ram_cache(void)
         }
         if (host_off == offset) { /* walk ramblock->host */
             host_off = ramlist_bitmap_find_and_reset_dirty(block, offset);
-            printf("host_off %ld", host_off);
-            fflush(stdout);
+            //printf("host_off %ld", host_off);
+            //fflush(stdout);
         }
         if (host_off >= block->used_length &&
             cache_off >= block->used_length) {
@@ -3163,17 +3163,19 @@ void colo_flush_ram_cache(void)
                 offset = host_off;
                 host_dirty++;
                 both_dirty += (host_off == cache_off);
-                printf("here\n");
-                fflush(stdout);
+                //printf("here\n");
+                //fflush(stdout);
             } else {
                 offset = cache_off;
+                primary_dirty++;
             }
             dst_host = block->host + offset;
             src_host = block->colo_cache + offset;
             memcpy(dst_host, src_host, TARGET_PAGE_SIZE);
         }
     }
-    printf("\n\n\n*****\ncolo result: host_dirty=%"PRIu64" both dirty=%"PRIu64"\n\n*****\n", host_dirty, both_dirty);
+    primary_dirty+= both_dirty;
+    printf("\n\n\n*****\ncolo result: backup_dirty=%"PRIu64", primary_dirty=%"PRIu64", both dirty=%"PRIu64"\n\n*****\n", host_dirty,primary_dirty, both_dirty);
 
 
     rcu_read_unlock();
