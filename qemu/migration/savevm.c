@@ -1781,7 +1781,7 @@ static LoadStateEntry *loadvm_find_section_entry(MigrationIncomingState *mis,
 
     return le;
 }
-
+//xs: error in this function
 static int
 qemu_loadvm_section_start_full(QEMUFile *f, MigrationIncomingState *mis)
 {
@@ -1822,6 +1822,7 @@ qemu_loadvm_section_start_full(QEMUFile *f, MigrationIncomingState *mis)
     if (!le) {
         le = loadvm_save_section_entry(mis, se, section_id, version_id);
     }
+    //xs: error in this function
     ret = vmstate_load(f, se, version_id);
     if (ret < 0) {
         error_report("error while loading state for instance 0x%x of"
@@ -1864,6 +1865,7 @@ qemu_loadvm_section_part_end(QEMUFile *f, MigrationIncomingState *mis)
 
     return 0;
 }
+//xs: bug here
 
 int qemu_loadvm_state_main(QEMUFile *f, MigrationIncomingState *mis)
 {
@@ -1877,6 +1879,7 @@ int qemu_loadvm_state_main(QEMUFile *f, MigrationIncomingState *mis)
         switch (section_type) {
         case QEMU_VM_SECTION_START:
         case QEMU_VM_SECTION_FULL:
+            //xs: error here
             ret = qemu_loadvm_section_start_full(f, mis);
             if (ret < 0) {
                 return ret;

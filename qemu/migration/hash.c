@@ -416,7 +416,9 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 	if (divergent_bitmap == NULL){	
 		divergent_bitmap = bitmap_new(ram_bitmap_pages);
 	}else{
-		bitmap_zero(divergent_bitmap, ram_bitmap_pages);
+		//bitmap_zero(divergent_bitmap, ram_bitmap_pages);
+		free(divergent_bitmap);
+		divergent_bitmap = bitmap_new(ram_bitmap_pages);
 	}
 
 
