@@ -3161,6 +3161,8 @@ void colo_flush_ram_cache(void)
     assert(migration_dirty_pages == 0);
     trace_colo_flush_ram_cache_begin(host_dirty);
     trace_colo_flush_ram_cache_begin(both_dirty);
+    printf("\n\n\n*****\ncolo result: host_dirty=%"PRIu64" both dirty=%"PRIu64"\n\n*****\n", host_dirty, both_dirty);
+    fflush(stdout);
     trace_colo_flush_ram_cache_end();
 }
 
