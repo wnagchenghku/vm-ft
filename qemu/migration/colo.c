@@ -419,13 +419,15 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     * TODO: We may need a timeout mechanism to prevent COLO process
     * to be blocked here.
     */
-    printf("Called qemu transaction\n");
-    fflush(stdout);
+    //printf("Called qemu transaction\n");
+    //fflush(stdout);
 
 
     migrate_use_mc_rdma = true;
     colo_not_first_sync = true;
     qemu_savevm_live_state(s->to_dst_file);
+    //printf("\n\n******* qemu_savevm_live_state returned\n\n");
+
     colo_not_first_sync = false;
     migrate_use_mc_rdma = false;
 
@@ -880,8 +882,8 @@ void *colo_process_incoming_thread(void *opaque)
             error_report("Load VM's live state (ram) error");
             goto out;
         }
-
- 
+        //printf("\n\n****** qemu_loadvm_state_main returned *****");
+        //fflush(stdout);
 
         migrate_use_mc_rdma = false;
         /* read the VM state total size first */
@@ -936,6 +938,13 @@ void *colo_process_incoming_thread(void *opaque)
         vmstate_loading = true;
         // colo_flush_ram_cache();
         //XS: GUESS CPU
+
+        // printf("\n\n****** before [qemu_load_device_state] *****");
+        // fflush(stdout);
+
+
+        //xs:! This function failed
+        printf("\n***********\n[RDMA_BUFFER ADDR] :%p\n", rdma_buffer);
         ret = qemu_load_device_state(fb); 
 
         if (ret < 0) {
@@ -1005,8 +1014,8 @@ out:
     * incoming thread, so here it is not necessary to lock here again,
     * or there will be a deadlock error.
     */
-    printf("before calling release**********\n\n\n\n\n");
-    fflush(stdout);
+    //printf("before calling release**********\n\n\n\n\n");
+    // fflush(stdout);
     colo_release_ram_cache();
 
     /* Hope this not to be too long to loop here */
