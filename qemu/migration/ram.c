@@ -2866,11 +2866,12 @@ static int ram_load(QEMUFile *f, void *opaque, int version_id)
             RAMBlock *block = ram_block_from_stream(f, flags);
 
             /* After going into COLO, we should load the Page into colo_cache */
-            if (ram_cache_enable) {
-                host = colo_cache_from_block_offset(block, addr);
-            } else {
+            //xs: just a test
+            //if (ram_cache_enable) {
+            //    host = colo_cache_from_block_offset(block, addr);
+            //} else {
                 host = host_from_ram_block_offset(block, addr);
-            }
+            //}
             if (!host) {
                 error_report("Illegal RAM offset " RAM_ADDR_FMT, addr);
                 ret = -EINVAL;
