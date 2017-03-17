@@ -2455,22 +2455,23 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
     /* try transferring iterative blocks of memory */
 
     /* flush all remaining blocks regardless of rate limiting */
-    while (true) {
-        int pages;
+    //xs: transfer pages; 
+    // while (true) {
+    //     int pages;
 
 
-        // printf("[ram_find_and_save_block] before\n");
-        // fflush(stdout);
-        pages = ram_find_and_save_block(f, !migration_in_colo_state(),
-                                        &bytes_transferred);
-        // printf("[ram_find_and_save_block] returned pages=%d\n", pages);
-        // fflush(stdout);
+    //     // printf("[ram_find_and_save_block] before\n");
+    //     // fflush(stdout);
+    //     pages = ram_find_and_save_block(f, !migration_in_colo_state(),
+    //                                     &bytes_transferred);
+    //     // printf("[ram_find_and_save_block] returned pages=%d\n", pages);
+    //     // fflush(stdout);
 
-        /* no more blocks to sent */
-        if (pages == 0) {
-            break;
-        }
-    }
+    //     /* no more blocks to sent */
+    //     if (pages == 0) {
+    //         break;
+    //     }
+    // }
 
     unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
     int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
