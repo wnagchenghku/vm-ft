@@ -3138,6 +3138,8 @@ void colo_flush_ram_cache(void)
         }
         if (host_off == offset) { /* walk ramblock->host */
             host_off = ramlist_bitmap_find_and_reset_dirty(block, offset);
+            printf("host_off %ld", host_off);
+            fflush(stdout);
         }
         if (host_off >= block->used_length &&
             cache_off >= block->used_length) {
