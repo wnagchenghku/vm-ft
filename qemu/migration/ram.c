@@ -2364,119 +2364,131 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         migration_bitmap_sync();
     }
 
-    //XS: TRY to transfer the dirty bitmap; 
-    printf("\n Before going into checking of first sync\n");
-    fflush(stdout);
-    if (colo_not_first_sync == true){
-        printf("\n getting into checking of first sync\n");
-        fflush(stdout);
-        int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
-        long len =  BITS_TO_LONGS(ram_bitmap_pages);
-        unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
+
+
+
+
+
+
+    // //XS: TRY to transfer the dirty bitmap; 
+    // printf("\n Before going into checking of first sync\n");
+    // fflush(stdout);
+    // if (colo_not_first_sync == true){
+    //     printf("\n getting into checking of first sync\n");
+    //     fflush(stdout);
+    //     int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
+    //     long len =  BITS_TO_LONGS(ram_bitmap_pages);
+    //     unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
         
 
-        // printf("\n before memcpy\n");
-        // fflush(stdout);
-        memcpy(rdma_buffer, bitmap, len * sizeof(unsigned long)); 
-        //int tmp = 4;
-        //memcpy(rdma_buffer, &tmp, sizeof(tmp));
-        // printf("\n after memcpy before put\n");
-        // fflush(stdout);
+    //     // printf("\n before memcpy\n");
+    //     // fflush(stdout);
+    //     memcpy(rdma_buffer, bitmap, len * sizeof(unsigned long)); 
+    //     //int tmp = 4;
+    //     //memcpy(rdma_buffer, &tmp, sizeof(tmp));
+    //     // printf("\n after memcpy before put\n");
+    //     // fflush(stdout);
 
 
 
-        ssize_t ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
-        if (ret < 0){
-            printf("Failed to send bitmap from primary to backup\n");
-        }
-        // printf("\n after put\n");
-        // fflush(stdout);
+    //     ssize_t ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
+    //     if (ret < 0){
+    //         printf("Failed to send bitmap from primary to backup\n");
+    //     }
+    //     // printf("\n after put\n");
+    //     // fflush(stdout);
 
 
-        //printf("[Bitmap] RDMA sent length %lu\n", ret);
+    //     //printf("[Bitmap] RDMA sent length %lu\n", ret);
 
-        //XS: receive the bitmap from backup. 
-        ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
-        printf("[Bitmap] RDMA received length %lu\n", ret);
-        unsigned long *backup_bitmap = (unsigned long *) rdma_buffer;
+    //     //XS: receive the bitmap from backup. 
+    //     ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
+    //     printf("[Bitmap] RDMA received length %lu\n", ret);
+    //     unsigned long *backup_bitmap = (unsigned long *) rdma_buffer;
         
-        /******
-        Bitmap AND backup_bitmap => Both dirty
-        Bitmap XOR backup_bitmap => Just one dirty
+    //     /******
+    //     Bitmap AND backup_bitmap => Both dirty
+    //     Bitmap XOR backup_bitmap => Just one dirty
 
-        */
-        printf("Primary Bitmap count%"PRId64"\n", slow_bitmap_count(bitmap, ram_bitmap_pages));
-        printf("Backup Bitmap count%"PRId64"\n", slow_bitmap_count(backup_bitmap, ram_bitmap_pages));
-
-
-        //XS_FIXIT: This is slow, a global variable may be better, otherwise malloc each time is slow
-        unsigned long *and_bitmap = bitmap_new(ram_bitmap_pages);
-        bitmap_and(and_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
-        // if (ret <= 0){
-        //     printf("\n\nFailed to do the and operation on the bitmap\n\n");
-        // }
-        printf("And Bitmap count%"PRId64"\n", slow_bitmap_count(and_bitmap, ram_bitmap_pages));
+    //     */
+    //     printf("Primary Bitmap count%"PRId64"\n", slow_bitmap_count(bitmap, ram_bitmap_pages));
+    //     printf("Backup Bitmap count%"PRId64"\n", slow_bitmap_count(backup_bitmap, ram_bitmap_pages));
 
 
-        unsigned long *xor_bitmap = bitmap_new(ram_bitmap_pages);
-        bitmap_xor(xor_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
-        // if (ret <= 0){
-        //     printf("\n\nFailed to do the xor operation on the bitmap\n\n");
-        // }
-        printf("XOR Bitmap count%"PRId64"\n", slow_bitmap_count(xor_bitmap, ram_bitmap_pages));
+    //     //XS_FIXIT: This is slow, a global variable may be better, otherwise malloc each time is slow
+    //     unsigned long *and_bitmap = bitmap_new(ram_bitmap_pages);
+    //     bitmap_and(and_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
+    //     // if (ret <= 0){
+    //     //     printf("\n\nFailed to do the and operation on the bitmap\n\n");
+    //     // }
+    //     printf("And Bitmap count%"PRId64"\n", slow_bitmap_count(and_bitmap, ram_bitmap_pages));
 
 
-        unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
-        bitmap_or(or_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
-        printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
-
-        //xs: test or bitmap
-        compute_hash_list(or_bitmap, ram_bitmap_pages);
-
-        hash_list *hlist = get_hash_list_pointer();
-        ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
-
-        hash_list *backup_hashlist = (hash_list *) malloc (sizeof (hash_list));
-        //backup_hashlist -> hashes = (hash_t *) rdma_buffer;
-        backup_hashlist -> len = ret / sizeof(hash_t);
-        /**
-        primary send hash_list to backup so that backup has the divergent bitmap
-        **/
-        backup_hashlist -> hashes = (hash_t*) malloc(backup_hashlist->len * sizeof(hash_t));
-        memcpy(backup_hashlist->hashes, rdma_buffer, backup_hashlist->len * sizeof(hash_t));
+    //     unsigned long *xor_bitmap = bitmap_new(ram_bitmap_pages);
+    //     bitmap_xor(xor_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
+    //     // if (ret <= 0){
+    //     //     printf("\n\nFailed to do the xor operation on the bitmap\n\n");
+    //     // }
+    //     printf("XOR Bitmap count%"PRId64"\n", slow_bitmap_count(xor_bitmap, ram_bitmap_pages));
 
 
-        memcpy(rdma_buffer, hlist->hashes, hlist->len * sizeof(hash_t));
-        ret = mc_rdma_put_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
+    //     unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
+    //     bitmap_or(or_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
+    //     printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
 
-        if(ret <0){
-            printf("failed to send hash_list from primary to backup");
-        }
+    //     //xs: test or bitmap
+    //     compute_hash_list(or_bitmap, ram_bitmap_pages);
+
+    //     hash_list *hlist = get_hash_list_pointer();
+    //     ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
+
+    //     hash_list *backup_hashlist = (hash_list *) malloc (sizeof (hash_list));
+    //     //backup_hashlist -> hashes = (hash_t *) rdma_buffer;
+    //     backup_hashlist -> len = ret / sizeof(hash_t);
+    //     /**
+    //     primary send hash_list to backup so that backup has the divergent bitmap
+    //     **/
+    //     backup_hashlist -> hashes = (hash_t*) malloc(backup_hashlist->len * sizeof(hash_t));
+    //     memcpy(backup_hashlist->hashes, rdma_buffer, backup_hashlist->len * sizeof(hash_t));
 
 
+    //     memcpy(rdma_buffer, hlist->hashes, hlist->len * sizeof(hash_t));
+    //     ret = mc_rdma_put_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
 
-
-        printf("\nReceived hash list of len %lu\n", backup_hashlist->len);
-        //TODO: compare
-        // printf("primary hash list\n");
-        // print_hash_list(hlist);
-
-        // printf("backup hash list\n");
-        // print_hash_list(backup_hashlist);
+    //     if(ret <0){
+    //         printf("failed to send hash_list from primary to backup");
+    //     }
 
 
 
-        compare_hash_list(backup_hashlist);
-        free(and_bitmap);
-        free(xor_bitmap);
-        free(or_bitmap);
-        free(backup_hashlist);
+
+    //     printf("\nReceived hash list of len %lu\n", backup_hashlist->len);
+    //     //TODO: compare
+    //     // printf("primary hash list\n");
+    //     // print_hash_list(hlist);
+
+    //     // printf("backup hash list\n");
+    //     // print_hash_list(backup_hashlist);
 
 
-    }
+
+    //     compare_hash_list(backup_hashlist);
+    //     free(and_bitmap);
+    //     free(xor_bitmap);
+    //     free(or_bitmap);
+    //     free(backup_hashlist);
+
+
+    // }
+
+
+
+
+
+
 
     ram_control_before_iterate(f, RAM_CONTROL_FINISH);
-
+    
     /* try transferring iterative blocks of memory */
 
     /* flush all remaining blocks regardless of rate limiting */
