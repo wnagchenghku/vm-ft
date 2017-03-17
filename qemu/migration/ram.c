@@ -2298,7 +2298,7 @@ int backup_prepare_bitmap(void){
 
 
 
-    bitmap_zero(backup_bitmap, ram_bitmap_pages);
+    //bitmap_zero(backup_bitmap, ram_bitmap_pages);
 
 
     rcu_read_unlock();
