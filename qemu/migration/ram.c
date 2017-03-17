@@ -2283,6 +2283,13 @@ int backup_prepare_bitmap(void){
         printf("Failed to send hashes from backup to primary\n");
     }
 
+    ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
+
+    hash_list * primary_hashlist = (hash_list*) malloc(sizeof(hash_list));
+    primary_hashlist -> len = ret / sizeof(hash_t);
+    primary_hashlist -> hashes = (hash_t*)rdma_buffer;
+
+    compare_hash_list(primary_hashlist);
 
 
 
@@ -2401,8 +2408,25 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
 
         hash_list *backup_hashlist = (hash_list *) malloc (sizeof (hash_list));
-        backup_hashlist -> hashes = (hash_t *) rdma_buffer;
+        //backup_hashlist -> hashes = (hash_t *) rdma_buffer;
         backup_hashlist -> len = ret / sizeof(hash_t);
+        /**
+        primary send hash_list to backup so that backup has the divergent bitmap
+        **/
+        backup_hashlist -> hashes = (hash_t*) malloc(backup_hashlist->len * sizeof(hash_t));
+        memcpy(backup_hashlist->hashes, rdma_buffer, backup_hashlist->len * sizeof(hash_t));
+
+
+        memcpy(rdma_buffer, hlist->hashes, hlist->len * sizeof(hash_t));
+        ret = mc_rdma_put_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
+
+        if(ret <0){
+            printf("failed to send hash_list from primary to backup");
+        }
+
+
+
+
         printf("\nReceived hash list of len %lu\n", backup_hashlist->len);
         //TODO: compare
         // printf("primary hash list\n");
@@ -3091,7 +3115,7 @@ void colo_flush_ram_cache(void)
             }
             dst_host = block->host + offset;
             src_host = block->colo_cache + offset;
-            //memcpy(dst_host, src_host, TARGET_PAGE_SIZE);
+            memcpy(dst_host, src_host, TARGET_PAGE_SIZE);
         }
     }
     rcu_read_unlock();
