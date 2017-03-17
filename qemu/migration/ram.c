@@ -2459,12 +2459,12 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         int pages;
 
 
-        printf("[ram_find_and_save_block] before\n");
-        fflush(stdout);
+        // printf("[ram_find_and_save_block] before\n");
+        // fflush(stdout);
         pages = ram_find_and_save_block(f, !migration_in_colo_state(),
                                         &bytes_transferred);
-        printf("[ram_find_and_save_block] returned pages=%d\n", pages);
-        fflush(stdout);
+        // printf("[ram_find_and_save_block] returned pages=%d\n", pages);
+        // fflush(stdout);
 
         /* no more blocks to sent */
         if (pages == 0) {
