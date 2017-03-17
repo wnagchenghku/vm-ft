@@ -2940,7 +2940,7 @@ static int ram_load(QEMUFile *f, void *opaque, int version_id)
             RAMBlock *block = ram_block_from_stream(f, flags);
 
             /* After going into COLO, we should load the Page into colo_cache */
-            //xs: just a teset 
+            //xs: the page is load into colo cache, and the migration bitmap is used to record the cache is writen by the primary
             if (ram_cache_enable) {
                 host = colo_cache_from_block_offset(block, addr);
             } else {
@@ -3134,7 +3134,7 @@ void colo_flush_ram_cache(void)
     void *dst_host;
     void *src_host;
     ram_addr_t offset = 0, host_off = 0, cache_off = 0;
-    uint64_t host_dirty = 0, both_dirty = 0, primary_dirty=0;
+    uint64_t host_dirty = 0, both_dirty = 0, primary_dirty=0, total = 0, same = 0;
 
     trace_colo_flush_ram_cache_begin(migration_dirty_pages);
     address_space_sync_dirty_bitmap(&address_space_memory);
@@ -3172,11 +3172,16 @@ void colo_flush_ram_cache(void)
             dst_host = block->host + offset;
             src_host = block->colo_cache + offset;
             memcpy(dst_host, src_host, TARGET_PAGE_SIZE);
+            if (memcmp(dst_host, src_host, TARGET_PAGE_SIZE) == 0){
+                same++;
+            }
+            total++; 
+
         }
     }
     primary_dirty+= both_dirty;
-    printf("\n\n\n*****\ncolo result: backup_dirty=%"PRIu64", primary_dirty=%"PRIu64", both dirty=%"PRIu64"\n\n*****\n", host_dirty,primary_dirty, both_dirty);
-
+    printf("\n\n\n*****\ncolo result: backup_dirty=%"PRIu64", primary_dirty=%"PRIu64", both dirty=%"PRIu64"\n", host_dirty,primary_dirty, both_dirty);
+    printf("toal = %"PRIu64", same = %"PRIu64"\n*****\n", total, same);
 
     rcu_read_unlock();
     assert(migration_dirty_pages == 0);
