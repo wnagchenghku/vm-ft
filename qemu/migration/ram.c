@@ -3204,7 +3204,7 @@ void colo_flush_ram_cache(void)
 
         }
     }
-    primary_dirty+= both_dirty;
+    //primary_dirty+= both_dirty;
     printf("\n\n\n*****\ncolo result: backup_dirty=%"PRIu64", primary_dirty=%"PRIu64", both dirty=%"PRIu64"\n", host_dirty,primary_dirty, both_dirty);
     printf("primary_dirty = %"PRIu64", same = %"PRIu64"\n", primary_dirty, primary_dirty_same);
     printf("backup_dirty = %"PRIu64", same = %"PRIu64"\n", host_dirty, backup_dirty_same);
