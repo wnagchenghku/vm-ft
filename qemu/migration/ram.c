@@ -2866,12 +2866,12 @@ static int ram_load(QEMUFile *f, void *opaque, int version_id)
             RAMBlock *block = ram_block_from_stream(f, flags);
 
             /* After going into COLO, we should load the Page into colo_cache */
-            //xs: just a test
-            //if (ram_cache_enable) {
-            //    host = colo_cache_from_block_offset(block, addr);
-            //} else {
+            //xs: just a teset 
+            if (ram_cache_enable) {
+                host = colo_cache_from_block_offset(block, addr);
+            } else {
                 host = host_from_ram_block_offset(block, addr);
-            //}
+            }
             if (!host) {
                 error_report("Illegal RAM offset " RAM_ADDR_FMT, addr);
                 ret = -EINVAL;
@@ -3016,7 +3016,7 @@ out_locked:
     rcu_read_unlock();
     return -errno;
 }
-
+//xs: xs's function, not called yet
 void rdma_backup_init(void){
     //ram_cache_enable = true;
     int64_t ram_cache_pages = last_ram_offset() >> TARGET_PAGE_BITS;
@@ -3091,7 +3091,7 @@ void colo_flush_ram_cache(void)
             }
             dst_host = block->host + offset;
             src_host = block->colo_cache + offset;
-            memcpy(dst_host, src_host, TARGET_PAGE_SIZE);
+            //memcpy(dst_host, src_host, TARGET_PAGE_SIZE);
         }
     }
     rcu_read_unlock();
