@@ -2456,7 +2456,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
 
     /* flush all remaining blocks regardless of rate limiting */
     //xs: transfer pages
-    if (colo_not_first_sync == false){
+    //if (colo_not_first_sync == false){
 
         while (true) {
             int pages;
@@ -2474,7 +2474,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
                 break;
             }
         }
-    }
+    //}
 
     unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
     int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;

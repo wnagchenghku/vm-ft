@@ -423,7 +423,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     //fflush(stdout);
 
 
-    migrate_use_mc_rdma = true;
+    migrate_use_mc_rdma = false;
     colo_not_first_sync = true;
     qemu_savevm_live_state(s->to_dst_file);
     //printf("\n\n******* qemu_savevm_live_state returned\n\n");
@@ -876,7 +876,7 @@ void *colo_process_incoming_thread(void *opaque)
             goto out;
         }
 
-        migrate_use_mc_rdma = true;
+        migrate_use_mc_rdma = false;
         ret = qemu_loadvm_state_main(mis->from_src_file, mis);
         if (ret < 0) {
             error_report("Load VM's live state (ram) error");
@@ -936,7 +936,7 @@ void *colo_process_incoming_thread(void *opaque)
         qemu_mutex_lock_iothread();
         qemu_system_reset(VMRESET_SILENT);
         vmstate_loading = true;
-        // colo_flush_ram_cache();
+        colo_flush_ram_cache();
         //XS: GUESS CPU
 
         // printf("\n\n****** before [qemu_load_device_state] *****");
@@ -944,7 +944,7 @@ void *colo_process_incoming_thread(void *opaque)
 
 
         //xs:! This function failed
-        printf("\n***********\n[RDMA_BUFFER ADDR] :%p\n", rdma_buffer);
+        //printf("\n***********\n[RDMA_BUFFER ADDR] :%p\n", rdma_buffer);
         ret = qemu_load_device_state(fb); 
 
         if (ret < 0) {
