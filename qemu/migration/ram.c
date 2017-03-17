@@ -2317,8 +2317,8 @@ int backup_prepare_bitmap(void){
     compare_hash_list(primary_hashlist);
 
 
-    unsigned long *divergent_bmap = get_divergent_bitmap();
-    printbitmap(divergent_bmap);
+    //unsigned long *divergent_bmap = get_divergent_bitmap();
+    //printbitmap(divergent_bmap);
 
 
 

@@ -193,14 +193,14 @@ static void *compute_thread_func(void *arg){
 		else {
 			job_end  = (t+1) * workload -1;  
 		}
-		printf("[compute] Thread %d started, workload from:  %lu to :%lu\n", t, job_start, job_end);
+		//printf("[compute] Thread %d started, workload from:  %lu to :%lu\n", t, job_start, job_end);
 
 		unsigned long i; 
 		for (i = job_start; i <= job_end; i++){
 			compute_hash(i);
 		}
 		//printf("[compute] Thread %d finished, workload from:  %lu to :%lu\n", t, job_start, job_end);
-		printf("[compute] Thread %d finished\n", t);
+		//printf("[compute] Thread %d finished\n", t);
 		pthread_spin_lock(&finished_lock);
 		finished_thread++;
 		pthread_spin_unlock(&finished_lock);
@@ -237,7 +237,7 @@ static void *compare_thread_func(void *arg){
 				pthread_spin_unlock(&compare_spin_lock);
 			}
 		}
-		printf("[compare] Thread %d finished, workload from:  %lu to :%lu\n", t, job_start, job_end);
+		//printf("[compare] Thread %d finished, workload from:  %lu to :%lu\n", t, job_start, job_end);
 		pthread_spin_lock(&compare_spin_lock);
 		compare_complete_thread++;
 		//TOOD: transfer the page
