@@ -1418,24 +1418,24 @@ static int ram_find_and_save_block(QEMUFile *f, bool last_stage,
 
     do {
         again = true;
-        printf("before calling get_queued_page\n");
+        printf("[get_queued_page] before\n");
         found = get_queued_page(ms, &pss, &dirty_ram_abs);
-        printf("get_queued_page returns %d\n", found);
+        printf("[get_queued_page] returned found = %d\n", found);
 
 
         if (!found) {
             /* priority queue empty, so just search for something dirty */
-            printf("before calling find_dirty_block\n");
+            printf("[find_dirty_block] before \n");
             found = find_dirty_block(f, &pss, &again, &dirty_ram_abs);
-            printf("find_dirty_block returns %d\n", found);
+            printf("[find_dirty_block] returns found = %d\n", found);
         }
 
         if (found) {
-            printf("before calling ram_save_host_page\n");
+            printf("[ram_save_host_page] before\n");
             pages = ram_save_host_page(ms, f, &pss,
                                        last_stage, bytes_transferred,
                                        dirty_ram_abs);
-            printf("ram_save_host_page returns %d\n", pages);
+            printf("[ram_save_host_page] returns pages =  %d\n", pages);
         }
     } while (!pages && again);
 
@@ -2425,10 +2425,10 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         int pages;
 
 
-        printf("before calling ram_find_and_save_block\n");
+        printf("[ram_find_and_save_block] before\n");
         pages = ram_find_and_save_block(f, !migration_in_colo_state(),
                                         &bytes_transferred);
-        printf("ram_find_and_save_block returned %d\n", pages);
+        printf("[ram_find_and_save_block] returned pages=%d\n", pages);
 
         /* no more blocks to sent */
         if (pages == 0) {
