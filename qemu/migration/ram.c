@@ -2501,9 +2501,9 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         }
     //}
 
-    unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
-    int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
-    bitmap_zero(bitmap, ram_bitmap_pages);
+    //unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
+    //int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
+    //bitmap_zero(bitmap, ram_bitmap_pages);
 
 
     flush_compressed_data(f);
