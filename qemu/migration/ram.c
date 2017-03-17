@@ -3174,7 +3174,6 @@ void colo_flush_ram_cache(void)
             if (memcmp(dst_host, src_host, TARGET_PAGE_SIZE) == 0){
                 same++;
             }
-            
             memcpy(dst_host, src_host, TARGET_PAGE_SIZE);
             
             total++; 
@@ -3183,7 +3182,7 @@ void colo_flush_ram_cache(void)
     }
     primary_dirty+= both_dirty;
     printf("\n\n\n*****\ncolo result: backup_dirty=%"PRIu64", primary_dirty=%"PRIu64", both dirty=%"PRIu64"\n", host_dirty,primary_dirty, both_dirty);
-    printf("toal = %"PRIu64", same = %"PRIu64"\n*****\n", total, same)
+    printf("toal = %"PRIu64", same = %"PRIu64"\n*****\n", total, same);
 
     rcu_read_unlock();
     assert(migration_dirty_pages == 0);
