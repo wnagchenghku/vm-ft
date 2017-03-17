@@ -671,8 +671,18 @@ static void migration_bitmap_sync_init(void)
 
 static void migration_bitmap_sync(void)
 {
+
+
+
+
     RAMBlock *block;
     uint64_t num_dirty_pages_init = migration_dirty_pages;
+
+    printf("***************\nCalling [migration_bitmap_sync]\n num_dirty_pages_init = %"PRIu64"\n", num_dirty_pages_init);
+    fflush(stdout);
+
+
+
     MigrationState *s = migrate_get_current();
     int64_t end_time;
     int64_t bytes_xfer_now;
@@ -694,6 +704,9 @@ static void migration_bitmap_sync(void)
     rcu_read_lock();
     QLIST_FOREACH_RCU(block, &ram_list.blocks, next) {
         migration_bitmap_sync_range(block->offset, block->used_length);
+
+        printf("after checking block:%s, migration_dirty_pages = %"PRIu64"\n", block->idstr, migration_dirty_pages);
+        fflush(stdout);
     }
     rcu_read_unlock();
     qemu_mutex_unlock(&migration_bitmap_mutex);
@@ -701,6 +714,11 @@ static void migration_bitmap_sync(void)
     trace_migration_bitmap_sync_end(migration_dirty_pages
                                     - num_dirty_pages_init);
     num_dirty_pages_period += migration_dirty_pages - num_dirty_pages_init;
+    
+    printf("num_dirty_pages_period = %"PRIu64"\n", num_dirty_pages_init);
+    fflush(stdout);
+
+
     end_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
 
     /* more than 1 second = 1000 millisecons */
@@ -744,6 +762,13 @@ static void migration_bitmap_sync(void)
     if (migrate_use_events()) {
         qapi_event_send_migration_pass(bitmap_sync_count, NULL);
     }
+
+
+    printf("before return [migration_bitmap_sync]\n migration_dirty_pages = %"PRIu64"\n****************\n", migration_dirty_pages);
+    fflush(stdout);
+
+
+
 }
 
 /**
@@ -3116,6 +3141,7 @@ void colo_flush_ram_cache(void)
         }
         if (host_off >= block->used_length &&
             cache_off >= block->used_length) {
+            //xs: not in this block
             cache_off = host_off = offset = 0;
             block = QLIST_NEXT_RCU(block, next);
         } else {

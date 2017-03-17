@@ -9,5 +9,5 @@ sudo LD_LIBRARY_PATH=$VMFT_ROOT/rdma-paxos/target:$LD_LIBRARY_PATH x86_64-softmm
 { 'execute':'x-blockdev-change', 'arguments':{'parent': 'colo-disk0', 'node': 'node0' } }
 { 'execute': 'migrate-set-capabilities',
       'arguments': {'capabilities': [ {'capability': 'x-colo', 'state': true } ] } }
-{ "execute": "migrate-set-parameters" , "arguments": { "x-checkpoint-delay": 5000 } }
+{ "execute": "migrate-set-parameters" , "arguments": { "x-checkpoint-delay": 10000 } }
 { 'execute': 'migrate', 'arguments': {'uri': 'tcp:10.22.1.3:8888' } }
