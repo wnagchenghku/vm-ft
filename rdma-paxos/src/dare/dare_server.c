@@ -2272,7 +2272,7 @@ redirector_read_handler(EV_P_ ev_io *w, int revents)
 {
     char buffer[256];
     int n = read(w->fd, buffer, 255);
-    printf("Here is the message: %s\n",buffer);
+    //printf("Here is the message: %s\n",buffer);
 }
 
 static void

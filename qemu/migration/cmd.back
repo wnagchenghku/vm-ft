@@ -12,3 +12,4 @@ sudo LD_LIBRARY_PATH=$VMFT_ROOT/rdma-paxos/target:$LD_LIBRARY_PATH x86_64-softmm
   'arguments': {'addr': {'type': 'inet', 'data': {'host': '10.22.1.3', 'port': '8889'} } }
 }
 {'execute': 'nbd-server-add', 'arguments': {'device': 'colo-disk0', 'writable': true } }
+
