@@ -609,12 +609,12 @@ static inline bool migration_bitmap_clear_dirty(ram_addr_t addr)
     int nr = addr >> TARGET_PAGE_BITS;
     unsigned long *bitmap;
 
-    // if (colo_not_first_sync == true){
-    //     bitmap = get_divergent_bitmap();
+    if (colo_not_first_sync == true){
+        bitmap = get_divergent_bitmap();
         
-    // }else{
+    }else{
         bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
-    // }
+    }
 
     ret = test_and_clear_bit(nr, bitmap);
 
