@@ -2274,6 +2274,9 @@ int backup_prepare_bitmap(void){
 
     unsigned long *backup_bitmap = atomic_rcu_read(&backup_bitmap_rcu)->bmap;
     
+
+
+
     //printbitmap(backup_bitmap);
 
 
@@ -2286,12 +2289,14 @@ int backup_prepare_bitmap(void){
     unsigned long *primary_bitmap = (unsigned long*) malloc(ret);
     memcpy(primary_bitmap, rdma_buffer, ret);
 
+    printf("Primary Bitmap count: %"PRId64"\n", slow_bitmap_count(primary_bitmap, ram_bitmap_pages));
 
+    printf("Backup Bitmap count: %"PRId64"\n", slow_bitmap_count(backup_bitmap, ram_bitmap_pages));
 
 
 
     memcpy(rdma_buffer, backup_bitmap, len * sizeof(unsigned long)); 
-    printf("rdma_buffer addr: %p\n", rdma_buffer);
+    //printf("rdma_buffer addr: %p\n", rdma_buffer);
 
     ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
     if (ret < 0){
