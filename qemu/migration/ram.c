@@ -2270,7 +2270,7 @@ int backup_prepare_bitmap(void){
     int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
     long len =  BITS_TO_LONGS(ram_bitmap_pages);
     //address_space_sync_dirty_bitmap(&address_space_memory);    
-    backup_bitmap_sync();
+    //backup_bitmap_sync();
 
     unsigned long *backup_bitmap = atomic_rcu_read(&backup_bitmap_rcu)->bmap;
     
