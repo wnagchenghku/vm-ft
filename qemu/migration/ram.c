@@ -51,7 +51,7 @@ static uint8_t *rdma_buffer;
 
 extern bool colo_not_first_sync; 
 
-
+extern bool colo_primary_transfer; 
 
 #ifdef DEBUG_MIGRATION_RAM
 #define DPRINTF(fmt, ...) \
@@ -584,12 +584,12 @@ ram_addr_t migration_bitmap_find_dirty(RAMBlock *rb,
 
     unsigned long next;
 
-    // if (colo_not_first_sync == true){
-    //     bitmap = get_divergent_bitmap();
+    if (colo_primary_transfer == true){
+        bitmap = get_divergent_bitmap();
         
-    // }else{
+    }else{
         bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
-    // }
+    }
     
 
 

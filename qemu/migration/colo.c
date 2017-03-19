@@ -33,6 +33,7 @@ static bool vmstate_loading;
 
 bool colo_not_first_sync; 
 
+bool colo_primary_transfer; 
 
 /* colo buffer */
 #define COLO_BUFFER_BASE_SIZE (4 * 1024 * 1024)
@@ -425,8 +426,13 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
     migrate_use_mc_rdma = false;
     colo_not_first_sync = true;
+
+
+    colo_primary_transfer = true;
     qemu_savevm_live_state(s->to_dst_file);
     //printf("\n\n******* qemu_savevm_live_state returned\n\n");
+    colo_primary_transfer = false;
+
 
     colo_not_first_sync = false;
     migrate_use_mc_rdma = false;
@@ -544,7 +550,7 @@ static void colo_process_checkpoint(MigrationState *s)
     hash_init();
     printf("\nHASH INIT CALLED\n");
 
-
+    colo_primary_transfer = false; 
   
 
 
