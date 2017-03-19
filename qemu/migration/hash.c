@@ -167,11 +167,14 @@ static uint8_t* get_page_addr(uint64_t page_index){
 }
 
 static inline void compute_hash(unsigned long i){
-	#ifdef USE_MERKLE_TREE
-	mtree->tree[index_to_node(i)] = hashofpage(get_page_addr(i), 4096);
-	#else
-	hlist->hashes[i] = hashofpage(get_page_addr(i), 4096);
-	#endif
+	// #ifdef USE_MERKLE_TREE
+	// mtree->tree[index_to_node(i)] = hashofpage(get_page_addr(i), 4096);
+	// #else
+
+
+
+	hlist->hashes[i] = hashofpage(get_page_addr(dirty_indices[i]), 4096);
+	// #endif
 }
 
 
@@ -307,7 +310,7 @@ static void update_dirty_indices(unsigned long *bitmap, unsigned long nbits){
 	 	cur = find_next_bit(bitmap, ram_bitmap_pages, cur +1);
 	 	printf("%lu ", cur);
 	 }
-	 
+
 
 
 }
