@@ -2375,7 +2375,7 @@ int backup_prepare_bitmap(void){
 
 
     bitmap_zero(backup_bitmap, ram_bitmap_pages);
-
+    backup_dirty_pages = 0;
 
     // rcu_read_unlock();
 
