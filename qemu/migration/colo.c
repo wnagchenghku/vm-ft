@@ -870,7 +870,7 @@ void *colo_process_incoming_thread(void *opaque)
         //                    COLO_MESSAGE_VMSTATE_SEND, &local_err);
         mc_receive_check_message(COLO_MESSAGE_VMSTATE_SEND, &local_err);
 
-        //backup_prepare_bitmap();
+        backup_prepare_bitmap();
 
         if (local_err) {
             goto out;

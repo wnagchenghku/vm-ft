@@ -234,7 +234,13 @@ static RAMBlock *last_seen_block;
 static RAMBlock *last_sent_block;
 static ram_addr_t last_offset;
 static QemuMutex migration_bitmap_mutex;
+static QemuMutex backup_bitmap_mutex; //xs's function
+
+
 static uint64_t migration_dirty_pages;
+static uint64_t backup_dirty_pages; //xs; 
+
+
 static bool ram_cache_enable;
 static uint32_t last_version;
 static bool ram_bulk_stage;
@@ -261,6 +267,11 @@ static struct BitmapRcu {
      */
     unsigned long *unsentmap;
 } *migration_bitmap_rcu;
+
+//xs: 
+struct BitmapRcu *backup_bitmap_rcu;
+
+
 
 struct CompressParam {
     bool start;
@@ -668,6 +679,43 @@ static void migration_bitmap_sync_init(void)
     xbzrle_cache_miss_prev = 0;
     iterations_prev = 0;
 }
+//xs: xs's function
+static void backup_bitmap_sync_range(ram_addr_t start, ram_addr_t length){
+
+    unsigned long *bitmap;
+    bitmap = atomic_rcu_read(&backup_bitmap_rcu)->bmap;
+
+    backup_dirty_pages +=
+        cpu_physical_memory_sync_dirty_bitmap(bitmap, start, length);
+}
+
+
+
+
+//xs: xs's function;
+static void backup_bitmap_sync(void){
+    address_space_sync_dirty_bitmap(&address_space_memory);
+    RAMBlock *block;
+
+
+    qemu_mutex_lock(&backup_bitmap_mutex);
+
+    rcu_read_lock();
+
+    QLIST_FOREACH_RCU(block, &ram_list.blocks, next) {
+        backup_bitmap_sync_range(block->offset, block->used_length);
+
+        printf("after checking block:%s, back_dirty_pages = %"PRIu64"\n", block->idstr, backup_dirty_pages);
+        fflush(stdout);
+    }
+    rcu_read_unlock();
+
+    qemu_mutex_unlock(&backup_bitmap_mutex);
+
+}
+
+
+
 
 static void migration_bitmap_sync(void)
 {
@@ -1992,6 +2040,7 @@ static int ram_save_init_globals(void)
     bitmap_sync_count = 0;
     migration_bitmap_sync_init();
     qemu_mutex_init(&migration_bitmap_mutex);
+    qemu_mutex_init(&backup_bitmap_mutex);
 
     if (migrate_use_xbzrle()) {
         XBZRLE_cache_lock();
@@ -2221,114 +2270,116 @@ int backup_prepare_bitmap(void){
     int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
     long len =  BITS_TO_LONGS(ram_bitmap_pages);
     //address_space_sync_dirty_bitmap(&address_space_memory);    
-    migration_bitmap_sync();
+    backup_bitmap_sync();
 
-    unsigned long *backup_bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
+    unsigned long *backup_bitmap = atomic_rcu_read(&backup_bitmap_rcu)->bmap;
     
     //printbitmap(backup_bitmap);
 
-    ssize_t ret; 
-    ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
-    printf("[Bitmap] RDMA received length %lu\n", ret);
+
     
-    //FIXIT: slow; 
-    unsigned long *primary_bitmap = (unsigned long*) malloc(ret);
-    memcpy(primary_bitmap, rdma_buffer, ret);
+    // ssize_t ret; 
+    // ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
+    // printf("[Bitmap] RDMA received length %lu\n", ret);
+    
+    // //FIXIT: slow; 
+    // unsigned long *primary_bitmap = (unsigned long*) malloc(ret);
+    // memcpy(primary_bitmap, rdma_buffer, ret);
 
 
 
 
 
-    memcpy(rdma_buffer, backup_bitmap, len * sizeof(unsigned long)); 
-    printf("rdma_buffer addr: %p\n", rdma_buffer);
+    // memcpy(rdma_buffer, backup_bitmap, len * sizeof(unsigned long)); 
+    // printf("rdma_buffer addr: %p\n", rdma_buffer);
 
-    ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
-    if (ret < 0){
-        printf("Failed to send bitmap from backup to primary\n");
-    }
-    //printf("[Bitmap] RDMA sent length %lu\n", ret);
-
-    //unsigned long *primary_bitmap = (unsigned long*) rdma_buffer;
-
-
-
-    unsigned long *and_bitmap = bitmap_new(ram_bitmap_pages);
-    bitmap_and(and_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
-    // if (ret <= 0){
-    //     printf("\n\nFailed to do the and operation on the bitmap\n\n");
+    // ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
+    // if (ret < 0){
+    //     printf("Failed to send bitmap from backup to primary\n");
     // }
-    printf("And Bitmap count: %"PRId64"\n", slow_bitmap_count(and_bitmap, ram_bitmap_pages));
-    //printbitmap(and_bitmap);
+    // //printf("[Bitmap] RDMA sent length %lu\n", ret);
 
-
-    unsigned long *xor_bitmap = bitmap_new(ram_bitmap_pages);
-    bitmap_xor(xor_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
-    // if (ret <= 0){
-    //     printf("\n\nFailed to do the xor operation on the bitmap\n\n");
-    // }
-    printf("XOR Bitmap count%"PRId64"\n", slow_bitmap_count(xor_bitmap, ram_bitmap_pages));
-    //printbitmap(xor_bitmap);
+    // //unsigned long *primary_bitmap = (unsigned long*) rdma_buffer;
 
 
 
-    unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
-    bitmap_or(or_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
-    printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
-
-    //printbitmap(or_bitmap);
-
-
-
-    //xs: test or bitmap
-    compute_hash_list(or_bitmap, ram_bitmap_pages);
+    // unsigned long *and_bitmap = bitmap_new(ram_bitmap_pages);
+    // bitmap_and(and_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
+    // // if (ret <= 0){
+    // //     printf("\n\nFailed to do the and operation on the bitmap\n\n");
+    // // }
+    // printf("And Bitmap count: %"PRId64"\n", slow_bitmap_count(and_bitmap, ram_bitmap_pages));
+    // //printbitmap(and_bitmap);
 
 
-    //TODO: compute hash based on xor_bitmapr   
-    hash_list *hlist = get_hash_list_pointer(); 
+    // unsigned long *xor_bitmap = bitmap_new(ram_bitmap_pages);
+    // bitmap_xor(xor_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
+    // // if (ret <= 0){
+    // //     printf("\n\nFailed to do the xor operation on the bitmap\n\n");
+    // // }
+    // printf("XOR Bitmap count%"PRId64"\n", slow_bitmap_count(xor_bitmap, ram_bitmap_pages));
+    // //printbitmap(xor_bitmap);
 
-    printf("\n before memcpy, size = %ld\n", hlist->len * sizeof(hash_t));
-    printf("rdma_buffer: %p, hlist->hashes: %p\n", rdma_buffer, hlist->hashes);
-    fflush(stdout);
 
 
-    memcpy(rdma_buffer, hlist->hashes, hlist->len * sizeof(hash_t)); 
+    // unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
+    // bitmap_or(or_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
+    // printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
+
+    // //printbitmap(or_bitmap);
+
+
+
+    // //xs: test or bitmap
+    // compute_hash_list(or_bitmap, ram_bitmap_pages);
+
+
+    // //TODO: compute hash based on xor_bitmapr   
+    // hash_list *hlist = get_hash_list_pointer(); 
+
+    // printf("\n before memcpy, size = %ld\n", hlist->len * sizeof(hash_t));
+    // printf("rdma_buffer: %p, hlist->hashes: %p\n", rdma_buffer, hlist->hashes);
+    // fflush(stdout);
+
+
+    // memcpy(rdma_buffer, hlist->hashes, hlist->len * sizeof(hash_t)); 
     
 
 
 
-    printf("\n after memcpy\n");
-    fflush(stdout);
+    // printf("\n after memcpy\n");
+    // fflush(stdout);
 
-    ret = mc_rdma_put_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
-
-
-    printf("\n after put buffer\n");
-    fflush(stdout);
-    if (ret < 0){
-        printf("Failed to send hashes from backup to primary\n");
-    }
-
-    ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
-
-    hash_list * primary_hashlist = (hash_list*) malloc(sizeof(hash_list));
-    primary_hashlist -> len = ret / sizeof(hash_t);
-    primary_hashlist -> hashes = (hash_t*)rdma_buffer;
-
-    compare_hash_list(primary_hashlist);
+    // ret = mc_rdma_put_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
 
 
-    //unsigned long *divergent_bmap = get_divergent_bitmap();
-    //printbitmap(divergent_bmap);
+    // printf("\n after put buffer\n");
+    // fflush(stdout);
+    // if (ret < 0){
+    //     printf("Failed to send hashes from backup to primary\n");
+    // }
+
+    // ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
+
+    // hash_list * primary_hashlist = (hash_list*) malloc(sizeof(hash_list));
+    // primary_hashlist -> len = ret / sizeof(hash_t);
+    // primary_hashlist -> hashes = (hash_t*)rdma_buffer;
+
+    // compare_hash_list(primary_hashlist);
+
+
+    // //unsigned long *divergent_bmap = get_divergent_bitmap();
+    // //printbitmap(divergent_bmap);
 
 
 
 
-    //bitmap_zero(backup_bitmap, ram_bitmap_pages);
+    // //bitmap_zero(backup_bitmap, ram_bitmap_pages);
 
 
-    rcu_read_unlock();
+    // rcu_read_unlock();
 
-    return 0;
+    // return 0;
 
 }
 
@@ -3073,6 +3124,16 @@ int colo_init_ram_cache(void)
     migration_bitmap_rcu->bmap = bitmap_new(ram_cache_pages);
     migration_dirty_pages = 0;
     memory_global_dirty_log_start();
+
+    /**
+    xs: create a backup bitmap rcu to collect the bitmap of backup 
+    suing the same logic 
+    */
+
+    backup_bitmap_rcu = g_new0(struct BitmapRcu, 1);
+    backup_bitmap_rcu->bmap = bitmap_new(ram_cache_pages); // the number of cache pages is the same as all pages
+    backup_dirty_pages = 0;
+
 
     rdma_buffer = mc_rdma_get_colo_ctrl_buffer_ptr();
 
