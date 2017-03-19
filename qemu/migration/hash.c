@@ -296,20 +296,20 @@ static void update_dirty_indices(unsigned long *bitmap, unsigned long nbits){
 		}
 	}
 
-	printf("***********\n dirty indices: ");
-	 unsigned long j; 
-	 for (j =0 ; j <dirty_count ; j++){
-	 	printf("%lu ", dirty_indices[j]);
-	 }
-	 printf("\n");
+	// printf("***********\n dirty indices: ");
+	//  unsigned long j; 
+	//  for (j =0 ; j <dirty_count ; j++){
+	//  	printf("%lu ", dirty_indices[j]);
+	//  }
+	//  printf("\n");
 
-	 printf("***********\n result from find next bit");
-	 fflush(stdout);
-	 unsigned long cur =0; 
-	 while (cur < ram_bitmap_pages){
-	 	cur = find_next_bit(bitmap, ram_bitmap_pages, cur +1);
-	 	printf("%lu ", cur);
-	 }
+	//  printf("***********\n result from find next bit");
+	//  fflush(stdout);
+	//  unsigned long cur =0; 
+	//  while (cur < ram_bitmap_pages){
+	//  	cur = find_next_bit(bitmap, ram_bitmap_pages, cur +1);
+	//  	printf("%lu ", cur);
+	//  }
 
 
 
