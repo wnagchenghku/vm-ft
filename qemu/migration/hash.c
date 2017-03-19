@@ -161,6 +161,7 @@ static uint8_t* get_page_addr(uint64_t page_index){
 		} 
 	}
 	printf("\n\n***!!!overflow, check your logic !!***\n\n");
+	fflush(stdout);
 	return fake_page;
 
 }
@@ -291,6 +292,24 @@ static void update_dirty_indices(unsigned long *bitmap, unsigned long nbits){
 			mask <<= 1; 
 		}
 	}
+
+	printf("***********\n dirty indices: ");
+	 unsigned long j; 
+	 for (j =0 ; j <dirty_count ; j++){
+	 	printf("%lu ", dirty_indices[j]);
+	 }
+	 printf("\n");
+
+	 printf("***********\n result from find next bit");
+	 fflush(stdout);
+	 unsigned long cur =0; 
+	 while (cur < ram_bitmap_pages){
+	 	cur = find_next_bit(bitmap, ram_bitmap_pages, cur +1);
+	 	printf("%lu ", cur);
+	 }
+	 
+
+
 }
 
 
