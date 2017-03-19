@@ -2277,7 +2277,7 @@ int backup_prepare_bitmap(void){
     //printbitmap(backup_bitmap);
 
 
-    
+
     // ssize_t ret; 
     // ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
     // printf("[Bitmap] RDMA received length %lu\n", ret);
@@ -2374,12 +2374,13 @@ int backup_prepare_bitmap(void){
 
 
 
-    // //bitmap_zero(backup_bitmap, ram_bitmap_pages);
+    bitmap_zero(backup_bitmap, ram_bitmap_pages);
 
 
     // rcu_read_unlock();
 
-    // return 0;
+
+    return 0;
 
 }
 
