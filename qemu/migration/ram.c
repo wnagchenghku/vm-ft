@@ -2374,7 +2374,7 @@ int backup_prepare_bitmap(void){
 
 
 
-    bitmap_zero(backup_bitmap, ram_bitmap_pages);
+    //bitmap_zero(backup_bitmap, ram_bitmap_pages);
     backup_dirty_pages = 0;
 
     // rcu_read_unlock();
@@ -3283,6 +3283,13 @@ void colo_flush_ram_cache(void)
     trace_colo_flush_ram_cache_begin(both_dirty);
     fflush(stdout);
     trace_colo_flush_ram_cache_end();
+
+
+    //xs: 
+
+    int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
+    bitmap_zero(backup_bitmap, ram_bitmap_pages);
+
 }
 
 static SaveVMHandlers savevm_ram_handlers = {
