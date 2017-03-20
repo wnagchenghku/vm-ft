@@ -27,7 +27,13 @@
 #include "mc-rdma.h"
 #include "rsm-interface.h"
 
+#include "migration/hash.h"
+
 static bool vmstate_loading;
+
+bool colo_not_first_sync; 
+
+bool colo_primary_transfer; 
 
 /* colo buffer */
 #define COLO_BUFFER_BASE_SIZE (4 * 1024 * 1024)
@@ -338,7 +344,8 @@ static uint64_t mc_receive_message_value(uint32_t expect_msg, Error **errp)
 
     return value;
 }
-
+//XS: primary do checkpoint
+//start doing the cehckpoint
 static int colo_do_checkpoint_transaction(MigrationState *s,
                                           QEMUSizedBuffer *buffer)
 {
@@ -346,6 +353,15 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     size_t size;
     Error *local_err = NULL;
     int ret = -1;
+
+
+
+
+    /**
+    1. memcpy 
+    2. rdma_buffer = start address (optional)
+    3. ret = mc_rdma_put_colo_ctrl_buffer(sizeof(msg));
+    **/
 
     // colo_send_message(s->to_dst_file, COLO_MESSAGE_CHECKPOINT_REQUEST,
     //                   &local_err);
@@ -404,8 +420,21 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     * TODO: We may need a timeout mechanism to prevent COLO process
     * to be blocked here.
     */
-    migrate_use_mc_rdma = true;
+    //printf("Called qemu transaction\n");
+    //fflush(stdout);
+
+
+    migrate_use_mc_rdma = false;
+    colo_not_first_sync = true;
+
+
+    colo_primary_transfer = true;
     qemu_savevm_live_state(s->to_dst_file);
+    //printf("\n\n******* qemu_savevm_live_state returned\n\n");
+    colo_primary_transfer = false;
+
+
+    colo_not_first_sync = false;
     migrate_use_mc_rdma = false;
 
     /* flush QEMU_VM_EOF and RAM_SAVE_FLAG_EOS so that
@@ -510,8 +539,21 @@ static int colo_prepare_before_save(MigrationState *s)
     return ret;
 }
 
+
+
+
+
+//XS: primary thread;
 static void colo_process_checkpoint(MigrationState *s)
 {
+
+    hash_init();
+    printf("\nHASH INIT CALLED\n");
+
+    colo_primary_transfer = false; 
+  
+
+
     QEMUSizedBuffer *buffer = NULL;
     int64_t current_time, checkpoint_time = qemu_clock_get_ms(QEMU_CLOCK_HOST);
     Error *local_err = NULL;
@@ -636,6 +678,9 @@ out:
 
 void migrate_start_colo_process(MigrationState *s)
 {
+
+
+
     qemu_mutex_unlock_iothread();
     qemu_sem_init(&s->colo_sem, 0);
     migrate_set_state(&s->state, MIGRATION_STATUS_ACTIVE,
@@ -714,9 +759,11 @@ static int colo_prepare_before_load(QEMUFile *f)
     }
     return ret;
 }
-
+//XS: backup thread
 void *colo_process_incoming_thread(void *opaque)
 {
+    hash_init();
+    printf("\nHASH INIT CALLED\n");
     MigrationIncomingState *mis = opaque;
     QEMUFile *fb = NULL;
     QEMUSizedBuffer *buffer = NULL; /* Cache incoming device state */
@@ -745,7 +792,11 @@ void *colo_process_incoming_thread(void *opaque)
      */
     qemu_file_set_blocking(mis->from_src_file, true);
 
-    // ret = colo_init_ram_cache();
+    //XS: backup init global variables; 
+    //rdma_backup_init();
+
+
+    ret = colo_init_ram_cache();
     // if (ret < 0) {
     //     error_report("Failed to initialize ram cache");
     //     goto out;
@@ -779,11 +830,30 @@ void *colo_process_incoming_thread(void *opaque)
     }
 
     while (mis->state == MIGRATION_STATUS_COLO) {
+        printf("****************inside Loop\n\n\n\n");
+        fflush(stdout);
+        
         int request;
 
         // colo_wait_handle_message(mis->from_src_file, &request, &local_err);
 
+
+    // Ret: len; 
+    // COLOMessage msg;
+    // ret = mc_rdma_get_colo_ctrl_buffer();
+    // msg = rdma_buffer;
+
+
+
         mc_wait_handle_message(&request, &local_err);
+
+        //TODO: receive primary's bitmap
+        //TODO: Send itself's bitmap. 
+
+
+
+
+
 
         if (local_err) {
             goto out;
@@ -799,20 +869,28 @@ void *colo_process_incoming_thread(void *opaque)
         trace_colo_vm_state_change("run", "stop");
         qemu_mutex_unlock_iothread();
 
+
+        
+
         // colo_receive_check_message(mis->from_src_file,
         //                    COLO_MESSAGE_VMSTATE_SEND, &local_err);
         mc_receive_check_message(COLO_MESSAGE_VMSTATE_SEND, &local_err);
+
+        backup_prepare_bitmap();
 
         if (local_err) {
             goto out;
         }
 
-        migrate_use_mc_rdma = true;
+        migrate_use_mc_rdma = false;
         ret = qemu_loadvm_state_main(mis->from_src_file, mis);
         if (ret < 0) {
             error_report("Load VM's live state (ram) error");
             goto out;
         }
+        //printf("\n\n****** qemu_loadvm_state_main returned *****");
+        //fflush(stdout);
+
         migrate_use_mc_rdma = false;
         /* read the VM state total size first */
         // value = colo_receive_message_value(mis->from_src_file,
@@ -820,11 +898,16 @@ void *colo_process_incoming_thread(void *opaque)
         
         value = mc_receive_message_value(COLO_MESSAGE_VMSTATE_SIZE, &local_err);
 
+
+
+
+
         if (local_err) {
             goto out;
         }
 
         total_size = mc_rdma_get_colo_ctrl_buffer(value);
+
         if (total_size != value) {
             error_report("Got %lu VMState data, less than expected %lu",
                          total_size, value);
@@ -833,6 +916,7 @@ void *colo_process_incoming_thread(void *opaque)
         }
         /* read vm device state into colo buffer */
         total_size = mc_qsb_fill_buffer(buffer, rdma_buffer, value);
+
         // total_size = qsb_fill_buffer(buffer, mis->from_src_file, value);
         if (total_size != value) {
             error_report("Got %lu VMState data, less than expected %lu",
@@ -858,8 +942,17 @@ void *colo_process_incoming_thread(void *opaque)
         qemu_mutex_lock_iothread();
         qemu_system_reset(VMRESET_SILENT);
         vmstate_loading = true;
-        // colo_flush_ram_cache();
-        ret = qemu_load_device_state(fb);
+        colo_flush_ram_cache();
+        //XS: GUESS CPU
+
+        // printf("\n\n****** before [qemu_load_device_state] *****");
+        // fflush(stdout);
+
+
+        //xs:! This function failed
+        //printf("\n***********\n[RDMA_BUFFER ADDR] :%p\n", rdma_buffer);
+        ret = qemu_load_device_state(fb); 
+
         if (ret < 0) {
             error_report("COLO: load device state failed");
             qemu_mutex_unlock_iothread();
@@ -903,6 +996,9 @@ void *colo_process_incoming_thread(void *opaque)
     }
 
 out:
+    printf("****************inside out\n\n\n\n");
+    fflush(stdout);
+
      vmstate_loading = false;
     /* Throw the unreported error message after exited from loop */
     if (local_err) {
@@ -924,6 +1020,8 @@ out:
     * incoming thread, so here it is not necessary to lock here again,
     * or there will be a deadlock error.
     */
+    //printf("before calling release**********\n\n\n\n\n");
+    // fflush(stdout);
     colo_release_ram_cache();
 
     /* Hope this not to be too long to loop here */
