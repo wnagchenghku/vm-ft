@@ -649,8 +649,9 @@ void compare_hash_list(hash_list *rhlist){
 		pthread_spin_unlock(&compare_spin_lock);
 		usleep(100);
 	}
+    printf("Compared %"PRIu64 " pages, same = %" PRIu64" same rate = %"PRIu64"%%\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len);
 
-	fprintf(stderr ,"Compared %"PRIu64 " pages, same = %" PRIu64" same rate = %"PRIu64"%%\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len);
+	fprintf(stderr ,"%"PRIu64 ",%" PRIu64", %"PRIu64"%%\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len);
 }
 
 // int main(char* argv[], int argc){
