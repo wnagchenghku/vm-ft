@@ -1917,6 +1917,11 @@ static int sock_connect(const char *servername, int port)
             else
             {
                 listenfd = sockfd;
+                
+                int optval = 1;
+                setsockopt(listenfd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
+                setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+                
                 if (bind(listenfd, iterator->ai_addr, iterator->ai_addrlen))
                     goto sock_connect_exit;
                 listen(listenfd, 1);
