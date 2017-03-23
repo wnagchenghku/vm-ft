@@ -135,7 +135,7 @@ static ssize_t tap_receive_iov(NetClientState *nc, const struct iovec *iov,
 
     //xs: Add a vnet header. 
     if (s->host_vnet_hdr_len && !s->using_vnet_hdr) {
-        count_payload_length((uint8_t *) iov[0].iov_base, iov[0].iov_len);
+        //count_payload_length((uint8_t *) iov[0].iov_base, iov[0].iov_len);
 
 
 
