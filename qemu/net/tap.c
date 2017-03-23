@@ -119,10 +119,19 @@ static ssize_t tap_write_packet(TAPState *s, const struct iovec *iov, int iovcnt
         tap_write_poll(s, true);
         return 0;
     }
-    fprintf(stderr, "receive 4\n");
+    //fprintf(stderr, "receive 4\n");
 
     return len;
 }
+
+// static count_payload_length(const struct iovec *iov, int iovcnt){
+//     int i; 
+//     for (i = 0; i <iovcnt; i++){
+
+//     }
+// }
+
+
 
 static ssize_t tap_receive_iov(NetClientState *nc, const struct iovec *iov,
                                int iovcnt)
@@ -131,15 +140,21 @@ static ssize_t tap_receive_iov(NetClientState *nc, const struct iovec *iov,
     const struct iovec *iovp = iov;
     struct iovec iov_copy[iovcnt + 1];
     struct virtio_net_hdr_mrg_rxbuf hdr = { };
+    fprintf(stderr, "iovcnt =%d\n",iovcnt);
 
+    //xs: Add a vnet header. 
     if (s->host_vnet_hdr_len && !s->using_vnet_hdr) {
+        
+
+
+
         iov_copy[0].iov_base = &hdr;
         iov_copy[0].iov_len =  s->host_vnet_hdr_len;
         memcpy(&iov_copy[1], iov, iovcnt * sizeof(*iov));
         iovp = iov_copy;
         iovcnt++;
     }
-    fprintf(stderr, "receive 3\n");
+    //fprintf(stderr, "receive 3\n");
 
     return tap_write_packet(s, iovp, iovcnt);
 }
@@ -160,7 +175,7 @@ static ssize_t tap_receive_raw(NetClientState *nc, const uint8_t *buf, size_t si
     iov[iovcnt].iov_base = (char *)buf;
     iov[iovcnt].iov_len  = size;
     iovcnt++;
-    fprintf(stderr, "receive 1\n");
+    //fprintf(stderr, "receive 1\n");
     return tap_write_packet(s, iov, iovcnt);
 }
 
@@ -176,7 +191,7 @@ static ssize_t tap_receive(NetClientState *nc, const uint8_t *buf, size_t size)
     iov[0].iov_base = (char *)buf;
     iov[0].iov_len  = size;
 
-    fprintf(stderr, "receive 2\n");
+    //fprintf(stderr, "receive 2\n");
 
     return tap_write_packet(s, iov, 1);
 }
