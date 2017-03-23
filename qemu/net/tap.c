@@ -163,7 +163,7 @@ static ssize_t tap_receive_iov(NetClientState *nc, const struct iovec *iov,
     //xs: Add a vnet header. 
     if (s->host_vnet_hdr_len && !s->using_vnet_hdr) {
         
-        printf("*******if\n");
+        fprintf(stderr, "*******if\n");
 
 
 
@@ -173,7 +173,7 @@ static ssize_t tap_receive_iov(NetClientState *nc, const struct iovec *iov,
         iovp = iov_copy;
         iovcnt++;
     }else{
-        printf("*****else, iovcnt = \n");
+        fprintf(stderr, "*****else, iovcnt = \n");
     }
     //fprintf(stderr, "receive 3\n");
 
