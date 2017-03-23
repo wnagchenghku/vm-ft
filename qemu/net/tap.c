@@ -45,6 +45,18 @@
 
 #include "net/vhost_net.h"
 
+
+static unsigned long output_counter; //xs
+
+
+
+
+
+
+
+
+
+
 typedef struct TAPState {
     NetClientState nc;
     int fd;
@@ -146,7 +158,7 @@ static ssize_t tap_receive_raw(NetClientState *nc, const uint8_t *buf, size_t si
     iov[iovcnt].iov_base = (char *)buf;
     iov[iovcnt].iov_len  = size;
     iovcnt++;
-
+    printf("1");
     return tap_write_packet(s, iov, iovcnt);
 }
 
@@ -161,6 +173,9 @@ static ssize_t tap_receive(NetClientState *nc, const uint8_t *buf, size_t size)
 
     iov[0].iov_base = (char *)buf;
     iov[0].iov_len  = size;
+
+    printf("2");
+
 
     return tap_write_packet(s, iov, 1);
 }
