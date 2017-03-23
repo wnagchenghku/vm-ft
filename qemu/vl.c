@@ -122,6 +122,7 @@ int main(int argc, char **argv)
 #include "qapi/qmp/qerror.h"
 
 #include "rsm-interface.h"
+#include "net/tap.h"
 
 #define MAX_VIRTIO_CONSOLES 1
 #define MAX_SCLP_CONSOLES 1
@@ -2979,6 +2980,7 @@ static void set_memory_options(uint64_t *ram_slots, ram_addr_t *maxram_size,
 
 int main(int argc, char **argv, char **envp)
 {   
+    outgoing_counter_init();
     int i;
     int snapshot, linux_boot;
     const char *initrd_filename;

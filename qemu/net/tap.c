@@ -55,7 +55,30 @@
 static unsigned long output_counter; //xs
 
 
+static pthread_spinlock_t counter_lock;
 
+
+void outgoing_counter_init(void){
+    output_counter = 0; 
+    pthread_spin_init(&counter_lock, 0);
+}
+
+unsigned long get_output_counter(void){
+    unsigned long ret; 
+    pthread_spin_lock(&counter_lock);
+    ret = output_counter;
+    pthread_spin_unlock(&counter_lock);
+    return ret; 
+}
+
+unsigned long get_and_rest_output_counter(void){
+    unsigned long ret; 
+    pthread_spin_lock(&counter_lock);
+    ret = output_counter;
+    output_counter = 0;
+    pthread_spin_unlock(&counter_lock);
+    return ret; 
+}
 
 
 
@@ -144,11 +167,15 @@ static void count_payload_length(const uint8_t* buf, int len){
                 short ip_len = ntohs(ip_header->ip_len); 
                 int payload_length = ip_len - ip_header_size - tcp_header_size; 
                 fprintf(stderr, "payload_length = %d\n", payload_length);
+
+                pthread_spin_lock(&counter_lock);
                 output_counter = output_counter + payload_length;
+                pthread_spin_unlock(&counter_lock);                
             }
         }
     }
 }
+
 
 
 
