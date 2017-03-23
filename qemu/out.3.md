@@ -1,51 +1,51 @@
 Modified QP state to RTR
 Modified COLO CTRL QP state to RTR
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 4198610,4070650, 96%, 0
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 payload_length = 0
 payload_length = 0
 4634,3101, 66%, 0
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 2013,1766, 87%, 0
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 1353,1191, 88%, 0
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 1257,1122, 89%, 0
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 1327,1090, 82%, 0
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 12524,2842, 22%, 0
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 3176,1458, 45%, 0
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 payload_length = 0
 payload_length = 0
 payload_length = 0
@@ -95,10 +95,10 @@ payload_length = 0
 payload_length = 0
 payload_length = 0
 4371,1369, 31%, 0
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 payload_length = 0
 payload_length = 160
 payload_length = 0
@@ -148,10 +148,10 @@ payload_length = 160
 payload_length = 160
 payload_length = 160
 2163,1756, 81%, 5120
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 payload_length = 0
 payload_length = 160
 payload_length = 0
@@ -190,10 +190,10 @@ payload_length = 320
 payload_length = 160
 payload_length = 320
 2986,2812, 94%, 5120
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 payload_length = 0
 payload_length = 0
 payload_length = 0
@@ -227,10 +227,10 @@ payload_length = 645
 payload_length = 645
 payload_length = 645
 3640,3485, 95%, 10320
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 payload_length = 0
 payload_length = 0
 payload_length = 0
@@ -280,10 +280,10 @@ payload_length = 1285
 payload_length = 1285
 payload_length = 1285
 3836,3651, 95%, 20560
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 payload_length = 0
 payload_length = 0
 payload_length = 0
@@ -359,10 +359,10 @@ payload_length = 1127
 payload_length = 1448
 payload_length = 1127
 2495,2273, 91%, 41200
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 payload_length = 0
 payload_length = 0
 payload_length = 0
@@ -504,10 +504,10 @@ payload_length = 1448
 payload_length = 1448
 payload_length = 1448
 4995,3039, 60%, 81408
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 payload_length = 0
 payload_length = 0
 payload_length = 0
@@ -706,10 +706,10 @@ payload_length = 1448
 payload_length = 1448
 payload_length = 1448
 5753,2667, 46%, 140640
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 payload_length = 0
 payload_length = 0
 payload_length = 0
@@ -1121,10 +1121,10 @@ payload_length = 1448
 payload_length = 0
 payload_length = 1205
 5881,2360, 40%, 190635
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 payload_length = 0
 payload_length = 0
 payload_length = 0
@@ -1460,10 +1460,10 @@ payload_length = 165
 payload_length = 160
 payload_length = 540
 5073,3471, 68%, 38772
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 payload_length = 0
 payload_length = 0
 payload_length = 0
@@ -1862,10 +1862,10 @@ payload_length = 0
 payload_length = 744
 payload_length = 755
 6502,3350, 51%, 87370
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 payload_length = 0
 payload_length = 0
 payload_length = 0
@@ -2341,10 +2341,10 @@ payload_length = 744
 payload_length = 1448
 payload_length = 477
 9097,4352, 47%, 193391
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 payload_length = 0
 payload_length = 0
 payload_length = 0
@@ -2713,10 +2713,10 @@ payload_length = 800
 payload_length = 295
 payload_length = 355
 9647,4141, 42%, 165092
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 payload_length = 0
 payload_length = 0
 payload_length = 0
@@ -3097,10 +3097,10 @@ payload_length = 190
 payload_length = 1420
 payload_length = 1110
 7905,5607, 70%, 161210
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
-qemu-system-x86_64: warning: TSC frequency mismatch between VM and host, and TSC scaling unavailable
+
+
+
+
 payload_length = 0
 payload_length = 0
 payload_length = 0
