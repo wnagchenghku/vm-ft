@@ -158,7 +158,8 @@ static ssize_t tap_receive_raw(NetClientState *nc, const uint8_t *buf, size_t si
     iov[iovcnt].iov_base = (char *)buf;
     iov[iovcnt].iov_len  = size;
     iovcnt++;
-    printf("1");
+    printf("receive 1\n");
+    fflush(stdout);
     return tap_write_packet(s, iov, iovcnt);
 }
 
@@ -174,8 +175,8 @@ static ssize_t tap_receive(NetClientState *nc, const uint8_t *buf, size_t size)
     iov[0].iov_base = (char *)buf;
     iov[0].iov_len  = size;
 
-    printf("2");
-
+    printf("receive 2\n");
+    fflush(stdout);
 
     return tap_write_packet(s, iov, 1);
 }
