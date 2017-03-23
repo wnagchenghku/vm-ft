@@ -100,7 +100,7 @@ static void count_payload_length(const uint8_t* buf, int len){
                 int tcp_header_size = 4 * (tcp_header->th_off & 0X0F);
                 short ip_len = ntohs(ip_header->ip_len); 
                 int payload_length = ip_len - ip_header_size - tcp_header_size; 
-                //fprintf(stderr, "payload_length = %d\n", payload_length);
+                fprintf(stderr, "payload_length = %d\n", payload_length);
 
                 pthread_spin_lock(&counter_lock);
                 output_counter = output_counter + payload_length;
@@ -651,7 +651,6 @@ static ssize_t filter_receive_iov(NetClientState *nc,
             }
         }
     } else {
-        fprintf(stderr, "iovcnt = %d\n", iovcnt);
         count_payload_length((uint8_t *) iov[0].iov_base, iov[0].iov_len);
         //fprintf(stderr, "got output, iovcnt=%d\n", iovcnt);
         QTAILQ_FOREACH_REVERSE(nf, &nc->filters, NetFilterHead, next) {
