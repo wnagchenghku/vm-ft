@@ -148,7 +148,7 @@ static ssize_t tap_write_packet(TAPState *s, const struct iovec *iov, int iovcnt
         tap_write_poll(s, true);
         return 0;
     }
-    //fprintf(stderr, "receive 4\n");
+    fprintf(stderr, "receive 4\n");
 
     return len;
 }
@@ -199,7 +199,7 @@ static ssize_t tap_receive_iov(NetClientState *nc, const struct iovec *iov,
         iovp = iov_copy;
         iovcnt++;
     }
-    //fprintf(stderr, "receive 3\n");
+    fprintf(stderr, "receive 3\n");
 
     return tap_write_packet(s, iovp, iovcnt);
 }
