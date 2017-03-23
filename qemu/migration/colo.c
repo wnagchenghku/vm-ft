@@ -386,6 +386,9 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         goto out;
     }
     vm_stop_force_state(RUN_STATE_COLO);
+
+    uint64_t sync_consensus_req = proxy_get_sync_consensus();
+
     qemu_mutex_unlock_iothread();
     trace_colo_vm_state_change("run", "stop");
     /*
@@ -395,6 +398,8 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     if (failover_request_is_active()) {
         goto out;
     }
+
+    mc_send_message_value(COLO_MESSAGE_VMSTATE_SIZE, sync_consensus_req, &local_err);
 
     /* we call this api although this may do nothing on primary side */
     qemu_mutex_lock_iothread();
@@ -863,6 +868,9 @@ void *colo_process_incoming_thread(void *opaque)
             error_report("failover request");
             goto out;
         }
+
+        uint64_t sync_consensus_req = mc_receive_message_value(COLO_MESSAGE_VMSTATE_SIZE, &local_err); 
+        proxy_wait_sync_consensus(sync_consensus_req);
 
         qemu_mutex_lock_iothread();
         vm_stop_force_state(RUN_STATE_COLO);
