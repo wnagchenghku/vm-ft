@@ -45,6 +45,12 @@
 
 #include "net/vhost_net.h"
 
+#include <netinet/tcp.h>
+#include <netinet/if_ether.h>
+#include <arpa/inet.h>
+#include <netinet/ip.h>
+
+
 
 static unsigned long output_counter; //xs
 
@@ -124,12 +130,25 @@ static ssize_t tap_write_packet(TAPState *s, const struct iovec *iov, int iovcnt
     return len;
 }
 
-// static count_payload_length(const struct iovec *iov, int iovcnt){
-//     int i; 
-//     for (i = 0; i <iovcnt; i++){
+static void count_payload_length(const uint8_t* buf, int len){
+    int eth_hdr_len = sizeof(struct ether_header);
 
-//     }
-// }
+    if (len > eth_hdr_len){
+        struct ether_header* eth_hdr = (struct ether_header*) buf; 
+        if (eth_hdr->ether_type == 0x0008){
+            struct ip* ip_header = (struct ip*)(buf + eth_hdr_len);
+            if (ip_header->ip_p == 0x06){
+                int ip_header_size = 4 * (ip_header->ip_hl & 0x0F);
+                struct tcphdr* tcp_header = (struct tcphdr*)(buf + eth_hdr_len + ip_header_size);
+                int tcp_header_size = 4 * (tcp_header->th_off & 0X0F);
+                short ip_len = ntohs(ip_header->ip_len); 
+                int payload_length = ip_len - ip_header_size - tcp_header_size; 
+                fprintf(stderr, "payload_length = %d\n", payload_length);
+                output_counter = output_counter + payload_length;
+            }
+        }
+    }
+}
 
 
 
@@ -140,11 +159,11 @@ static ssize_t tap_receive_iov(NetClientState *nc, const struct iovec *iov,
     const struct iovec *iovp = iov;
     struct iovec iov_copy[iovcnt + 1];
     struct virtio_net_hdr_mrg_rxbuf hdr = { };
-    fprintf(stderr, "iovcnt =%d\n",iovcnt);
 
     //xs: Add a vnet header. 
     if (s->host_vnet_hdr_len && !s->using_vnet_hdr) {
         
+        printf("*******if\n");
 
 
 
@@ -153,6 +172,8 @@ static ssize_t tap_receive_iov(NetClientState *nc, const struct iovec *iov,
         memcpy(&iov_copy[1], iov, iovcnt * sizeof(*iov));
         iovp = iov_copy;
         iovcnt++;
+    }else{
+        printf("*****else, iovcnt = \n");
     }
     //fprintf(stderr, "receive 3\n");
 
