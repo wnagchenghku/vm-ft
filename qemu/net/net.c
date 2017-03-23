@@ -651,6 +651,7 @@ static ssize_t filter_receive_iov(NetClientState *nc,
             }
         }
     } else {
+        fprintf(stderr, "iovcnt = %d\n", iovcnt);
         count_payload_length((uint8_t *) iov[0].iov_base, iov[0].iov_len);
         //fprintf(stderr, "got output, iovcnt=%d\n", iovcnt);
         QTAILQ_FOREACH_REVERSE(nf, &nc->filters, NetFilterHead, next) {
