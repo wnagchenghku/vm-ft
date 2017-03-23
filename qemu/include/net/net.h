@@ -233,4 +233,15 @@ unsigned compute_mcast_idx(const uint8_t *ep);
     .offset     = vmstate_offset_macaddr(_state, _field),            \
 }
 
+
+void outgoing_counter_init(void);
+
+unsigned long get_output_counter(void);
+
+unsigned long get_and_rest_output_counter(void);
+
+
+
+
+
 #endif

@@ -40,13 +40,6 @@ struct vhost_net *tap_get_vhost_net(NetClientState *nc);
 
 
 
-void outgoing_counter_init(void);
-
-unsigned long get_output_counter(void);
-
-unsigned long get_and_rest_output_counter(void);
-
-
 
 
 #endif /* QEMU_NET_TAP_H */

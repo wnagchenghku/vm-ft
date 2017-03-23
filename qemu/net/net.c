@@ -50,6 +50,48 @@
 
 #include "rsm-interface.h"
 
+#include <netinet/tcp.h>
+#include <netinet/if_ether.h>
+#include <arpa/inet.h>
+#include <netinet/ip.h>
+
+
+
+
+static unsigned long output_counter; //xs
+
+
+static pthread_spinlock_t counter_lock;
+
+
+void outgoing_counter_init(void){
+    output_counter = 0; 
+    pthread_spin_init(&counter_lock, 0);
+}
+
+unsigned long get_output_counter(void){
+    unsigned long ret; 
+    pthread_spin_lock(&counter_lock);
+    ret = output_counter;
+    pthread_spin_unlock(&counter_lock);
+    return ret; 
+}
+
+unsigned long get_and_rest_output_counter(void){
+    unsigned long ret; 
+    pthread_spin_lock(&counter_lock);
+    ret = output_counter;
+    output_counter = 0;
+    pthread_spin_unlock(&counter_lock);
+    return ret; 
+}
+
+
+
+
+
+
+
 /* Net bridge is currently not supported for W32. */
 #if !defined(_WIN32)
 # define CONFIG_NET_BRIDGE
@@ -544,6 +586,38 @@ int qemu_can_send_packet(NetClientState *sender)
     }
     return 1;
 }
+
+static void count_payload_length(const uint8_t* buf, int len){
+    int eth_hdr_len = sizeof(struct ether_header);
+
+    if (len > eth_hdr_len){
+        struct ether_header* eth_hdr = (struct ether_header*) buf; 
+        if (eth_hdr->ether_type == 0x0008){
+            struct ip* ip_header = (struct ip*)(buf + eth_hdr_len);
+            if (ip_header->ip_p == 0x06){
+                int ip_header_size = 4 * (ip_header->ip_hl & 0x0F);
+                struct tcphdr* tcp_header = (struct tcphdr*)(buf + eth_hdr_len + ip_header_size);
+                int tcp_header_size = 4 * (tcp_header->th_off & 0X0F);
+                short ip_len = ntohs(ip_header->ip_len); 
+                int payload_length = ip_len - ip_header_size - tcp_header_size; 
+                //fprintf(stderr, "payload_length = %d\n", payload_length);
+
+                pthread_spin_lock(&counter_lock);
+                output_counter = output_counter + payload_length;
+                pthread_spin_unlock(&counter_lock);                
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
 
 static ssize_t filter_receive_iov(NetClientState *nc,
                                   NetFilterDirection direction,
