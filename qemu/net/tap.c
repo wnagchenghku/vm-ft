@@ -166,7 +166,7 @@ static void count_payload_length(const uint8_t* buf, int len){
                 int tcp_header_size = 4 * (tcp_header->th_off & 0X0F);
                 short ip_len = ntohs(ip_header->ip_len); 
                 int payload_length = ip_len - ip_header_size - tcp_header_size; 
-                fprintf(stderr, "payload_length = %d\n", payload_length);
+                //fprintf(stderr, "payload_length = %d\n", payload_length);
 
                 pthread_spin_lock(&counter_lock);
                 output_counter = output_counter + payload_length;
