@@ -90,6 +90,12 @@ unsigned long get_and_rest_output_counter(void){
 static void count_payload_length(const uint8_t* buf, int len, int dir, unsigned flags, char* sender_name){
     int eth_hdr_len = sizeof(struct ether_header);
 
+    if (strcmp (sender_name, "hn0") == 0){
+        return;
+    }
+
+
+
     if (len > eth_hdr_len){
         struct ether_header* eth_hdr = (struct ether_header*) buf; 
         if (eth_hdr->ether_type == 0x0008){
