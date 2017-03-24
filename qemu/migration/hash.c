@@ -32,6 +32,9 @@
 #include "mc-rdma.h"
 
 #include "migration/hash.h"
+#include "net/net.h"
+
+
 
 #define nthread 20
 
@@ -651,7 +654,7 @@ void compare_hash_list(hash_list *rhlist){
 	}
     printf("Compared %"PRIu64 " pages, same = %" PRIu64" same rate = %"PRIu64"%%\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len);
 
-	fprintf(stderr ,"%"PRIu64 ",%" PRIu64", %"PRIu64"%%\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len);
+	fprintf(stderr ,"%"PRIu64 ",%" PRIu64", %"PRIu64"%%, %lu\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len, get_and_rest_output_counter());
 }
 
 // int main(char* argv[], int argc){
