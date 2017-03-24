@@ -100,10 +100,15 @@ static void count_payload_length(const uint8_t* buf, int len){
                 int tcp_header_size = 4 * (tcp_header->th_off & 0X0F);
                 short ip_len = ntohs(ip_header->ip_len); 
                 int payload_length = ip_len - ip_header_size - tcp_header_size; 
-                struct in_addr ad;
-                ad.s_addr = ip_header-> ip_src.s_addr;
-                fprintf(stderr, "payload_length = %d, src_ip = %s\n", payload_length, inet_ntoa(ad));
+                struct in_addr srcad;
+                srcad.s_addr = ip_header-> ip_src.s_addr;
 
+
+                struct in_addr dstad;
+                dstad.s_addr = ip_header-> ip_dst.s_addr; 
+
+                fprintf(stderr, "payload_length = %d, src_ip = %s:%d", payload_length, inet_ntoa(srcad), htons(tcp_header->th_sport));
+                fprintf(stderr, "dst_ip = %s:%d\n", inet_ntoa(dstad),htons(tcp_header->th_dport));
                 pthread_spin_lock(&counter_lock);
                 output_counter = output_counter + payload_length;
                 pthread_spin_unlock(&counter_lock);                
@@ -653,6 +658,7 @@ static ssize_t filter_receive_iov(NetClientState *nc,
             }
         }
     } else {
+        fprintf(stderr, "dir = %d ",direction);
         count_payload_length((uint8_t *) iov[0].iov_base, iov[0].iov_len);
         //fprintf(stderr, "got output, iovcnt=%d\n", iovcnt);
         QTAILQ_FOREACH_REVERSE(nf, &nc->filters, NetFilterHead, next) {
