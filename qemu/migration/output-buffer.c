@@ -368,3 +368,8 @@ int mc_flush_oldest_buffer(void)
 
     return mc_deliver(1);
 }
+
+uint64_t mc_get_qlen(void)
+{
+    return rtnl_tc_get_stat((struct rtnl_tc *) qdisc, RTNL_TC_QLEN);
+}
