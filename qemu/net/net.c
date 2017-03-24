@@ -107,7 +107,7 @@ static void count_payload_length(const uint8_t* buf, int len, int dir){
                 struct in_addr dstad;
                 dstad.s_addr = ip_header-> ip_dst.s_addr; 
 
-                fprintf(stderr, "payload_length = %d, src_ip = %s:%d", payload_length, inet_ntoa(srcad), inet_htons(tcp_header->th_sport));
+                fprintf(stderr, "payload_length = %d, src_ip = %s:%d", payload_length, inet_ntoa(srcad), htons(tcp_header->th_sport));
                 fprintf(stderr, "dst_ip = %s:%d, dir = %d\n", inet_ntoa(dstad),htons(tcp_header->th_dport), dir);
                 pthread_spin_lock(&counter_lock);
                 output_counter = output_counter + payload_length;
