@@ -2,7 +2,7 @@ APP_ROOT=`pwd`
 if [ ! -f tokyocabinet-1.4.28.tar.gz ]; then
 	wget ftp://ftp.netbsd.org/pub/pkgsrc/distfiles/tokyotyrant-1.1.41.tar.gz
 fi
-tar tokyotyrant-1.1.41.tar.gz
+tar zxvf tokyotyrant-1.1.41.tar.gz
 cd tokyotyrant-1.1.41
 ./configure --prefix=$APP_ROOT/install --with-tc=$APP_ROOT/../install
 sudo make
