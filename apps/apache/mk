@@ -37,7 +37,7 @@ make install
 # change conf file
 cd $APP_DIR/install/conf
 sed -i "s/Listen 80/Listen 7002/g" httpd.conf
-echo "ServerName 10.22.1.14" >> httpd.conf
+echo "ServerName 127.0.0.1" >> httpd.conf
 echo "ServerLimit 1" >> httpd.conf
 echo "ThreadsPerChild 8" >> httpd.conf
 # DocumentRoot: The directory out of which you will serve your documents.
