@@ -16,8 +16,8 @@ extern "C" {
 	struct proxy_node_t* proxy_init(const char* proxy_log_path, uint8_t role);
 	void proxy_on_mirror(uint8_t *buf, int len);
 	int is_leader(void);
-	uint64_t proxy_get_sync_consensus(void);
-	void proxy_wait_sync_consensus(uint64_t sync_consensus);
+	void proxy_wait_checkpoint_req(void);
+	void proxy_on_checkpoint_req(void);
 	
 #ifdef __cplusplus
 }

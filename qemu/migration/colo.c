@@ -354,9 +354,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     Error *local_err = NULL;
     int ret = -1;
 
-
-
-
     /**
     1. memcpy 
     2. rdma_buffer = start address (optional)
@@ -366,7 +363,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     // colo_send_message(s->to_dst_file, COLO_MESSAGE_CHECKPOINT_REQUEST,
     //                   &local_err);
 
-    mc_send_message(COLO_MESSAGE_CHECKPOINT_REQUEST, &local_err);
+    proxy_on_checkpoint_req();
 
     if (local_err) {
         goto out;
@@ -387,8 +384,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     }
     vm_stop_force_state(RUN_STATE_COLO);
 
-    uint64_t sync_consensus_req = proxy_get_sync_consensus();
-
     qemu_mutex_unlock_iothread();
     trace_colo_vm_state_change("run", "stop");
     /*
@@ -398,8 +393,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     if (failover_request_is_active()) {
         goto out;
     }
-
-    mc_send_message_value(COLO_MESSAGE_VMSTATE_SIZE, sync_consensus_req, &local_err);
 
     /* we call this api although this may do nothing on primary side */
     qemu_mutex_lock_iothread();
@@ -839,7 +832,6 @@ void *colo_process_incoming_thread(void *opaque)
         fflush(stdout);
         
         int request;
-
         // colo_wait_handle_message(mis->from_src_file, &request, &local_err);
 
 
@@ -848,17 +840,11 @@ void *colo_process_incoming_thread(void *opaque)
     // ret = mc_rdma_get_colo_ctrl_buffer();
     // msg = rdma_buffer;
 
-
-
-        mc_wait_handle_message(&request, &local_err);
+        proxy_wait_checkpoint_req();
+        request = 1;
 
         //TODO: receive primary's bitmap
         //TODO: Send itself's bitmap. 
-
-
-
-
-
 
         if (local_err) {
             goto out;
@@ -868,9 +854,6 @@ void *colo_process_incoming_thread(void *opaque)
             error_report("failover request");
             goto out;
         }
-
-        uint64_t sync_consensus_req = mc_receive_message_value(COLO_MESSAGE_VMSTATE_SIZE, &local_err); 
-        proxy_wait_sync_consensus(sync_consensus_req);
 
         qemu_mutex_lock_iothread();
         vm_stop_force_state(RUN_STATE_COLO);

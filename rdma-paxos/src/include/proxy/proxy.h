@@ -8,8 +8,13 @@
 #include <sys/queue.h>
 
 #define MIRROR  7
+#define CHECKPOINT  8
 
 #define MIRROR_CONNECTION 13
+#define CHECKPOINT_CTRL_CONNECTION 14
+
+#define CHECKPOINT_REQ_READY (0)
+#define CHECKPOINT_REQ_WAIT (1)
 
 typedef uint16_t hk_t;
 typedef uint8_t nc_t;
@@ -83,5 +88,10 @@ typedef struct proxy_send_msg_t{
     } data;
 }proxy_send_msg;
 #define PROXY_SEND_MSG_SIZE(M) (M->data.cmd.len+sizeof(proxy_send_msg))
+
+typedef struct proxy_checkpoint_msg_t{
+    proxy_msg_header header;
+}proxy_checkpoint_msg;
+#define PROXY_CHECKPOINT_MSG_SIZE (sizeof(proxy_checkpoint_msg))
 
 #endif

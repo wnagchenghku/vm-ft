@@ -23,6 +23,8 @@ proxy_node* proxy;
 
 const char* config_path = "../rdma-paxos/target/nodes.local.cfg";
 
+static int checkpoint_req_status;
+
 int dare_main(proxy_node* proxy, uint8_t role)
 {
     int rc; 
@@ -121,7 +123,7 @@ int dare_main(proxy_node* proxy, uint8_t role)
     return 0;
 }
 
-static void leader_handle_submit_req(void* buf, ssize_t data_size)
+static void leader_handle_submit_req(void* buf, ssize_t data_size, uint8_t type)
 {
     assert(data_size <= IO_BUF_SIZE);
 
@@ -130,8 +132,8 @@ static void leader_handle_submit_req(void* buf, ssize_t data_size)
 
     tailq_entry_t* n2 = (tailq_entry_t*)malloc(sizeof(tailq_entry_t));
     n2->req_id = ++proxy->sync_req_id;
-    n2->connection_id = MIRROR_CONNECTION;
-    n2->type = MIRROR;
+    n2->connection_id = type == MIRROR ? MIRROR_CONNECTION : CHECKPOINT_CTRL_CONNECTION;
+    n2->type = type;
     n2->cmd.len = data_size;
     if (data_size)
         memcpy(n2->cmd.cmd, buf, data_size);
@@ -162,20 +164,21 @@ static int set_blocking(int fd, int blocking) {
 
 void proxy_on_mirror(uint8_t *buf, int len)
 {
-    leader_handle_submit_req(buf, len);
+    leader_handle_submit_req(buf, len, MIRROR);
     return;
 }
 
-uint64_t proxy_get_sync_consensus(void)
+void proxy_on_checkpoint_req(void)
 {
-    SYS_LOG(proxy,"Get Synchronization Consensus %"PRIu64"\n",proxy->sync_req_id);
-    return proxy->sync_req_id;
+    leader_handle_submit_req(NULL, 0, CHECKPOINT);
+    return;
 }
 
-void proxy_wait_sync_consensus(uint64_t sync_consensus)
+void proxy_wait_checkpoint_req(void)
 {
-    SYS_LOG(proxy,"Wait Synchronization Consensus %"PRIu64"\n",sync_consensus);
-    while(proxy->sync_req_id < sync_consensus);
+    while (checkpoint_req_status != CHECKPOINT_REQ_READY);
+    checkpoint_req_status = CHECKPOINT_REQ_WAIT;
+    return;
 }
 
 static void update_highest_rec(void*arg)
@@ -199,6 +202,11 @@ static void stablestorage_save_request(void* data,void*arg)
         {
             proxy_send_msg* send_msg = (proxy_send_msg*)data;
             store_record(proxy->db_ptr,PROXY_SEND_MSG_SIZE(send_msg),data);
+            break;
+        }
+        case CHECKPOINT:
+        {
+            store_record(proxy->db_ptr,PROXY_CHECKPOINT_MSG_SIZE,data);
             break;
         }
     }
@@ -233,6 +241,12 @@ static int stablestorage_load_records(void*buf,uint32_t size,void*arg)
                 do_action_send(send_msg->data.cmd.len, send_msg->data.cmd.cmd, arg);
                 break;
             }
+            case CHECKPOINT:
+            {
+                len += PROXY_CHECKPOINT_MSG_SIZE;
+                store_record(proxy->db_ptr,PROXY_CHECKPOINT_MSG_SIZE,header);
+                break;
+            }
         }
     }
     return 0;
@@ -262,7 +276,18 @@ static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,vo
         output = proxy->req_log_file;
     }
 
-    do_action_send(data_size, data, arg);
+    switch(type) {
+        case MIRROR:
+        {
+            do_action_send(data_size, data, arg);
+            break;
+        }
+        case CHECKPOINT:
+        {
+            checkpoint_req_status = CHECKPOINT_REQ_READY;
+            break;
+        }
+    }
 
     return;
 }
@@ -337,6 +362,8 @@ proxy_node* proxy_init(const char* proxy_log_path, uint8_t role)
     if(pthread_spin_init(&tailq_lock, PTHREAD_PROCESS_PRIVATE)){
         err_log("PROXY: Cannot init the lock\n");
     }
+
+    checkpoint_req_status = CHECKPOINT_REQ_WAIT;
 
     dare_main(proxy, role);
 
