@@ -606,7 +606,7 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 	}
 
 
-	printf("\n\nBefore waking up compute threads, dirty_count = %lu, hashlist->hashes addr = %p\n\n", hlist->len, hlist->hashes);
+	//printf("\n\nBefore waking up compute threads, dirty_count = %lu, hashlist->hashes addr = %p\n\n", hlist->len, hlist->hashes);
 	int i; 
 	for (i = 0; i<nthread; i++){
 		pthread_mutex_lock(&compute_locks[i]);
@@ -624,7 +624,7 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 		usleep(100);
 	}
 
-	printf("compute hashlist finished, will return \n");
+	//printf("compute hashlist finished, will return \n");
 
 
 }
@@ -637,7 +637,7 @@ void compare_hash_list(hash_list *rhlist){
 	diverse_count = 0;
 	remote_hlist = rhlist; 
 	int i ; 
-	printf("before waking up compare hashlist\n");
+	//printf("before waking up compare hashlist\n");
 	for (i = 0; i<nthread; i++){
 		pthread_mutex_lock(&compare_locks[i]);
 		pthread_cond_broadcast(&compare_conds[i]);
@@ -652,7 +652,7 @@ void compare_hash_list(hash_list *rhlist){
 		pthread_spin_unlock(&compare_spin_lock);
 		usleep(100);
 	}
-    printf("Compared %"PRIu64 " pages, same = %" PRIu64" same rate = %"PRIu64"%%\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len);
+   // printf("Compared %"PRIu64 " pages, same = %" PRIu64" same rate = %"PRIu64"%%\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len);
 
 	// fprintf(stderr ,"%"PRIu64 ",%" PRIu64", %"PRIu64"%%, %lu\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len, get_and_rest_output_counter());
 }
