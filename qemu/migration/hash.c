@@ -425,16 +425,16 @@ static char* long_to_binary(long l){
 }
 
 
-static void printbitmap(unsigned long *bmap){
-    int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
-    long len =  BITS_TO_LONGS(ram_bitmap_pages);
-    fprintf(stderr, "len: %ld ", len);
-    int i;
-    for (i=0; i< len; i++){
-        fprintf(stderr, "[%d]: %s\n", i, long_to_binary(bmap[i]));
-    }
+// static void printbitmap(unsigned long *bmap){
+//     int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
+//     long len =  BITS_TO_LONGS(ram_bitmap_pages);
+//     fprintf(stderr, "len: %ld ", len);
+//     int i;
+//     for (i=0; i< len; i++){
+//         fprintf(stderr, "[%d]: %s\n", i, long_to_binary(bmap[i]));
+//     }
 
-}
+// }
 
 
 unsigned long * get_divergent_bitmap(void){
@@ -654,7 +654,7 @@ void compare_hash_list(hash_list *rhlist){
 	}
     printf("Compared %"PRIu64 " pages, same = %" PRIu64" same rate = %"PRIu64"%%\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len);
 
-	fprintf(stderr ,"%"PRIu64 ",%" PRIu64", %"PRIu64"%%, %lu\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len, get_and_rest_output_counter());
+	// fprintf(stderr ,"%"PRIu64 ",%" PRIu64", %"PRIu64"%%, %lu\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len, get_and_rest_output_counter());
 }
 
 // int main(char* argv[], int argc){
