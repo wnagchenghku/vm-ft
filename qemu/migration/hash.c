@@ -403,7 +403,7 @@ static void *compare_thread_func(void *arg){
 				pthread_spin_unlock(&compare_spin_lock);
 			}
 		}
-		//printf("[compare] Thread %d finished, workload from:  %lu to :%lu\n", t, job_start, job_end);
+		printf("[compare] Thread %d finished, workload from:  %lu to :%lu\n", t, job_start, job_end);
 		pthread_spin_lock(&compare_spin_lock);
 		compare_complete_thread++;
 		//TOOD: transfer the page
