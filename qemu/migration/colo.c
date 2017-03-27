@@ -28,12 +28,15 @@
 #include "rsm-interface.h"
 
 #include "migration/hash.h"
+#include "net/net.h"
 
 static bool vmstate_loading;
 
 bool colo_not_first_sync; 
 
 bool colo_primary_transfer; 
+
+#define SYNC_OUTPUT_RANGE 0.95
 
 /* colo buffer */
 #define COLO_BUFFER_BASE_SIZE (4 * 1024 * 1024)
@@ -384,8 +387,16 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     }
     vm_stop_force_state(RUN_STATE_COLO);
 
+    uint64_t output_counter = get_output_counter();
+
     qemu_mutex_unlock_iothread();
     trace_colo_vm_state_change("run", "stop");
+
+    reset_output_counter();
+
+    mc_send_message_value(COLO_MESSAGE_VMSTATE_SIZE, output_counter, &local_err);    
+
+
     /*
      * failover request bh could be called after
      * vm_stop_force_state so we check failover_request_is_active() again.
@@ -757,6 +768,19 @@ static int colo_prepare_before_load(QEMUFile *f)
     }
     return ret;
 }
+
+static int wait_output(uint64_t primary_output_counter)
+{
+    if (get_output_counter() >= primary_output_counter)
+    {
+        return 0;
+    }
+
+    while (get_output_counter() >= (primary_output_counter * SYNC_OUTPUT_RANGE));
+
+    return 0;
+}
+
 //XS: backup thread
 void *colo_process_incoming_thread(void *opaque)
 {
@@ -854,6 +878,12 @@ void *colo_process_incoming_thread(void *opaque)
             error_report("failover request");
             goto out;
         }
+
+
+        uint64_t primary_output_counter = mc_receive_message_value(COLO_MESSAGE_VMSTATE_SIZE, &local_err);
+        wait_output(primary_output_counter);
+        reset_output_counter();
+
 
         qemu_mutex_lock_iothread();
         vm_stop_force_state(RUN_STATE_COLO);

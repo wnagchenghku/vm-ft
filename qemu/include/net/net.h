@@ -233,12 +233,14 @@ unsigned compute_mcast_idx(const uint8_t *ep);
     .offset     = vmstate_offset_macaddr(_state, _field),            \
 }
 
-
+//called in vl.c main 
 void outgoing_counter_init(void);
 
-unsigned long get_output_counter(void);
 
-unsigned long get_and_rest_output_counter(void);
+
+uint64_t get_output_counter(void);
+
+int reset_output_counter(void);
 
 
 

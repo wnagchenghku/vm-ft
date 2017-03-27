@@ -58,7 +58,7 @@
 
 
 
-static unsigned long output_counter; //xs
+static uint64_t output_counter; //xs
 
 
 static pthread_spinlock_t counter_lock;
@@ -69,21 +69,19 @@ void outgoing_counter_init(void){
     pthread_spin_init(&counter_lock, 0);
 }
 
-unsigned long get_output_counter(void){
-    unsigned long ret; 
+uint64_t get_output_counter(void){
+    uint64_t ret; 
     pthread_spin_lock(&counter_lock);
     ret = output_counter;
     pthread_spin_unlock(&counter_lock);
     return ret; 
 }
 
-unsigned long get_and_rest_output_counter(void){
-    unsigned long ret; 
+int reset_output_counter(void){
     pthread_spin_lock(&counter_lock);
-    ret = output_counter;
     output_counter = 0;
     pthread_spin_unlock(&counter_lock);
-    return ret; 
+    return 0; 
 }
 
 
