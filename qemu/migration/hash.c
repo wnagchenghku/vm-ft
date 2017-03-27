@@ -403,7 +403,7 @@ static void *compare_thread_func(void *arg){
 				pthread_spin_unlock(&compare_spin_lock);
 			}
 		}
-		printf("[compare] Thread %d finished, workload from:  %lu to :%lu\n", t, job_start, job_end);
+		//printf("[compare] Thread %d finished, workload from:  %lu to :%lu\n", t, job_start, job_end);
 		pthread_spin_lock(&compare_spin_lock);
 		compare_complete_thread++;
 		//TOOD: transfer the page
@@ -507,11 +507,11 @@ void hash_init(void){
 
 	update_dirty_indices(test_bitmap, ram_bitmap_pages);
 
-	printf("\n\n dirty_count = %lu\n", dirty_count);
-	for (i =0 ; i<dirty_count; i++){
-		printf("%lu\n", dirty_indices[i]);
-	}
-	printf("******\n");
+	// printf("\n\n dirty_count = %lu\n", dirty_count);
+	// for (i =0 ; i<dirty_count; i++){
+	// 	printf("%lu\n", dirty_indices[i]);
+	// }
+	// printf("******\n");
 
 
 
@@ -652,7 +652,7 @@ void compare_hash_list(hash_list *rhlist){
 		pthread_spin_unlock(&compare_spin_lock);
 		usleep(100);
 	}
-   // printf("Compared %"PRIu64 " pages, same = %" PRIu64" same rate = %"PRIu64"%%\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len);
+    printf("Compared %"PRIu64 " pages, same = %" PRIu64" same rate = %"PRIu64"%%\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len);
 
 	// fprintf(stderr ,"%"PRIu64 ",%" PRIu64", %"PRIu64"%%, %lu\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len, get_and_rest_output_counter());
 }
