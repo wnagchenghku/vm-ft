@@ -2410,7 +2410,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
 
 
 
-    printblocks();
+    //printblocks();
 
     rdma_buffer = mc_rdma_get_colo_ctrl_buffer_ptr();
     rcu_read_lock();

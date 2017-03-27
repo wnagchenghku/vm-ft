@@ -546,7 +546,7 @@ static void colo_process_checkpoint(MigrationState *s)
 {
 
     hash_init();
-    printf("\nHASH INIT CALLED\n");
+    // printf("\nHASH INIT CALLED\n");
 
     colo_primary_transfer = false; 
   
@@ -761,7 +761,7 @@ static int colo_prepare_before_load(QEMUFile *f)
 void *colo_process_incoming_thread(void *opaque)
 {
     hash_init();
-    printf("\nHASH INIT CALLED\n");
+    // printf("\nHASH INIT CALLED\n");
     MigrationIncomingState *mis = opaque;
     QEMUFile *fb = NULL;
     QEMUSizedBuffer *buffer = NULL; /* Cache incoming device state */
@@ -828,8 +828,8 @@ void *colo_process_incoming_thread(void *opaque)
     }
 
     while (mis->state == MIGRATION_STATUS_COLO) {
-        printf("****************inside Loop\n\n\n\n");
-        fflush(stdout);
+        // printf("****************inside Loop\n\n\n\n");
+        // fflush(stdout);
         
         int request;
         // colo_wait_handle_message(mis->from_src_file, &request, &local_err);
@@ -987,8 +987,8 @@ void *colo_process_incoming_thread(void *opaque)
     }
 
 out:
-    printf("****************inside out\n\n\n\n");
-    fflush(stdout);
+    // printf("****************inside out\n\n\n\n");
+    // fflush(stdout);
 
      vmstate_loading = false;
     /* Throw the unreported error message after exited from loop */
