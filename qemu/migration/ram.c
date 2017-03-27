@@ -3262,12 +3262,12 @@ void colo_flush_ram_cache(void)
             //     }
 
 
-            // }
-            // dst_host = block->host + offset;
-            // src_host = block->colo_cache + offset;
+            }
+            dst_host = block->host + offset;
+            src_host = block->colo_cache + offset;
             // if (memcmp(dst_host, src_host, TARGET_PAGE_SIZE) == 0){
             //     same++;
-            }
+            // }
             memcpy(dst_host, src_host, TARGET_PAGE_SIZE);
             
             total++; 
