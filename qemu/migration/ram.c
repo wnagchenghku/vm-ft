@@ -2329,7 +2329,7 @@ int backup_prepare_bitmap(void){
 
     unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
     bitmap_or(or_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
-    printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
+    // printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
 
     //printbitmap(or_bitmap);
 
