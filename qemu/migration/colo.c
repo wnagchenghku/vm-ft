@@ -776,7 +776,7 @@ static int wait_output(uint64_t primary_output_counter)
         return 0;
     }
 
-    while (get_output_counter() >= (primary_output_counter * SYNC_OUTPUT_RANGE));
+    while (get_output_counter() <= (primary_output_counter * SYNC_OUTPUT_RANGE));
 
     return 0;
 }
