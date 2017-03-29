@@ -352,6 +352,8 @@ static uint64_t mc_receive_message_value(uint32_t expect_msg, Error **errp)
 static int colo_do_checkpoint_transaction(MigrationState *s,
                                           QEMUSizedBuffer *buffer)
 {
+    struct timeval t1, t2;
+    
     QEMUFile *trans = NULL;
     size_t size;
     Error *local_err = NULL;
@@ -385,6 +387,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         qemu_mutex_unlock_iothread();
         goto out;
     }
+    gettimeofday(&t1, 0);
     vm_stop_force_state(RUN_STATE_COLO);
 
     //uint64_t output_counter = get_output_counter();
@@ -516,10 +519,15 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     /* Resume primary guest */
     qemu_mutex_lock_iothread();
     vm_start();
+    
     qemu_mutex_unlock_iothread();
     //trace_colo_vm_state_change("stop", "run");
-
+    
     mc_flush_oldest_buffer();
+
+    gettimeofday(&t2, 0);
+    long elapsed = (t2.tv_sec-t1.tv_sec)*1000000 + t2.tv_usec-t1.tv_usec;
+    printf("%ld us\n", elapsed);
 
     colo_compare_do_checkpoint();
 
