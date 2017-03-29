@@ -349,10 +349,13 @@ static uint64_t mc_receive_message_value(uint32_t expect_msg, Error **errp)
 }
 //XS: primary do checkpoint
 //start doing the cehckpoint
+
+static struct timeval t1, t2;
+
 static int colo_do_checkpoint_transaction(MigrationState *s,
                                           QEMUSizedBuffer *buffer)
 {
-    struct timeval t1, t2;
+ 
     
     QEMUFile *trans = NULL;
     size_t size;
@@ -388,6 +391,11 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         goto out;
     }
     gettimeofday(&t1, 0);
+    long between = (t1.tv_sec-t2.tv_sec)*1000000 + t1.tv_usec-t2.tv_usec;
+    printf("between %ld us\n", between);
+
+
+
     vm_stop_force_state(RUN_STATE_COLO);
 
     //uint64_t output_counter = get_output_counter();
