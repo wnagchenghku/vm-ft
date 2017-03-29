@@ -387,14 +387,14 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     }
     vm_stop_force_state(RUN_STATE_COLO);
 
-    uint64_t output_counter = get_output_counter();
+    //uint64_t output_counter = get_output_counter();
 
     qemu_mutex_unlock_iothread();
     //trace_colo_vm_state_change("run", "stop");
 
-    reset_output_counter();
+    //reset_output_counter();
 
-    mc_send_message_value(COLO_MESSAGE_VMSTATE_SIZE, output_counter, &local_err);    
+    //mc_send_message_value(COLO_MESSAGE_VMSTATE_SIZE, output_counter, &local_err);    
 
 
     /*
@@ -880,9 +880,9 @@ void *colo_process_incoming_thread(void *opaque)
         }
 
 
-        uint64_t primary_output_counter = mc_receive_message_value(COLO_MESSAGE_VMSTATE_SIZE, &local_err);
-        wait_output(primary_output_counter);
-        reset_output_counter();
+        //uint64_t primary_output_counter = mc_receive_message_value(COLO_MESSAGE_VMSTATE_SIZE, &local_err);
+       // wait_output(primary_output_counter);
+      //  reset_output_counter();
 
 
         qemu_mutex_lock_iothread();

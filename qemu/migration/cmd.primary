@@ -39,4 +39,4 @@ sudo tc qdisc add dev tap0 ingress
 sudo tc filter add dev tap0 parent ffff: proto ip pref 10 u32 match u32 0 0 action mirred egress redirect dev ifb0
 
 
-{ "execute": "migrate-set-parameters" , "arguments": { "x-checkpoint-delay": 120 } }
+{ "execute": "migrate-set-parameters" , "arguments": { "x-checkpoint-delay": 100 } }
