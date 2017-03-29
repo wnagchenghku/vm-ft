@@ -36,7 +36,7 @@ bool colo_not_first_sync;
 
 bool colo_primary_transfer; 
 
-#define SYNC_OUTPUT_RANGE 0.95
+#define SYNC_OUTPUT_RANGE 0.98
 
 /* colo buffer */
 #define COLO_BUFFER_BASE_SIZE (4 * 1024 * 1024)
@@ -390,7 +390,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     uint64_t output_counter = get_output_counter();
 
     qemu_mutex_unlock_iothread();
-    trace_colo_vm_state_change("run", "stop");
+    //trace_colo_vm_state_change("run", "stop");
 
     reset_output_counter();
 
@@ -517,7 +517,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     qemu_mutex_lock_iothread();
     vm_start();
     qemu_mutex_unlock_iothread();
-    trace_colo_vm_state_change("stop", "run");
+    //trace_colo_vm_state_change("stop", "run");
 
     mc_flush_oldest_buffer();
 
@@ -887,7 +887,7 @@ void *colo_process_incoming_thread(void *opaque)
 
         qemu_mutex_lock_iothread();
         vm_stop_force_state(RUN_STATE_COLO);
-        trace_colo_vm_state_change("run", "stop");
+        //trace_colo_vm_state_change("run", "stop");
         qemu_mutex_unlock_iothread();
 
 
@@ -1010,7 +1010,7 @@ void *colo_process_incoming_thread(void *opaque)
 
         qemu_mutex_lock_iothread();
         vm_start();
-        trace_colo_vm_state_change("stop", "run");
+        //trace_colo_vm_state_change("stop", "run");
         qemu_mutex_unlock_iothread();
         qemu_fclose(fb);
         fb = NULL;

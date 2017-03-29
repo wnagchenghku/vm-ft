@@ -13,9 +13,9 @@
 
 #include "output-buffer.h"
 
-#define DEBUG_MC
-#define DEBUG_MC_VERBOSE
-#define DEBUG_MC_REALLY_VERBOSE
+//#define DEBUG_MC
+//#define DEBUG_MC_VERBOSE
+//#define DEBUG_MC_REALLY_VERBOSE
 
 #ifdef DEBUG_MC
 #define DPRINTF(fmt, ...) \
