@@ -42,8 +42,8 @@
 
 //#define USE_MERKLE_TREE 
 
-//#define HASH_CRC
-#define HASH_CKSUM
+#define HASH_CRC
+//#define HASH_CKSUM
 
 
 
