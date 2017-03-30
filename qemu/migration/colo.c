@@ -44,7 +44,7 @@ bool control_clock;
 #define COLO_BUFFER_BASE_SIZE (4 * 1024 * 1024)
 
 typedef struct clock_handler_t {
-    struct timespec clocks[15];
+    struct timespec clocks[200];
     int counter;
 }clock_handler;
 
@@ -435,19 +435,16 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         qemu_mutex_unlock_iothread();
         goto out;
     }
-    gettimeofday(&t1, 0);
-    long between = (t1.tv_sec-t2.tv_sec)*1000000 + t1.tv_usec-t2.tv_usec;
-    printf("between %ld us\n", between);
-
-
+   
 
     vm_stop_force_state(RUN_STATE_COLO);
 
+
+    clock_add(&clock);
     //uint64_t output_counter = get_output_counter();
 
     qemu_mutex_unlock_iothread();
     //trace_colo_vm_state_change("run", "stop");
-
     //reset_output_counter();
 
     //mc_send_message_value(COLO_MESSAGE_VMSTATE_SIZE, output_counter, &local_err);    
@@ -489,6 +486,9 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     //fflush(stdout);
 
 
+
+    clock_add(&clock);
+
     migrate_use_mc_rdma = false;
     colo_not_first_sync = true;
 
@@ -502,6 +502,10 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     colo_not_first_sync = false;
     migrate_use_mc_rdma = false;
 
+
+    clock_add(&clock);
+
+
     /* flush QEMU_VM_EOF and RAM_SAVE_FLAG_EOS so that
      * colo_process_incoming_thread can step out of qemu_loadvm_state_main
      */
@@ -514,6 +518,10 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         goto out;
     }
     qemu_fflush(trans);
+
+    clock_add(&clock);
+
+
 
     /* we send the total size of the vmstate first */
     size = qsb_get_length(buffer);
@@ -534,6 +542,8 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         goto out;
     }
 
+    clock_add(&clock);
+
     // colo_receive_check_message(s->rp_state.from_dst_file,
     //                    COLO_MESSAGE_VMSTATE_RECEIVED, &local_err);
     mc_receive_check_message(COLO_MESSAGE_VMSTATE_RECEIVED, &local_err);
@@ -541,6 +551,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     if (local_err) {
         goto out;
     }
+    clock_add(&clock);
 
     // colo_receive_check_message(s->rp_state.from_dst_file,
     //                    COLO_MESSAGE_VMSTATE_LOADED, &local_err);
@@ -549,6 +560,9 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     if (local_err) {
         goto out;
     }
+
+    clock_add(&clock);
+   
 
     if (colo_shutdown_requested) {
         colo_send_message(s->to_dst_file, COLO_MESSAGE_GUEST_SHUTDOWN,
@@ -567,7 +581,11 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
     ret = 0;
 
+
+
+
     mc_start_buffer();
+    clock_add(&clock);
 
     /* Resume primary guest */
     qemu_mutex_lock_iothread();
@@ -576,14 +594,12 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     control_clock = false;
     qemu_mutex_unlock_iothread();
     //trace_colo_vm_state_change("stop", "run");
-    
+        clock_add(&clock);
+
     mc_flush_oldest_buffer();
-
-    gettimeofday(&t2, 0);
-    long elapsed = (t2.tv_sec-t1.tv_sec)*1000000 + t2.tv_usec-t1.tv_usec;
-    printf("%ld us\n", elapsed);
-
     clock_add(&clock);
+
+    
     clock_display(&clock);
 
     colo_compare_do_checkpoint();
