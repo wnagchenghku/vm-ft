@@ -48,7 +48,7 @@ typedef struct clock_handler_t {
     int counter;
 }clock_handler;
 
-#define BILLION 1000L
+#define BILLION 1000000000L
 
 static void clock_init(clock_handler *c_k)
 {
@@ -75,7 +75,8 @@ static void clock_display(clock_handler *c_k)
         if (i != 0)
         {
             diff = BILLION * (end_time.tv_sec - start_time.tv_sec) + end_time.tv_nsec - start_time.tv_nsec;
-            sprintf(tmp, "%llu\n;", (long long unsigned int)diff);
+            double elp = diff / 1000000.0;
+            sprintf(tmp, "%f\n", elp);
             strcat(str, tmp);
         }
         start_time = end_time;
