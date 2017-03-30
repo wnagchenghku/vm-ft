@@ -2544,6 +2544,9 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
             //xs: todo; check the length
         }
 
+        
+        clock_add(&clock);
+
         //ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
 
        // hash_list *backup_hashlist = (hash_list *) malloc (sizeof (hash_list));
