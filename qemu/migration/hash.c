@@ -36,14 +36,14 @@
 
 
 
-#define nthread 20
+#define nthread 16
 
 //#define ALGO_TEST
 
 //#define USE_MERKLE_TREE 
 
-//#define HASH_CRC
-#define HASH_CKSUM
+#define HASH_CRC
+//#define HASH_CKSUM
 
 
 
@@ -254,8 +254,8 @@ static pthread_cond_t *compute_conds;
 
 
 // For count all the "both dirtied" pages
-static unsigned long *dirty_indices; 
-static unsigned long dirty_count; 
+// static unsigned long *dirty_indices; 
+// static unsigned long dirty_count; 
 
 
 static merkle_tree_t *mtree; 
@@ -275,9 +275,12 @@ static int compare_complete_thread;
 
 
 
-
 hash_list* get_hash_list_pointer(void){
 	return hlist;
+}
+
+hash_list* get_remote_hash_list_pointer(void){
+    return remote_hlist;
 }
 
 void print_hash_list(hash_list *list){
@@ -328,52 +331,115 @@ static uint8_t* get_page_addr(uint64_t page_index){
 
 }
 
-static inline void compute_hash(unsigned long i){
+static inline hash_t compute_hash(unsigned long page_index){
 	// #ifdef USE_MERKLE_TREE
 	// mtree->tree[index_to_node(i)] = hashofpage(get_page_addr(i), 4096);
 	// #else
 
 
 
-	hlist->hashes[i] = hashofpage(get_page_addr(dirty_indices[i]), 4096);
+	//hlist->hashes[i] = 
+
+    return hashofpage(get_page_addr(page_index), 4096);
 	// #endif
 }
 
+static unsigned long *compute_bitmap; 
 
 
 static void *compute_thread_func(void *arg){
-	int t = *(int *)arg; //The thread index of the thread
-	while(1){
-		pthread_mutex_lock(&compute_locks[t]);
-		pthread_cond_wait(&compute_conds[t], &compute_locks[t]);
-		pthread_mutex_unlock(&compute_locks[t]);
-		
-		unsigned long workload = dirty_count / nthread;
-		unsigned long job_start = t * workload; 
-		unsigned long job_end;
-		
+ int t = *(int *)arg; //The thread index of the thread
+ while(1){
+     pthread_mutex_lock(&compute_locks[t]);
+     pthread_cond_wait(&compute_conds[t], &compute_locks[t]);
+     pthread_mutex_unlock(&compute_locks[t]);
+        
+     
+     int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
 
-		if ( t == (nthread -1)) {
-			job_end = dirty_count -1; 
-		}
-		else {
-			job_end  = (t+1) * workload -1;  
-		}
-		//printf("[compute] Thread %d started, workload from:  %lu to :%lu\n", t, job_start, job_end);
+     int i, offset; 
 
-		unsigned long i; 
-		for (i = job_start; i <= job_end; i++){
-			compute_hash(i);
-		}
-		//printf("[compute] Thread %d finished, workload from:  %lu to :%lu\n", t, job_start, job_end);
-		//printf("[compute] Thread %d finished\n", t);
-		pthread_spin_lock(&finished_lock);
-		finished_thread++;
-		pthread_spin_unlock(&finished_lock);
-	}
-	return NULL; 
+
+     int count = 0; 
+
+     unsigned long mask;
+
+     for(i = 0; i * 64 < ram_bitmap_pages; i++){
+        mask = 1 << t;
+
+        for (offset = i; offset <64 && i*64 +offset < ram_bitmap_pages; offset+=t){
+            if (mask & compute_bitmap[i]){  
+                hlist->hashes[t][count] = compute_hash(i*64 + offset); 
+                hlist->page_indices[t][count++] = i*64 + offset;
+            }
+            mask <<= nthread; 
+        } 
+     }
+
+     hlist->len[t] = count; 
+
+     // unsigned long workload = dirty_count / nthread;
+     // unsigned long job_start = t * workload; 
+     // unsigned long job_end;
+        
+
+     // if ( t == (nthread -1)) {
+     //     job_end = dirty_count -1; 
+     // }
+     // else {
+     //     job_end  = (t+1) * workload -1;  
+     // }
+     // //printf("[compute] Thread %d started, workload from:  %lu to :%lu\n", t, job_start, job_end);
+
+     // unsigned long i; 
+     // for (i = job_start; i <= job_end; i++){
+     //     compute_hash(i);
+     // }
+     // //printf("[compute] Thread %d finished, workload from:  %lu to :%lu\n", t, job_start, job_end);
+     // //printf("[compute] Thread %d finished\n", t);
+     pthread_spin_lock(&finished_lock);
+     finished_thread++;
+     pthread_spin_unlock(&finished_lock);
+ }
+ return NULL; 
 
 }
+
+
+
+// static void *compute_thread_func(void *arg){
+// 	int t = *(int *)arg; //The thread index of the thread
+// 	while(1){
+// 		pthread_mutex_lock(&compute_locks[t]);
+// 		pthread_cond_wait(&compute_conds[t], &compute_locks[t]);
+// 		pthread_mutex_unlock(&compute_locks[t]);
+		
+// 		unsigned long workload = dirty_count / nthread;
+// 		unsigned long job_start = t * workload; 
+// 		unsigned long job_end;
+		
+
+// 		if ( t == (nthread -1)) {
+// 			job_end = dirty_count -1; 
+// 		}
+// 		else {
+// 			job_end  = (t+1) * workload -1;  
+// 		}
+// 		//printf("[compute] Thread %d started, workload from:  %lu to :%lu\n", t, job_start, job_end);
+
+// 		unsigned long i; 
+// 		for (i = job_start; i <= job_end; i++){
+// 			compute_hash(i);
+// 		}
+// 		//printf("[compute] Thread %d finished, workload from:  %lu to :%lu\n", t, job_start, job_end);
+// 		//printf("[compute] Thread %d finished\n", t);
+// 		pthread_spin_lock(&finished_lock);
+// 		finished_thread++;
+// 		pthread_spin_unlock(&finished_lock);
+// 	}
+// 	return NULL; 
+
+// }
 
 unsigned long *divergent_bitmap; 
 
@@ -386,19 +452,22 @@ static void *compare_thread_func(void *arg){
 		pthread_mutex_lock(&compare_locks[t]);
 		pthread_cond_wait(&compare_conds[t], &compare_locks[t]);
 		pthread_mutex_unlock(&compare_locks[t]);
-		uint64_t workload = hlist -> len / nthread ;
-		uint64_t job_start = t * workload; 
-		uint64_t job_end = (t+1) * workload - 1 ; 
-		if (t + 1 == nthread){
-			job_end = (hlist->len) -1;
-		}
+		//uint64_t workload = hlist -> len / nthread ;
+		//uint64_t job_start = t * workload; 
+		// //uint64_t job_end = (t+1) * workload - 1 ; 
+		// if (t + 1 == nthread){
+		// 	job_end = (hlist->len) -1;
+		// }
+
+
+
 		uint64_t i; 
-		for (i = job_start; i <= job_end; i++){
-			if (memcmp(&(remote_hlist->hashes[i]), &(hlist->hashes[i]), sizeof(hash_t)) != 0){
+		for (i =0; i < hlist->len[t] ; i++){
+			if (memcmp(&(remote_hlist->hashes[t][i]), &(hlist->hashes[t][i]), sizeof(hash_t)) != 0){
 				pthread_spin_lock(&compare_spin_lock);
 				diverse_count++;
 				//TOOD: transfer the page
-				bitmap_set(divergent_bitmap, dirty_indices[i], 1);
+				bitmap_set(divergent_bitmap, hlist->page_indices[t][i], 1);
 
 				pthread_spin_unlock(&compare_spin_lock);
 			}
@@ -436,46 +505,51 @@ static char* long_to_binary(long l){
 
 // }
 
+int get_n_thread(void){
+    return nthread;
+}
+
+
 
 unsigned long * get_divergent_bitmap(void){
 	return divergent_bitmap;
 }
 
 
-static void update_dirty_indices(unsigned long *bitmap, unsigned long nbits){
-	unsigned long mask; 
-	int i, offset; 
-	int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
-	for (i =0; i * 64 < nbits; ++i){
-		mask = 1;
-		for (offset = 0; offset <64 && i*64 +offset < ram_bitmap_pages; offset++){
+// static void update_dirty_indices(unsigned long *bitmap, unsigned long nbits){
+// 	unsigned long mask; 
+// 	int i, offset; 
+// 	int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
+// 	for (i =0; i * 64 < nbits; ++i){
+// 		mask = 1;
+// 		for (offset = 0; offset <64 && i*64 +offset < ram_bitmap_pages; offset++){
 
-			if (mask & bitmap[i]){	
-				dirty_indices[dirty_count]=i*64 + offset; 
-				dirty_count++;
-			}
-			mask <<= 1; 
-		}
-	}
+// 			if (mask & bitmap[i]){	
+// 				dirty_indices[dirty_count]=i*64 + offset; 
+// 				dirty_count++;
+// 			}
+// 			mask <<= 1; 
+// 		}
+// 	}
 
-	// printf("***********\n dirty indices: ");
-	//  unsigned long j; 
-	//  for (j =0 ; j <dirty_count ; j++){
-	//  	printf("%lu ", dirty_indices[j]);
-	//  }
-	//  printf("\n");
+// 	// printf("***********\n dirty indices: ");
+// 	//  unsigned long j; 
+// 	//  for (j =0 ; j <dirty_count ; j++){
+// 	//  	printf("%lu ", dirty_indices[j]);
+// 	//  }
+// 	//  printf("\n");
 
-	//  printf("***********\n result from find next bit");
-	//  fflush(stdout);
-	//  unsigned long cur =0; 
-	//  while (cur < ram_bitmap_pages){
-	//  	cur = find_next_bit(bitmap, ram_bitmap_pages, cur +1);
-	//  	printf("%lu ", cur);
-	//  }
+// 	//  printf("***********\n result from find next bit");
+// 	//  fflush(stdout);
+// 	//  unsigned long cur =0; 
+// 	//  while (cur < ram_bitmap_pages){
+// 	//  	cur = find_next_bit(bitmap, ram_bitmap_pages, cur +1);
+// 	//  	printf("%lu ", cur);
+// 	//  }
 
 
 
-}
+// }
 
 
 void hash_init(void){
@@ -497,15 +571,15 @@ void hash_init(void){
 	compare_conds = (pthread_cond_t *)malloc (nthread * sizeof(pthread_cond_t));
 	pthread_spin_init (&compare_spin_lock, 0); 
 
-	unsigned long *test_bitmap = bitmap_new(ram_bitmap_pages);
-	bitmap_set(test_bitmap, 1, 1);
-	bitmap_set(test_bitmap, 65, 1);
+	//unsigned long *test_bitmap = bitmap_new(ram_bitmap_pages);
+	//bitmap_set(test_bitmap, 1, 1);
+	//bitmap_set(test_bitmap, 65, 1);
 	//printbitmap(test_bitmap);
 
-	dirty_indices = (unsigned long *) malloc(ram_bitmap_pages * sizeof(unsigned long));
+	//dirty_indices = (unsigned long *) malloc(ram_bitmap_pages * sizeof(unsigned long));
 
 
-	update_dirty_indices(test_bitmap, ram_bitmap_pages);
+	//update_dirty_indices(test_bitmap, ram_bitmap_pages);
 
 	// printf("\n\n dirty_count = %lu\n", dirty_count);
 	// for (i =0 ; i<dirty_count; i++){
@@ -529,8 +603,32 @@ void hash_init(void){
 
 	}
 
+    //Malloc for hlist; 
+    hlist = (hash_list*) malloc( sizeof (hash_list));
+    hlist -> hashes = (hash_t **) malloc(nthread * sizeof(hash_t *));
+    hlist -> page_indices = (uint64_t **) malloc(nthread *sizeof(uint64_t *));
+
+    uint64_t max_len = ram_bitmap_pages / nthread + 1; 
+
+    for (i =0; i<nthread; i++){
+        hlist -> hashes[i] = (hash_t *) malloc(max_len * sizeof(hash_t));
+        hlist -> page_indices[i] = (uint64_t *) malloc(max_len * sizeof(uint64_t));
+    }
+    hlist -> len = (uint64_t *) malloc(nthread * sizeof(uint64_t));
 
 	
+    //Malloc for remote hlist; 
+    remote_hlist = (hash_list*) malloc( sizeof (hash_list));
+    remote_hlist -> hashes = (hash_t **) malloc(nthread * sizeof(hash_t *));
+    remote_hlist -> page_indices = (uint64_t **) malloc(nthread *sizeof(uint64_t *));
+
+    for (i =0; i<nthread; i++){
+        remote_hlist -> hashes[i] = (hash_t *) malloc(max_len * sizeof(hash_t));
+        remote_hlist -> page_indices[i] = (uint64_t *) malloc(max_len * sizeof(uint64_t));
+    }
+    remote_hlist -> len = (uint64_t *) malloc(nthread * sizeof(uint64_t));
+
+
 
 
 	fake_page = (uint8_t *) malloc (4096);
@@ -539,46 +637,46 @@ void hash_init(void){
 
 //Construct a complete binary tree as http://mathworld.wolfram.com/images/eps-gif/CompleteBinaryTree_1000.gif
 
-void build_merkle_tree (unsigned long *bmap, unsigned long len){
-	dirty_count = 0;
-	update_dirty_indices(bmap, len);
+// void build_merkle_tree (unsigned long *bmap, unsigned long len){
+// 	dirty_count = 0;
+// 	update_dirty_indices(bmap, len);
 
-	mtree = (merkle_tree_t *) malloc (sizeof(merkle_tree_t));
+// 	mtree = (merkle_tree_t *) malloc (sizeof(merkle_tree_t));
 
 		
-	//get log base 2
-	unsigned long c = dirty_count; 
-	int tree_height = 1; 
-	while ( c >>= 1) { ++tree_height; }
-	// the tree height 
+// 	//get log base 2
+// 	unsigned long c = dirty_count; 
+// 	int tree_height = 1; 
+// 	while ( c >>= 1) { ++tree_height; }
+// 	// the tree height 
 
 
-	mtree-> tree_size = (1 << (tree_height)) - 1 + 2 * (len - (1 << (tree_height-1)));
-	mtree-> tree = (hash_t *) malloc (mtree->tree_size * sizeof(hash_t));
-	if (len - (1 << (tree_height-1)) == 0) {
-		mtree -> full = 1; 
-	}
-	else {
-		mtree -> full = 0;
-	}
-	mtree -> first_leaf_index = (mtree-> tree_size - 1) / 2 ;
-	mtree -> full_part_last_index = (1 << (tree_height)) - 2; 
-	mtree -> last_level_leaf_count =  2 * (len - (1 << (tree_height-1)));
+// 	mtree-> tree_size = (1 << (tree_height)) - 1 + 2 * (len - (1 << (tree_height-1)));
+// 	mtree-> tree = (hash_t *) malloc (mtree->tree_size * sizeof(hash_t));
+// 	if (len - (1 << (tree_height-1)) == 0) {
+// 		mtree -> full = 1; 
+// 	}
+// 	else {
+// 		mtree -> full = 0;
+// 	}
+// 	mtree -> first_leaf_index = (mtree-> tree_size - 1) / 2 ;
+// 	mtree -> full_part_last_index = (1 << (tree_height)) - 2; 
+// 	mtree -> last_level_leaf_count =  2 * (len - (1 << (tree_height-1)));
 
 
-	int i ;
-	for (i = 0; i<nthread; i++){
-		pthread_mutex_lock(&compute_locks[i]);
-		pthread_cond_broadcast(&compute_conds[i]);
-		pthread_mutex_unlock(&compute_locks[i]);
-	}
-	while(finished_thread < nthread){
-	}
-	long j;
-	for ( j= mtree->first_leaf_index-1 ; j >= 0; j--){
-		mtree->tree[j]=hashofhash(&(mtree->tree[2*j +1]), &(mtree->tree[2*j + 2]));
-	}
-}
+// 	int i ;
+// 	for (i = 0; i<nthread; i++){
+// 		pthread_mutex_lock(&compute_locks[i]);
+// 		pthread_cond_broadcast(&compute_conds[i]);
+// 		pthread_mutex_unlock(&compute_locks[i]);
+// 	}
+// 	while(finished_thread < nthread){
+// 	}
+// 	long j;
+// 	for ( j= mtree->first_leaf_index-1 ; j >= 0; j--){
+// 		mtree->tree[j]=hashofhash(&(mtree->tree[2*j +1]), &(mtree->tree[2*j + 2]));
+// 	}
+// }
 
 void compute_hash_list(unsigned long *bmap, unsigned long len){
 	
@@ -587,24 +685,15 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
     clock_add(&clock);
 
 
+    compute_bitmap = bmap;
+
 	int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
 
-	dirty_count = 0;
 	finished_thread = 0;
-	update_dirty_indices(bmap, len);
 
     clock_add(&clock);
 
-
-	if (hlist != NULL){
-		free(hlist->hashes);
-		free(hlist);
-	}
-
-	hlist = (hash_list*) malloc( sizeof (hash_list));
-	hlist -> hashes = (hash_t *) malloc(dirty_count * sizeof(hash_t));
-	hlist -> len =  dirty_count;
-
+    //xs fix it: slow
 	if (divergent_bitmap == NULL){	
 		divergent_bitmap = bitmap_new(ram_bitmap_pages);
 	}else{
@@ -635,18 +724,15 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
     printf("COMPUTE HASH LIST\n");
     clock_display(&clock);
 
-	//printf("compute hashlist finished, will return \n");
 
 
 }
 
 
 
-
-void compare_hash_list(hash_list *rhlist){
+void compare_hash_list(void){
 	compare_complete_thread = 0;
 	diverse_count = 0;
-	remote_hlist = rhlist; 
 	int i ; 
 	//printf("before waking up compare hashlist\n");
 	for (i = 0; i<nthread; i++){
@@ -663,7 +749,13 @@ void compare_hash_list(hash_list *rhlist){
 		pthread_spin_unlock(&compare_spin_lock);
 		usleep(100);
 	}
-    printf("Compared %"PRIu64 " pages, same = %" PRIu64" same rate = %"PRIu64"%%\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len);
+    uint64_t dirty_count =0; 
+    for (i = 0; i<nthread; i++){
+        dirty_count += hlist->len[i]; 
+    }
+
+
+    printf("Compared %"PRIu64 " pages, same = %" PRIu64" same rate = %"PRIu64"%%\n", dirty_count, dirty_count - diverse_count, (dirty_count - diverse_count) * 100 / dirty_count);
 
 	// fprintf(stderr ,"%"PRIu64 ",%" PRIu64", %"PRIu64"%%, %lu\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len, get_and_rest_output_counter());
 }

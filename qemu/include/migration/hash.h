@@ -28,8 +28,14 @@ struct merkle_tree_t {
 typedef struct merkle_tree_t merkle_tree_t; 
 
 struct hash_list {
-	hash_t *hashes;
-	uint64_t len; 
+	hash_t **hashes;
+
+	uint64_t **page_indices;
+
+	uint64_t *len;
+
+ 
+// /	uint64_t len; 
 };
 
 typedef struct hash_list hash_list;
@@ -39,6 +45,10 @@ typedef struct hash_list hash_list;
 
 
 hash_list* get_hash_list_pointer(void);
+
+
+hash_list* get_remote_hash_list_pointer(void);
+
 //Init global variables (locks, conds), call it once is enought
 void hash_init(void);
 
@@ -46,7 +56,7 @@ void build_merkle_tree (unsigned long *bitmap, unsigned long len);
 
 void compute_hash_list (unsigned long *bitmap, unsigned long len);
 
-void compare_hash_list(hash_list *hlist);
+void compare_hash_list(void);
 
 void print_hash_list(hash_list *list);
 
@@ -64,6 +74,6 @@ void clock_add(clock_handler *c_k);
 
 void clock_display(clock_handler *c_k);
 
-
+int get_n_thread(void);
 
 #endif //MEM_COMPARE_HASH_H

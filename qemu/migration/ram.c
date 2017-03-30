@@ -2348,7 +2348,19 @@ int backup_prepare_bitmap(void){
     // fflush(stdout);
 
 
-    memcpy(rdma_buffer, hlist->hashes, hlist->len * sizeof(hash_t)); 
+
+    int nthread = get_n_thread();
+
+    int i; 
+    for (i = 0; i< nthread; i++){
+        memcpy(rdma_buffer, hlist->hashes[i], hlist->len[i]* sizeof(hash_t));
+        ret = mc_rdma_put_colo_ctrl_buffer(hlist->len[i]* sizeof(hash_t));
+        if (ret < 0){
+            printf("Failed to send hashes from backup to primary\n");
+        }
+    }
+
+   // memcpy(rdma_buffer, hlist->hashes, hlist->len * sizeof(hash_t)); 
     
 
 
@@ -2356,22 +2368,28 @@ int backup_prepare_bitmap(void){
     // printf("\n after memcpy\n");
     // fflush(stdout);
 
-    ret = mc_rdma_put_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
+   // ret = mc_rdma_put_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
 
 
     // printf("\n after put buffer\n");
     // fflush(stdout);
-    if (ret < 0){
-        printf("Failed to send hashes from backup to primary\n");
+    
+    hash_list *remote_hlist = get_remote_hash_list_pointer();
+
+    for (i = 0; i<nthread; i++){
+        ret = mc_rdma_get_colo_ctrl_buffer(hlist->len[i] * sizeof(hash_t));
+        memcpy(remote_hlist->hashes[i], rdma_buffer, hlist->len[i] * sizeof(hash_t));
+        //XS: todo: check the length.
+
     }
 
-    ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
+    //ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
 
-    hash_list * primary_hashlist = (hash_list*) malloc(sizeof(hash_list));
-    primary_hashlist -> len = ret / sizeof(hash_t);
-    primary_hashlist -> hashes = (hash_t*)rdma_buffer;
+    // hash_list * primary_hashlist = (hash_list*) malloc(sizeof(hash_list));
+    // primary_hashlist -> len = ret / sizeof(hash_t);
+    // primary_hashlist -> hashes = (hash_t*)rdma_buffer;
 
-    compare_hash_list(primary_hashlist);
+    compare_hash_list();
 
 
     //unsigned long *divergent_bmap = get_divergent_bitmap();
@@ -2513,24 +2531,45 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
 
 
         hash_list *hlist = get_hash_list_pointer();
-        ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
+       
+        hash_list *remote_hlist = get_remote_hash_list_pointer();
 
-        hash_list *backup_hashlist = (hash_list *) malloc (sizeof (hash_list));
+        int nthread = get_n_thread();
+
+        int i; 
+
+        for (i=0; i< nthread; i++){
+            ret = mc_rdma_get_colo_ctrl_buffer(hlist->len[i] * sizeof(hash_t));
+            memcpy(remote_hlist->hashes[i], rdma_buffer, hlist->len[i] * sizeof(hash_t));
+            //xs: todo; check the length
+        }
+
+        //ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
+
+       // hash_list *backup_hashlist = (hash_list *) malloc (sizeof (hash_list));
         //backup_hashlist -> hashes = (hash_t *) rdma_buffer;
-        backup_hashlist -> len = ret / sizeof(hash_t);
+     //   backup_hashlist -> len = ret / sizeof(hash_t);
         /**
         primary send hash_list to backup so that backup has the divergent bitmap
         **/
-        backup_hashlist -> hashes = (hash_t*) malloc(backup_hashlist->len * sizeof(hash_t));
-        memcpy(backup_hashlist->hashes, rdma_buffer, backup_hashlist->len * sizeof(hash_t));
+      //  backup_hashlist -> hashes = (hash_t*) malloc(backup_hashlist->len * sizeof(hash_t));
+       // memcpy(backup_hashlist->hashes, rdma_buffer, backup_hashlist->len * sizeof(hash_t));
 
-
-        memcpy(rdma_buffer, hlist->hashes, hlist->len * sizeof(hash_t));
-        ret = mc_rdma_put_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
-
-        if(ret <0){
-            printf("failed to send hash_list from primary to backup");
+        for (i = 0; i< nthread; i++){
+            memcpy(rdma_buffer, hlist->hashes[i], hlist->len[i]* sizeof(hash_t));
+            ret = mc_rdma_put_colo_ctrl_buffer(hlist->len[i]* sizeof(hash_t));
+            if (ret < 0){
+                printf("Failed to send hashes from backup to primary\n");
+            }
         }
+
+
+        // memcpy(rdma_buffer, hlist->hashes, hlist->len * sizeof(hash_t));
+        // ret = mc_rdma_put_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
+
+        // if(ret <0){
+        //     printf("failed to send hash_list from primary to backup");
+        // }
 
 
 
@@ -2546,7 +2585,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         clock_add(&clock);
 
 
-        compare_hash_list(backup_hashlist);
+        compare_hash_list();
 
 
         // free(and_bitmap);
