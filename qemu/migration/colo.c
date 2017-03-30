@@ -441,7 +441,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     vm_stop_force_state(RUN_STATE_COLO);
 
 
-    clock_add(&clock);
+    
     //uint64_t output_counter = get_output_counter();
 
     qemu_mutex_unlock_iothread();
@@ -472,10 +472,13 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
      * qemu_mutex_lock_iothread() blocks the io thread for reading new network
      * packets
      */
+
+    clock_add(&clock);
     mc_send_message(COLO_MESSAGE_VMSTATE_SEND, &local_err);
     if (local_err) {
         goto out;
     }
+    clock_add(&clock);
 
     qemu_mutex_lock_iothread();
     /*
@@ -488,7 +491,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
 
 
-    clock_add(&clock);
 
     migrate_use_mc_rdma = false;
     colo_not_first_sync = true;
