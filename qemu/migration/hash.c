@@ -400,7 +400,7 @@ static void *compute_thread_func(void *arg){
      // //printf("[compute] Thread %d finished, workload from:  %lu to :%lu\n", t, job_start, job_end);
      // //printf("[compute] Thread %d finished\n", t);
     
-     printf("** thread %d finished \n", t);
+     printf("** thread %d finished, count=%d \n", t, count);
      fflush(stdout);
 
      pthread_spin_lock(&finished_lock);
