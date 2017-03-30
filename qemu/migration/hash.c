@@ -283,13 +283,13 @@ hash_list* get_remote_hash_list_pointer(void){
     return remote_hlist;
 }
 
-void print_hash_list(hash_list *list){
-	uint64_t i; 
-	for (i = 0; i<list->len; i++){
-		printf("%"PRIu64"\n", list->hashes[i]);
-	}
-	printf("*******end of hash list\n");
-}
+// void print_hash_list(hash_list *list){
+// 	uint64_t i; 
+// 	for (i = 0; i<list->len; i++){
+// 		printf("%"PRIu64"\n", list->hashes[i]);
+// 	}
+// 	printf("*******end of hash list\n");
+// }
 
 
 
