@@ -593,6 +593,9 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 	finished_thread = 0;
 	update_dirty_indices(bmap, len);
 
+    clock_add(&clock);
+
+
 	if (hlist != NULL){
 		free(hlist->hashes);
 		free(hlist);
