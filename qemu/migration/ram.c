@@ -2538,13 +2538,30 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
 
         int i; 
 
+        struct timeval t1, t2;
+        double elapsedTime;
+
+
+
         for (i=0; i< nthread; i++){
+            
+            gettimeofday(&t1, NULL);
+
             ret = mc_rdma_get_colo_ctrl_buffer(hlist->len[i] * sizeof(hash_t));
             memcpy(remote_hlist->hashes[i], rdma_buffer, hlist->len[i] * sizeof(hash_t));
+
+            elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
+            elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
+    
+            printf("[loop - %d] %f", i, elapsedTime);
+
+
+
+            gettimeofday(&t2, NULL);
             //xs: todo; check the length
         }
 
-        
+
         clock_add(&clock);
 
         //ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
