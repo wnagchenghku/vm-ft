@@ -2553,11 +2553,13 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
             elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
             elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
     
-            printf("[loop - %d] %f", i, elapsedTime);
-
-
-
             gettimeofday(&t2, NULL);
+
+            printf("[loop - %d] %f\n", i, elapsedTime);
+
+
+
+           
             //xs: todo; check the length
         }
 
