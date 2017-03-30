@@ -369,8 +369,8 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     Error *local_err = NULL;
     int ret = -1;
 
-    // clock_handler clock;
-    // clock_init(&clock);
+    clock_handler clock;
+    clock_init(&clock);
     // //clock_add(&clock);
     /**
     1. memcpy 
@@ -454,6 +454,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     //fflush(stdout);
 
 
+    clock_add(&clock);
 
 
     migrate_use_mc_rdma = false;
@@ -470,7 +471,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     migrate_use_mc_rdma = false;
 
 
-    //clock_add(&clock);
+    clock_add(&clock);
 
 
     /* flush QEMU_VM_EOF and RAM_SAVE_FLAG_EOS so that
@@ -577,8 +578,8 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     mc_flush_oldest_buffer(); //
     //clock_add(&clock);
 
-    
-    //clock_display(&clock);
+    printf("time of save memory\n");
+    clock_display(&clock);
 
     colo_compare_do_checkpoint();
 
