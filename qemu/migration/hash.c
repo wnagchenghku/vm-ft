@@ -369,7 +369,7 @@ static void *compute_thread_func(void *arg){
      for(i = 0; i * 64 < ram_bitmap_pages; i++){
         mask = 1 << t;
 
-        for (offset = i; offset <64 && i*64 +offset < ram_bitmap_pages; offset+=t){
+        for (offset = i; offset <64 && i*64 +offset < ram_bitmap_pages; offset+=nthread){
             if (mask & compute_bitmap[i]){  
                 hlist->hashes[t][count] = compute_hash(i*64 + offset); 
                 hlist->page_indices[t][count++] = i*64 + offset;
