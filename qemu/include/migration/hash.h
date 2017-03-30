@@ -52,5 +52,18 @@ void print_hash_list(hash_list *list);
 
 unsigned long * get_divergent_bitmap(void);
 
+typedef struct clock_handler_t {
+    struct timespec clocks[200];
+    int counter;
+}clock_handler;
+
+
+
+void clock_init(clock_handler *c_k);
+void clock_add(clock_handler *c_k);
+
+void clock_display(clock_handler *c_k);
+
+
 
 #endif //MEM_COMPARE_HASH_H

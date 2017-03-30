@@ -46,7 +46,7 @@
 #include "migration/colo.h"
 #include "mc-rdma.h"
 #include "migration/hash.h"
-#include "migration/gettime.h"
+//#include "migration/gettime.h"
 
 static uint8_t *rdma_buffer;
 

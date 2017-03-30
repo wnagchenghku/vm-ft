@@ -29,7 +29,7 @@
 
 #include "migration/hash.h"
 #include "net/net.h"
-#include "migration/gettime.h"
+//#include "migration/gettime.h"
 
 
 static bool vmstate_loading;
