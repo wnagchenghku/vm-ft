@@ -369,9 +369,9 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     Error *local_err = NULL;
     int ret = -1;
 
-    clock_handler clock;
-    clock_init(&clock);
-    clock_add(&clock);
+    // clock_handler clock;
+    // clock_init(&clock);
+    // //clock_add(&clock);
     /**
     1. memcpy 
     2. rdma_buffer = start address (optional)
@@ -437,12 +437,12 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
      * packets
      */
 
-    clock_add(&clock);
+    //clock_add(&clock);
     mc_send_message(COLO_MESSAGE_VMSTATE_SEND, &local_err);
     if (local_err) {
         goto out;
     }
-    clock_add(&clock);
+    //clock_add(&clock);
 
     qemu_mutex_lock_iothread();
     /*
@@ -470,7 +470,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     migrate_use_mc_rdma = false;
 
 
-    clock_add(&clock);
+    //clock_add(&clock);
 
 
     /* flush QEMU_VM_EOF and RAM_SAVE_FLAG_EOS so that
@@ -486,7 +486,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     }
     qemu_fflush(trans);
 
-    clock_add(&clock);
+    //clock_add(&clock);
 
     /* Resume primary guest */
     qemu_mutex_lock_iothread();
@@ -496,7 +496,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     qemu_mutex_unlock_iothread();
     //trace_colo_vm_state_change("stop", "run");
 
-    clock_add(&clock);
+    //clock_add(&clock);
 
 
 
@@ -519,7 +519,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         goto out;
     }
 
-    clock_add(&clock);
+    //clock_add(&clock);
 
     // colo_receive_check_message(s->rp_state.from_dst_file,
     //                    COLO_MESSAGE_VMSTATE_RECEIVED, &local_err);
@@ -531,7 +531,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
 
     
-    clock_add(&clock);
+    //clock_add(&clock);
 
 
     // colo_receive_check_message(s->rp_state.from_dst_file,
@@ -543,7 +543,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     }
 
    
-    clock_add(&clock);
+    //clock_add(&clock);
 
 
     if (colo_shutdown_requested) {
@@ -567,18 +567,18 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
 
     mc_start_buffer();
-    clock_add(&clock);
+    //clock_add(&clock);
 
 
     
 
-    clock_add(&clock);
+    //clock_add(&clock);
 
     mc_flush_oldest_buffer(); //
-    clock_add(&clock);
+    //clock_add(&clock);
 
     
-    clock_display(&clock);
+    //clock_display(&clock);
 
     colo_compare_do_checkpoint();
 

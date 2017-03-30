@@ -46,6 +46,7 @@
 #include "migration/colo.h"
 #include "mc-rdma.h"
 #include "migration/hash.h"
+#include "migration/gettime.h"
 
 static uint8_t *rdma_buffer;
 
@@ -2405,10 +2406,16 @@ static void printblocks(void){
 
 /* Called with iothread lock */
 //XS: the major function while doing migration. 
+
+
+
+
 static int ram_save_complete(QEMUFile *f, void *opaque)
 {
 
-
+    clock_handler clock;
+    clock_init(&clock);
+    clock_add(&clock);
 
     //printblocks();
 
@@ -2431,6 +2438,9 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
     // printf("\n Before going into checking of first sync\n");
     // fflush(stdout);
     if (colo_not_first_sync == true){
+
+        clock_add(&clock);
+
         // printf("\n getting into checking of first sync\n");
         // fflush(stdout);
         int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
@@ -2494,7 +2504,13 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         // printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
 
         //xs: test or bitmap
+
+        clock_add(&clock);
+
         compute_hash_list(or_bitmap, ram_bitmap_pages);
+
+        clock_add(&clock);
+
 
         hash_list *hlist = get_hash_list_pointer();
         ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
@@ -2527,9 +2543,12 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         // printf("backup hash list\n");
         // print_hash_list(backup_hashlist);
 
+        clock_add(&clock);
 
 
         compare_hash_list(backup_hashlist);
+
+
         // free(and_bitmap);
         // free(xor_bitmap);
         // free(or_bitmap);
@@ -2551,6 +2570,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
     /* flush all remaining blocks regardless of rate limiting */
     //xs: transfer pages
     //if (colo_not_first_sync == false){
+    clock_add(&clock);
 
         while (true) {
             int pages;
@@ -2570,6 +2590,9 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         }
     //}
 
+    clock_add(&clock);
+    
+
     unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
     int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
     bitmap_zero(bitmap, ram_bitmap_pages);
@@ -2582,6 +2605,10 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
     rcu_read_unlock();
 
     qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
+
+    clock_add(&clock);
+    clock_display(&clock);
+
 
     return 0;
 }
