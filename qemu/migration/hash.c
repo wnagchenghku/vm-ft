@@ -353,7 +353,9 @@ static void *compute_thread_func(void *arg){
      pthread_mutex_lock(&compute_locks[t]);
      pthread_cond_wait(&compute_conds[t], &compute_locks[t]);
      pthread_mutex_unlock(&compute_locks[t]);
-        
+    
+     printf("thread %d stated \n", t);
+     fflush(stdout);
      
      int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
 
@@ -397,6 +399,10 @@ static void *compute_thread_func(void *arg){
      // }
      // //printf("[compute] Thread %d finished, workload from:  %lu to :%lu\n", t, job_start, job_end);
      // //printf("[compute] Thread %d finished\n", t);
+    
+     printf("** thread %d finished \n", t);
+     fflush(stdout);
+
      pthread_spin_lock(&finished_lock);
      finished_thread++;
      pthread_spin_unlock(&finished_lock);
@@ -703,7 +709,6 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 	}
 
     clock_add(&clock);
-	//printf("\n\nBefore waking up compute threads, dirty_count = %lu, hashlist->hashes addr = %p\n\n", hlist->len, hlist->hashes);
 	int i; 
 	for (i = 0; i<nthread; i++){
 		pthread_mutex_lock(&compute_locks[i]);
