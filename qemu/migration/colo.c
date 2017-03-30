@@ -48,7 +48,7 @@ typedef struct clock_handler_t {
     int counter;
 }clock_handler;
 
-#define BILLION 1000000000L
+#define BILLION 1000L
 
 static void clock_init(clock_handler *c_k)
 {
@@ -75,7 +75,7 @@ static void clock_display(clock_handler *c_k)
         if (i != 0)
         {
             diff = BILLION * (end_time.tv_sec - start_time.tv_sec) + end_time.tv_nsec - start_time.tv_nsec;
-            sprintf(tmp, "%llu;", (long long unsigned int)diff);
+            sprintf(tmp, "%llu\n;", (long long unsigned int)diff);
             strcat(str, tmp);
         }
         start_time = end_time;
@@ -555,7 +555,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
     // colo_receive_check_message(s->rp_state.from_dst_file,
     //                    COLO_MESSAGE_VMSTATE_LOADED, &local_err);
-    mc_receive_check_message(COLO_MESSAGE_VMSTATE_LOADED, &local_err);
+    mc_receive_check_message(COLO_MESSAGE_VMSTATE_LOADED, &local_err); //around 20ms
 
     if (local_err) {
         goto out;
@@ -594,9 +594,11 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     control_clock = false;
     qemu_mutex_unlock_iothread();
     //trace_colo_vm_state_change("stop", "run");
-        clock_add(&clock);
+    
 
-    mc_flush_oldest_buffer();
+    clock_add(&clock);
+
+    mc_flush_oldest_buffer(); //
     clock_add(&clock);
 
     
