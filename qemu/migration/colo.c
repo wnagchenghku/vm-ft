@@ -556,6 +556,17 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     }
     clock_add(&clock);
 
+
+    /* Resume primary guest */
+    qemu_mutex_lock_iothread();
+    control_clock = true;
+    vm_start();
+    control_clock = false;
+    qemu_mutex_unlock_iothread();
+    //trace_colo_vm_state_change("stop", "run");
+    clock_add(&clock);
+
+
     // colo_receive_check_message(s->rp_state.from_dst_file,
     //                    COLO_MESSAGE_VMSTATE_LOADED, &local_err);
     mc_receive_check_message(COLO_MESSAGE_VMSTATE_LOADED, &local_err); //around 20ms
@@ -564,8 +575,9 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         goto out;
     }
 
-    clock_add(&clock);
    
+    clock_add(&clock);
+
 
     if (colo_shutdown_requested) {
         colo_send_message(s->to_dst_file, COLO_MESSAGE_GUEST_SHUTDOWN,
@@ -590,13 +602,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     mc_start_buffer();
     clock_add(&clock);
 
-    /* Resume primary guest */
-    qemu_mutex_lock_iothread();
-    control_clock = true;
-    vm_start();
-    control_clock = false;
-    qemu_mutex_unlock_iothread();
-    //trace_colo_vm_state_change("stop", "run");
+
     
 
     clock_add(&clock);
