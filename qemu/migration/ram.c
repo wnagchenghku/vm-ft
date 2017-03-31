@@ -2348,20 +2348,36 @@ int backup_prepare_bitmap(void){
     // fflush(stdout);
 
 
+    uint8_t * dst = rdma_buffer;
+
+
+
+
 
     int nthread = get_n_thread();
 
     int i; 
-    for (i = 0; i< nthread; i++){
-        memcpy(rdma_buffer, hlist->hashes[i], hlist->len[i]* sizeof(hash_t));
-        ret = mc_rdma_put_colo_ctrl_buffer(hlist->len[i]* sizeof(hash_t));
-        if (ret < 0){
-            printf("Failed to send hashes from backup to primary\n");
-        }
+
+    int64_t hash_nbytes = 0; 
+
+    for (i= 0; i<nthread; i++){
+        memcpy(dst, hlist->hashes[i], hlist->len[i]* sizeof(hash_t));
+        dst += hlist->len[i]* sizeof(hash_t);
+        hash_nbytes += hlist->len[i]* sizeof(hash_t);
     }
+
+
+    // for (i = 0; i< nthread; i++){
+    //     memcpy(rdma_buffer, hlist->hashes[i], hlist->len[i]* sizeof(hash_t));
+    //     ret = mc_rdma_put_colo_ctrl_buffer(hlist->len[i]* sizeof(hash_t));
+    //     if (ret < 0){
+    //         printf("Failed to send hashes from backup to primary\n");
+    //     }
+    // }
 
    // memcpy(rdma_buffer, hlist->hashes, hlist->len * sizeof(hash_t)); 
     
+
 
 
 
@@ -2374,14 +2390,14 @@ int backup_prepare_bitmap(void){
     // printf("\n after put buffer\n");
     // fflush(stdout);
     
-    hash_list *remote_hlist = get_remote_hash_list_pointer();
+    // hash_list *remote_hlist = get_remote_hash_list_pointer();
 
-    for (i = 0; i<nthread; i++){
-        ret = mc_rdma_get_colo_ctrl_buffer(hlist->len[i] * sizeof(hash_t));
-        memcpy(remote_hlist->hashes[i], rdma_buffer, hlist->len[i] * sizeof(hash_t));
-        //XS: todo: check the length.
+    // for (i = 0; i<nthread; i++){
+    //     ret = mc_rdma_get_colo_ctrl_buffer(hlist->len[i] * sizeof(hash_t));
+    //     memcpy(remote_hlist->hashes[i], rdma_buffer, hlist->len[i] * sizeof(hash_t));
+    //     //XS: todo: check the length.
 
-    }
+    // }
 
     //ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
 
@@ -2542,28 +2558,47 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         double elapsedTime;
 
 
+        uint8_t* src = rdma_buffer;
 
-        for (i=0; i< nthread; i++){
+        gettimeofday(&t1, NULL);
+
+
+        ret = mc_rdma_get_colo_ctrl_buffer(1);
+        for (i =0 ; i<nthread; i++){
+
+            memcpy(remote_hlist->hashes[i], src, hlist->len[i] * sizeof(hash_t));
+            src+=hlist->len[i] * sizeof(hash_t);
+        }
+
+        gettimeofday(&t2, NULL);
+
+        elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
+        elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
+
+
+        printf("[Waiting for bakcup bitmap] %f\n",elapsedTime);
+
+        // for (i=0; i< nthread; i++){
             
-            gettimeofday(&t1, NULL);
+        //     gettimeofday(&t1, NULL);
 
-            ret = mc_rdma_get_colo_ctrl_buffer(hlist->len[i] * sizeof(hash_t));
-            memcpy(remote_hlist->hashes[i], rdma_buffer, hlist->len[i] * sizeof(hash_t));
+        //     ret = mc_rdma_get_colo_ctrl_buffer(hlist->len[i] * sizeof(hash_t));
+        //     memcpy(remote_hlist->hashes[i], rdma_buffer, hlist->len[i] * sizeof(hash_t));
 
             
-            gettimeofday(&t2, NULL);
-            elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
-            elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
+        //     gettimeofday(&t2, NULL);
+        //     elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
+        //     elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
     
             
 
-            printf("[loop - %d] %f\n", i, elapsedTime);
+        //     printf("[loop - %d] %f\n", i, elapsedTime);
 
 
 
            
-            //xs: todo; check the length
-        }
+        //     //xs: todo; check the length
+        // }
 
 
         clock_add(&clock);
@@ -2579,13 +2614,13 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
       //  backup_hashlist -> hashes = (hash_t*) malloc(backup_hashlist->len * sizeof(hash_t));
        // memcpy(backup_hashlist->hashes, rdma_buffer, backup_hashlist->len * sizeof(hash_t));
 
-        for (i = 0; i< nthread; i++){
-            memcpy(rdma_buffer, hlist->hashes[i], hlist->len[i]* sizeof(hash_t));
-            ret = mc_rdma_put_colo_ctrl_buffer(hlist->len[i]* sizeof(hash_t));
-            if (ret < 0){
-                printf("Failed to send hashes from backup to primary\n");
-            }
-        }
+        // for (i = 0; i< nthread; i++){
+        //     memcpy(rdma_buffer, hlist->hashes[i], hlist->len[i]* sizeof(hash_t));
+        //     ret = mc_rdma_put_colo_ctrl_buffer(hlist->len[i]* sizeof(hash_t));
+        //     if (ret < 0){
+        //         printf("Failed to send hashes from backup to primary\n");
+        //     }
+        // }
 
 
         // memcpy(rdma_buffer, hlist->hashes, hlist->len * sizeof(hash_t));
