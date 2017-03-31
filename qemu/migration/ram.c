@@ -2327,12 +2327,24 @@ int backup_prepare_bitmap(void){
     //printbitmap(xor_bitmap);
 
 
+        struct timeval t1, t2, t3;
+        double elapsedTime;
 
-    unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
-    bitmap_or(or_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
-    // printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
+        gettimeofday(&t1, NULL);
 
-    //printbitmap(or_bitmap);
+
+        unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
+        gettimeofday(&t2, NULL);
+        bitmap_or(or_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
+        //printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
+        gettimeofday(&t3, NULL);
+
+        elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
+        elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
+        printf("[new bit] %f\n",elapsedTime);
+        elapsedTime = (t3.tv_sec - t2.tv_sec) * 1000.0;      // sec to ms
+        elapsedTime += (t3.tv_usec - t2.tv_usec) / 1000.0;   // us to ms
+        printf("[or bit] %f\n",elapsedTime);
 
 
 
@@ -2528,11 +2540,24 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         //     printf("\n\nFailed to do the xor operation on the bitmap\n\n");
         // }
         // printf("XOR Bitmap count%"PRId64"\n", slow_bitmap_count(xor_bitmap, ram_bitmap_pages));
+        struct timeval t1, t2, t3;
+        double elapsedTime;
+
+        gettimeofday(&t1, NULL);
 
 
         unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
+        gettimeofday(&t2, NULL);
         bitmap_or(or_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
         //printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
+        gettimeofday(&t3, NULL);
+
+        elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
+        elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
+        printf("[new bit] %f\n",elapsedTime);
+        elapsedTime = (t3.tv_sec - t2.tv_sec) * 1000.0;      // sec to ms
+        elapsedTime += (t3.tv_usec - t2.tv_usec) / 1000.0;   // us to ms
+        printf("[or bit] %f\n",elapsedTime);
 
         //xs: test or bitmap
 
@@ -2550,10 +2575,6 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         int nthread = get_n_thread();
 
         int i; 
-
-        struct timeval t1, t2;
-        double elapsedTime;
-
 
         uint8_t* src = rdma_buffer;
 
