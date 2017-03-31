@@ -2414,22 +2414,6 @@ uint8_t *mc_rdma_get_colo_ctrl_buffer_ptr(void)
 ssize_t mc_rdma_get_colo_ctrl_buffer(size_t size)
 {
     MC_RDMAControlHeader head;
-    struct ibv_recv_wr *bad_wr;
-    struct ibv_sge sge = {
-                            .addr = (uintptr_t)(rdma->colo_ctrl_wr_data.control),
-                            .length = MC_RDMA_CONTROL_MAX_BUFFER,
-                            .lkey = rdma->colo_ctrl_wr_data.control_mr->lkey,
-                         };
-
-    struct ibv_recv_wr recv_wr = {
-                                    .sg_list = &sge,
-                                    .num_sge = 1,
-                                 };
-
-
-    if (ibv_post_recv(rdma->colo_ctrl_qp, &recv_wr, &bad_wr)) {
-        return -1;
-    }
 
     int poll_result;
     struct ibv_wc wc;
@@ -2447,6 +2431,23 @@ ssize_t mc_rdma_get_colo_ctrl_buffer(size_t size)
 
     mc_network_to_control((void *) rdma->colo_ctrl_wr_data.control);
     memcpy(&head, rdma->colo_ctrl_wr_data.control, sizeof(MC_RDMAControlHeader));
+
+    struct ibv_recv_wr *bad_wr;
+    struct ibv_sge sge = {
+                            .addr = (uintptr_t)(rdma->colo_ctrl_wr_data.control),
+                            .length = MC_RDMA_CONTROL_MAX_BUFFER,
+                            .lkey = rdma->colo_ctrl_wr_data.control_mr->lkey,
+                         };
+
+    struct ibv_recv_wr recv_wr = {
+                                    .sg_list = &sge,
+                                    .num_sge = 1,
+                                 };
+
+
+    if (ibv_post_recv(rdma->colo_ctrl_qp, &recv_wr, &bad_wr)) {
+        return -1;
+    }
 
     return head.len;
 }
@@ -2485,6 +2486,23 @@ static void mc_accept_incoming_migration(void *arg)
     ret = mc_rdma_post_recv_control(rdma, MC_RDMA_WRID_READY);
 
     rdma->migration_started_on_destination = 1;
+
+
+    struct ibv_recv_wr *bad_wr;
+    struct ibv_sge sge = {
+                            .addr = (uintptr_t)(rdma->colo_ctrl_wr_data.control),
+                            .length = MC_RDMA_CONTROL_MAX_BUFFER,
+                            .lkey = rdma->colo_ctrl_wr_data.control_mr->lkey,
+                         };
+
+    struct ibv_recv_wr recv_wr = {
+                                    .sg_list = &sge,
+                                    .num_sge = 1,
+                                 };
+
+
+    if (ibv_post_recv(rdma->colo_ctrl_qp, &recv_wr, &bad_wr)) {
+    }
 }
 
 int mc_start_incoming_migration(void)
@@ -2565,5 +2583,24 @@ int mc_start_outgoing_migration(const char *mc_host_port)
 
     rdma->control_ready_expected = 1;
     rdma->nb_sent = 0;
+
+    struct ibv_recv_wr *bad_wr;
+    struct ibv_sge sge = {
+                            .addr = (uintptr_t)(rdma->colo_ctrl_wr_data.control),
+                            .length = MC_RDMA_CONTROL_MAX_BUFFER,
+                            .lkey = rdma->colo_ctrl_wr_data.control_mr->lkey,
+                         };
+
+    struct ibv_recv_wr recv_wr = {
+                                    .sg_list = &sge,
+                                    .num_sge = 1,
+                                 };
+
+
+    if (ibv_post_recv(rdma->colo_ctrl_qp, &recv_wr, &bad_wr)) {
+        return -1;
+    }
+
+
     return 0;
 }
