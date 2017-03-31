@@ -36,7 +36,7 @@
 
 
 
-#define nthread 20
+#define nthread 32
 
 //#define ALGO_TEST
 
