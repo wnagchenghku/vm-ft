@@ -2560,7 +2560,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         uint8_t* src = rdma_buffer;
 
 
-        ret = mc_rdma_get_colo_ctrl_buffer(sizeof(val));
+        ret = mc_rdma_get_colo_ctrl_buffer(sizeof(int));
         printf("val = %d\n", *(int*)rdma_buffer);
 
         gettimeofday(&t1, NULL);
