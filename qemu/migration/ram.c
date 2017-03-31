@@ -2351,10 +2351,7 @@ int backup_prepare_bitmap(void){
     uint8_t * dst = rdma_buffer;
 
 
-
-
-
-    int nthread = get_n_thread();
+    int nthread = get_n_thread(); 
 
     int i; 
 
@@ -2378,7 +2375,9 @@ int backup_prepare_bitmap(void){
    // memcpy(rdma_buffer, hlist->hashes, hlist->len * sizeof(hash_t)); 
     
 
-
+    int val = 123; 
+    memcpy(rdma_buffer, &val, sizeof(val));
+    mc_rdma_put_colo_ctrl_buffer(sizeof(val));
 
 
     // printf("\n after memcpy\n");
@@ -2560,17 +2559,22 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
 
         uint8_t* src = rdma_buffer;
 
+
+        int val;
+        ret = mc_rdma_get_colo_ctrl_buffer(sizeof(val));
+        printf("val = %d\n", val);
+
         gettimeofday(&t1, NULL);
-
-
         ret = mc_rdma_get_colo_ctrl_buffer(1);
+
+        gettimeofday(&t2, NULL);
         for (i =0 ; i<nthread; i++){
 
             memcpy(remote_hlist->hashes[i], src, hlist->len[i] * sizeof(hash_t));
             src+=hlist->len[i] * sizeof(hash_t);
         }
 
-        gettimeofday(&t2, NULL);
+        
 
         elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
         elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
