@@ -2384,7 +2384,7 @@ int backup_prepare_bitmap(void){
     // printf("\n after memcpy\n");
     // fflush(stdout);
 
-   // ret = mc_rdma_put_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
+    ret = mc_rdma_put_colo_ctrl_buffer(hash_nbytes);
 
 
     // printf("\n after put buffer\n");
