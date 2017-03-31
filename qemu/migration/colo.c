@@ -1055,8 +1055,13 @@ void *colo_process_incoming_thread(void *opaque)
             error_report("Can't open colo buffer for read");
             goto out;
         }
-        while(backup_system_reset_done == false){}
+        printf("before\n");
 
+        fflush(stdout);
+        while(backup_system_reset_done == false){}
+        printf("after\n");
+
+        fflush(stdout);
         qemu_mutex_lock_iothread();
         //qemu_system_reset(VMRESET_SILENT);
         vmstate_loading = true;

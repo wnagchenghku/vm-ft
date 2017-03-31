@@ -2378,17 +2378,14 @@ int backup_prepare_bitmap(void){
     int val = 123; 
     memcpy(rdma_buffer, &val, sizeof(val));
     mc_rdma_put_colo_ctrl_buffer(sizeof(val));
-    printf("\n after put 123\n");
-    fflush(stdout);
-
+   
     // printf("\n after memcpy\n");
     // fflush(stdout);
 
     ret = mc_rdma_put_colo_ctrl_buffer(hash_nbytes);
 
 
-    printf("\n after put buffer\n");
-    fflush(stdout);
+    
     
     // hash_list *remote_hlist = get_remote_hash_list_pointer();
 
@@ -2563,7 +2560,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
 
         ret = mc_rdma_get_colo_ctrl_buffer(sizeof(int));
         printf("val = %d\n", *(int*)rdma_buffer);
-        fflush(stdout);
+        
         gettimeofday(&t1, NULL);
         ret = mc_rdma_get_colo_ctrl_buffer(1);
 
