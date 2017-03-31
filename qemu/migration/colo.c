@@ -860,13 +860,13 @@ static void *backup_reset(void *arg){
         qemu_mutex_unlock_iothread();
         backup_system_reset_done = true;
         
-        /* discard colo disk buffer */
-        Error *local_err = NULL;
-        replication_do_checkpoint_all(&local_err);
-        if (local_err) {
-        }
+        // /* discard colo disk buffer */
+        // Error *local_err = NULL;
+        // replication_do_checkpoint_all(&local_err);
+        // if (local_err) {
+        // }
 
-        backup_disk_reset_done = true;
+        // backup_disk_reset_done = true;
     }
     return NULL;
 }
@@ -1082,13 +1082,13 @@ void *colo_process_incoming_thread(void *opaque)
             qemu_mutex_unlock_iothread();
             goto out;
         }
-        while(backup_disk_reset_done == false){}
-        // /* discard colo disk buffer */
-        // replication_do_checkpoint_all(&local_err);
-        // if (local_err) {
-        //     qemu_mutex_unlock_iothread();
-        //     goto out;
-        // }
+        // while(backup_disk_reset_done == false){}
+        /* discard colo disk buffer */
+        replication_do_checkpoint_all(&local_err);
+        if (local_err) {
+            qemu_mutex_unlock_iothread();
+            goto out;
+        }
 
         vmstate_loading = false;
         qemu_mutex_unlock_iothread();
