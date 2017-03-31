@@ -2398,12 +2398,6 @@ int backup_prepare_bitmap(void){
         elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
         printf("[new bit] %f\n",elapsedTime);
 
-
-
-
-    int val = 123; 
-    memcpy(rdma_buffer, &val, sizeof(val));
-    mc_rdma_put_colo_ctrl_buffer(sizeof(val));
    
     // printf("\n after memcpy\n");
     // fflush(stdout);
@@ -2591,10 +2585,6 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         int i; 
 
         uint8_t* src = rdma_buffer;
-
-
-        ret = mc_rdma_get_colo_ctrl_buffer(sizeof(int));
-        printf("val = %d\n", *(int*)rdma_buffer);
         
         gettimeofday(&t1, NULL);
         ret = mc_rdma_get_colo_ctrl_buffer(1);
