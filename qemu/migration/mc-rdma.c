@@ -2357,6 +2357,7 @@ connect_qp_exit:
 
 int mc_rdma_put_colo_ctrl_buffer(uint32_t size)
 {
+
     int ret = 0;
     MC_RDMAControlHeader head;
     head.len = size;

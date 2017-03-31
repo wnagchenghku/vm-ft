@@ -2299,10 +2299,20 @@ int backup_prepare_bitmap(void){
     memcpy(rdma_buffer, backup_bitmap, len * sizeof(unsigned long)); 
     //printf("rdma_buffer addr: %p\n", rdma_buffer);
 
+        struct timeval t1, t2, t3;
+        double elapsedTime;
+
+
+    gettimeofday(&t1, NULL);
+
     ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
     if (ret < 0){
         printf("Failed to send bitmap from backup to primary\n");
     }
+    gettimeofday(&t2, NULL);
+    elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
+        elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
+        printf("[put] %f\n",elapsedTime);
     //printf("[Bitmap] RDMA sent length %lu\n", ret);
 
     //unsigned long *primary_bitmap = (unsigned long*) rdma_buffer;
@@ -2327,8 +2337,6 @@ int backup_prepare_bitmap(void){
     //printbitmap(xor_bitmap);
 
 
-        struct timeval t1, t2, t3;
-        double elapsedTime;
 
         gettimeofday(&t1, NULL);
 
@@ -2391,7 +2399,7 @@ int backup_prepare_bitmap(void){
         printf("[new bit] %f\n",elapsedTime);
 
 
-    
+
 
     int val = 123; 
     memcpy(rdma_buffer, &val, sizeof(val));
