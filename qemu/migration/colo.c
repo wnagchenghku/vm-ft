@@ -857,9 +857,12 @@ static void *backup_reset(void *arg){
         pthread_mutex_unlock(&backup_reset_lock);
         qemu_mutex_lock_iothread();
         qemu_system_reset(VMRESET_SILENT);
+        printf("backup_system_reset_done\n");
+        fflush(stdout);
         qemu_mutex_unlock_iothread();
         backup_system_reset_done = true;
-        
+        printf("backup_system_reset_done\n");
+        fflush(stdout);
         // /* discard colo disk buffer */
         // Error *local_err = NULL;
         // replication_do_checkpoint_all(&local_err);
