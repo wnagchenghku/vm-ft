@@ -2334,17 +2334,17 @@ int backup_prepare_bitmap(void){
 
 
         unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
-        gettimeofday(&t2, NULL);
+       // gettimeofday(&t2, NULL);
         bitmap_or(or_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
         //printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
-        gettimeofday(&t3, NULL);
+        //gettimeofday(&t3, NULL);
 
-        elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
-        elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
-        printf("[new bit] %f\n",elapsedTime);
-        elapsedTime = (t3.tv_sec - t2.tv_sec) * 1000.0;      // sec to ms
-        elapsedTime += (t3.tv_usec - t2.tv_usec) / 1000.0;   // us to ms
-        printf("[or bit] %f\n",elapsedTime);
+        // elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
+        // elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
+        // printf("[new bit] %f\n",elapsedTime);
+        // elapsedTime = (t3.tv_sec - t2.tv_sec) * 1000.0;      // sec to ms
+        // elapsedTime += (t3.tv_usec - t2.tv_usec) / 1000.0;   // us to ms
+        // printf("[or bit] %f\n",elapsedTime);
 
 
 
@@ -2385,6 +2385,12 @@ int backup_prepare_bitmap(void){
     // }
 
    // memcpy(rdma_buffer, hlist->hashes, hlist->len * sizeof(hash_t)); 
+    gettimeofday(&t2, NULL);
+    elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
+        elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
+        printf("[new bit] %f\n",elapsedTime);
+
+
     
 
     int val = 123; 
