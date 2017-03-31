@@ -850,6 +850,8 @@ static bool backup_disk_reset_done;
 pthread_mutex_t backup_reset_lock;
 pthread_cond_t backup_reset_cond;
 
+static pthread_spinlock_t reset_spin_lock;
+
 static void *backup_reset(void *arg){
     while(1){
         pthread_mutex_lock(&backup_reset_lock);
@@ -860,9 +862,11 @@ static void *backup_reset(void *arg){
         printf("backup_system_reset_done\n");
         fflush(stdout);
         qemu_mutex_unlock_iothread();
+        pthread_spin_lock(&reset_spin_lock);
         backup_system_reset_done = true;
         printf("backup_system_reset_done\n");
         fflush(stdout);
+        pthread_spin_unlock(&reset_spin_lock);
         // /* discard colo disk buffer */
         // Error *local_err = NULL;
         // replication_do_checkpoint_all(&local_err);
@@ -949,6 +953,7 @@ void *colo_process_incoming_thread(void *opaque)
     if (local_err) {
         goto out;
     }
+    pthread_spin_init (&reset_spin_lock, 0); 
 
     while (mis->state == MIGRATION_STATUS_COLO) {
         // printf("****************inside Loop\n\n\n\n");
@@ -1061,7 +1066,17 @@ void *colo_process_incoming_thread(void *opaque)
         printf("before\n");
 
         fflush(stdout);
-        while(backup_system_reset_done == false){}
+        while (1)
+        {
+            pthread_spin_lock(&reset_spin_lock);
+            if (backup_system_reset_done == true)
+            {
+                pthread_spin_unlock(&reset_spin_lock);
+                break;
+            }
+            pthread_spin_unlock(&reset_spin_lock);
+        }
+        
         printf("after\n");
 
         fflush(stdout);
