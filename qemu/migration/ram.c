@@ -2404,7 +2404,7 @@ int backup_prepare_bitmap(void){
     // primary_hashlist -> len = ret / sizeof(hash_t);
     // primary_hashlist -> hashes = (hash_t*)rdma_buffer;
 
-    compare_hash_list();
+   // compare_hash_list();
 
 
     //unsigned long *divergent_bmap = get_divergent_bitmap();
@@ -2560,9 +2560,8 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         uint8_t* src = rdma_buffer;
 
 
-        int val;
         ret = mc_rdma_get_colo_ctrl_buffer(sizeof(val));
-        printf("val = %d\n", val);
+        printf("val = %d\n", *(int*)rdma_buffer);
 
         gettimeofday(&t1, NULL);
         ret = mc_rdma_get_colo_ctrl_buffer(1);
