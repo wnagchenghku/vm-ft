@@ -25,6 +25,9 @@
 #include <linux/kvm.h>
 #include <linux/kvm_para.h>
 
+#include "rsm-interface.h"
+#include "migration/colo.h"
+
 #define TYPE_KVM_CLOCK "kvmclock"
 #define KVM_CLOCK(obj) OBJECT_CHECK(KVMClockState, (obj), TYPE_KVM_CLOCK)
 
@@ -109,6 +112,11 @@ static void kvmclock_vm_state_change(void *opaque, int running,
         if (!cap_clock_ctrl) {
             return;
         }
+
+        if (control_clock && control_tsc() == 1) {
+            return;
+        }
+
         CPU_FOREACH(cpu) {
             ret = kvm_vcpu_ioctl(cpu, KVM_KVMCLOCK_CTRL, 0);
             if (ret) {

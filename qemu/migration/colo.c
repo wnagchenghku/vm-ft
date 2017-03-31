@@ -34,7 +34,9 @@ static bool vmstate_loading;
 
 bool colo_not_first_sync; 
 
-bool colo_primary_transfer; 
+bool colo_primary_transfer;
+
+bool control_clock;
 
 #define SYNC_OUTPUT_RANGE 0.98
 
@@ -526,8 +528,9 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
     /* Resume primary guest */
     qemu_mutex_lock_iothread();
+    control_clock = true;
     vm_start();
-    
+    control_clock = false;
     qemu_mutex_unlock_iothread();
     //trace_colo_vm_state_change("stop", "run");
     

@@ -39,5 +39,6 @@ void colo_do_failover(MigrationState *s);
 bool colo_shutdown(void);
 
 extern bool migrate_use_mc_rdma;
+extern bool control_clock;
 
 #endif

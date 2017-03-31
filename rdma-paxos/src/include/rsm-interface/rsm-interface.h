@@ -18,6 +18,7 @@ extern "C" {
 	int is_leader(void);
 	void proxy_wait_checkpoint_req(void);
 	void proxy_on_checkpoint_req(void);
+	int control_tsc(void);
 	
 #ifdef __cplusplus
 }
