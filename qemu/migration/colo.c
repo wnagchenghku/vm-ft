@@ -43,6 +43,46 @@ bool control_clock;
 /* colo buffer */
 #define COLO_BUFFER_BASE_SIZE (4 * 1024 * 1024)
 
+typedef struct clock_handler_t {
+    struct timespec clocks[15];
+    int counter;
+}clock_handler;
+
+#define BILLION 1000000000L
+
+static void clock_init(clock_handler *c_k)
+{
+    c_k->counter = 0;
+}
+static void clock_add(clock_handler *c_k)
+{
+    struct timespec clock_time;
+    clock_gettime(CLOCK_MONOTONIC, &clock_time);
+    c_k->clocks[c_k->counter] = clock_time;
+    c_k->counter++;
+}
+
+static void clock_display(clock_handler *c_k)
+{
+    uint64_t diff;
+    struct timespec start_time, end_time;
+    char tmp[64], str[256];
+    memset(str, 0, sizeof(str));
+    int i;
+    for (i = 0; i < c_k->counter; i++)
+    {
+        end_time = c_k->clocks[i];
+        if (i != 0)
+        {
+            diff = BILLION * (end_time.tv_sec - start_time.tv_sec) + end_time.tv_nsec - start_time.tv_nsec;
+            sprintf(tmp, "%llu;", (long long unsigned int)diff);
+            strcat(str, tmp);
+        }
+        start_time = end_time;
+    }
+    fprintf(stderr, "%s\n", str);
+}
+
 bool colo_supported(void)
 {
     return true;
@@ -364,6 +404,9 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     Error *local_err = NULL;
     int ret = -1;
 
+    clock_handler clock;
+    clock_init(&clock);
+    clock_add(&clock);
     /**
     1. memcpy 
     2. rdma_buffer = start address (optional)
@@ -539,6 +582,9 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     gettimeofday(&t2, 0);
     long elapsed = (t2.tv_sec-t1.tv_sec)*1000000 + t2.tv_usec-t1.tv_usec;
     printf("%ld us\n", elapsed);
+
+    clock_add(&clock);
+    clock_display(&clock);
 
     colo_compare_do_checkpoint();
 
