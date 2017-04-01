@@ -23,8 +23,6 @@ proxy_node* proxy;
 
 const char* config_path = "../rdma-paxos/target/nodes.local.cfg";
 
-#define TSC_INTERVAL 10
-
 static int checkpoint_req_status;
 
 int dare_main(proxy_node* proxy, uint8_t role)
@@ -125,16 +123,12 @@ int dare_main(proxy_node* proxy, uint8_t role)
     return 0;
 }
 
-static uint64_t req_between_ck;
-
 static void leader_handle_submit_req(void* buf, ssize_t data_size, uint8_t type)
 {
     assert(data_size <= IO_BUF_SIZE);
 
     pthread_spin_lock(&tailq_lock);
     uint64_t cur_rec = ++proxy->cur_rec;
-
-    req_between_ck++;
 
     tailq_entry_t* n2 = (tailq_entry_t*)malloc(sizeof(tailq_entry_t));
     n2->req_id = ++proxy->sync_req_id;

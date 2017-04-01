@@ -357,8 +357,6 @@ static uint64_t mc_receive_message_value(uint32_t expect_msg, Error **errp)
 //XS: primary do checkpoint
 //start doing the cehckpoint
 
-static struct timeval t1, t2;
-
 #define OPEN_FT
 static int colo_do_checkpoint_transaction(MigrationState *s,
                                           QEMUSizedBuffer *buffer)
