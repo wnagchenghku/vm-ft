@@ -42,15 +42,18 @@
 
 //#define USE_MERKLE_TREE 
 
-#define HASH_CRC
-//#define HASH_CKSUM
+
+#define HASH_CKSUM 0
+#define HASH_CRC 1
+#define HASH_FNV1 2
+#define HASH_FNV1a 3
+#define HASH_CITY64 4
 
 
+#define HASH_FUNC HASH_CITY64
 
 
-#ifdef HASH_CKSUM
-
-static hash_t hashofpage(uint8_t *data, int len){
+static hash_t cksum(uint8_t *data, int len){
 	int	nleft = len;
     hash_sum_t sum = 0;
     hash_t *w = (uint64_t *) data;
@@ -67,9 +70,7 @@ static hash_t hashofpage(uint8_t *data, int len){
     return(answer);
 } 
 
-#endif //HASH_CKSUM
 
-#ifdef HASH_CRC
 //A very simple CRC implementation from redis
 static const uint64_t crc64_tab[256] = {
     UINT64_C(0x0000000000000000), UINT64_C(0x7ad870c830358979),
@@ -212,13 +213,138 @@ static inline uint64_t crc64(uint64_t crc, const uint8_t *s, uint64_t l) {
     return crc;
 }
 
-static hash_t hashofpage(uint8_t *data, int len){
-	return crc64(0, data, len);
+
+static inline uint64_t FNV1(const uint8_t *s, uint64_t l){
+    uint64_t ret = 0xcbf29ce484222325; 
+    uint64_t prime = 0x100000001b3; 
+    int i ; 
+    for (i = 0; i< l; i++){
+        ret *= prime; 
+        ret = ret ^ s[i]; 
+    }
+    return ret; 
 }
 
 
 
-#endif //HASH_CRC
+
+static inline uint64_t FNV1a(const uint8_t *s, uint64_t l){
+    uint64_t ret = 0xcbf29ce484222325; 
+    uint64_t prime = 0x100000001b3; 
+    int i ; 
+    for (i = 0; i< l; i++){
+        ret = ret ^ s[i]; 
+        ret *= prime; 
+    }
+    return ret; 
+}
+
+
+static const uint64_t k1 = 0xb492b66fbe98f273ULL;
+
+static inline uint64_t ShiftMix(uint64_t val) {
+  return val ^ (val >> 47);
+}
+
+static inline uint64_t Fetch64(const uint8_t *p) {
+    uint64_t ret; 
+    memcpy(&ret, p, sizeof(ret));
+    return ret; 
+}
+
+static inline uint64_t Rotate(uint64_t val, int shift) {
+  // Avoid shifting by 64: doing so yields an undefined result.
+  return shift == 0 ? val : ((val >> shift) | (val << (64 - shift)));
+}
+
+
+
+
+static uint64_t HashLen16(uint64_t u, uint64_t v) {
+// Murmur-inspired hashing.
+  const uint64_t kMul = 0x9ddfea08eb382d69ULL;
+  uint64_t a = (u ^ v) * kMul;
+  a ^= (a >> 47);
+  uint64_t b = (v ^ a) * kMul;
+  b ^= (b >> 47);
+  b *= kMul;
+  return b;
+}
+
+
+static void weak(uint64_t w, uint64_t x, uint64_t y, uint64_t z, uint64_t a, uint64_t b, uint64_t *ret1, uint64_t *ret2) {
+  a += w;
+  b = Rotate(b + a + z, 21);
+  uint64_t c = a;
+  a += x;
+  a += y;
+  b += Rotate(a, 44);
+  *ret1 = a + z;
+  *ret2 = b + c; 
+  return;
+}
+
+
+
+static inline void WeakHashLen32WithSeeds(const uint8_t* s, uint64_t a, uint64_t b, uint64_t *ret1, uint64_t *ret2) {
+  return weak(Fetch64(s),Fetch64(s + 8),Fetch64(s + 16),Fetch64(s + 24), a, b, ret1, ret2);
+}
+
+
+static uint64_t city_hash_64(const uint8_t * s, size_t len){
+    uint64_t x = Fetch64(s + len -40);
+    uint64_t y = Fetch64(s + len -16) + Fetch64(s + len -56);
+    uint64_t z = HashLen16(Fetch64(s + len - 48) + len, Fetch64(s + len - 24));
+    uint64_t v1, v2, w1, w2; 
+
+    WeakHashLen32WithSeeds(s + len - 64, len, z, &v1, &v2);
+    WeakHashLen32WithSeeds(s + len - 32, y + k1, x, &w1, &w2);
+    x = x * k1 + Fetch64(s);
+    uint64_t tmp; 
+
+
+    len -= 64; 
+    do {
+        x = Rotate(x + y + v1 + Fetch64(s + 8), 37) * k1;
+        y = Rotate(y + v2 + Fetch64(s + 48), 42) * k1;
+        x ^= w2;
+        y += v1 + Fetch64(s + 40);
+        z = Rotate(z + w1, 33) * k1;
+        WeakHashLen32WithSeeds(s, v2 * k1, x + w1, &v1, &v2);
+        WeakHashLen32WithSeeds(s + 32, z + w2, y + Fetch64(s + 16), &w1, &w2);
+        tmp = z; 
+        z = x; 
+        x =tmp; 
+        s += 64;
+        len -= 64;
+    } while (len != 0);
+    return HashLen16(HashLen16(v1, w1) + ShiftMix(y) * k1 + z,
+                   HashLen16(v2, w2) + x);
+
+}
+
+
+static hash_t hashofpage(uint8_t *page , int len){
+#if HASH_FUNC == HASH_CKSUM
+    return cksum(page, len);
+
+#elif HASH_FUNC == HASH_CRC
+    return crc64(0, page, len);
+
+#elif HASH_FUNC == HASH_FNV1
+    return FNV1(page, len);
+
+#elif HASH_FUNC == HASH_FNV1a
+    return FNV1a(page, len);
+
+#elif HASH_FUNC == HASH_CITY64
+    return city_hash_64(page, len);
+
+#endif
+
+
+}
+
 
 
 static hash_t hashofhash(hash_t *a, hash_t *b){
