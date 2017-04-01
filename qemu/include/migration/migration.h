@@ -358,5 +358,9 @@ void rdma_backup_init(void);
 int backup_prepare_bitmap(void);
 
 
+void mc_clear_backup_bmap(void);
+
+
+
 
 #endif

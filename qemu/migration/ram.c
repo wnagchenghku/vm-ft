@@ -3451,6 +3451,17 @@ void colo_flush_ram_cache(void)
 
 }
 
+void mc_clear_backup_bmap(void){
+
+    unsigned long *backup_bitmap;
+    backup_bitmap = atomic_rcu_read(&backup_bitmap_rcu)->bmap;
+
+    int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
+    bitmap_zero(backup_bitmap, ram_bitmap_pages);
+    
+}
+
+
 static SaveVMHandlers savevm_ram_handlers = {
     .save_live_setup = ram_save_setup,
     .save_live_iterate = ram_save_iterate,

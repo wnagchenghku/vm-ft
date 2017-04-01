@@ -1086,6 +1086,7 @@ void *colo_process_incoming_thread(void *opaque)
         //colo_flush_ram_cache();
         //XS: GUESS CPU
 
+        mc_clear_backup_bmap();
         // printf("\n\n****** before [qemu_load_device_state] *****");
         // fflush(stdout);
 
