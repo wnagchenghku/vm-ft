@@ -201,11 +201,7 @@ static void set_filter_mirror_fd(void*arg, int fd)
 
 int control_tsc(void)
 {
-    if (req_between_ck <= TSC_INTERVAL)
-        return 0; // idle, do tsc sync
-    
-    req_between_ck = 1; //called between vm_resume
-    return 0;
+    return proxy->control_tsc;
 }
 
 static void stablestorage_save_request(void* data,void*arg)

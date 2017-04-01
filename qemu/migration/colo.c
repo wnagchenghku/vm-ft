@@ -1131,7 +1131,9 @@ void *colo_process_incoming_thread(void *opaque)
         }
 
         qemu_mutex_lock_iothread();
+        control_clock = true;
         vm_start();
+        control_clock = false;
         //trace_colo_vm_state_change("stop", "run");
         qemu_mutex_unlock_iothread();
         qemu_fclose(fb);
