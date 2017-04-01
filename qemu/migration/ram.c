@@ -2462,13 +2462,6 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         migration_bitmap_sync();
     }
 
-
-
-
-
-
-
-
     if (colo_not_first_sync == true){
 
 
@@ -2479,21 +2472,13 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
 
         memcpy(rdma_buffer, bitmap, len * sizeof(unsigned long)); 
         
-
-
-
         ssize_t ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
         if (ret < 0){
             printf("Failed to send bitmap from primary to backup\n");
         }
 
-
-
-        //printf("[Bitmap] RDMA sent length %lu\n", ret);
-
         //XS: receive the bitmap from backup. 
         ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
-        printf("[Bitmap] RDMA received length %lu\n", ret);
         unsigned long *backup_bitmap = (unsigned long *) rdma_buffer;
         
         /******

@@ -400,8 +400,8 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         qemu_mutex_unlock_iothread();
         goto out;
     }
-   
 
+    clock_add(&clock);
     vm_stop_force_state(RUN_STATE_COLO);
 
 
@@ -463,7 +463,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
     colo_primary_transfer = true;
     qemu_savevm_live_state(s->to_dst_file);
-    //printf("\n\n******* qemu_savevm_live_state returned\n\n");
     colo_primary_transfer = false;
 
 
@@ -486,13 +485,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         goto out;
     }
     qemu_fflush(trans);
-
-    //clock_add(&clock);
-
-
-    //clock_add(&clock);
-
-
 
     /* we send the total size of the vmstate first */
     size = qsb_get_length(buffer);
@@ -522,22 +514,14 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     if (local_err) {
         goto out;
     }
-
-
-    
-    //clock_add(&clock);
-
-
+    clock_add(&clock);
     // colo_receive_check_message(s->rp_state.from_dst_file,
     //                    COLO_MESSAGE_VMSTATE_LOADED, &local_err);
     mc_receive_check_message(COLO_MESSAGE_VMSTATE_LOADED, &local_err); //around 20ms
-
+    clock_add(&clock);
     if (local_err) {
         goto out;
     }
-
-   
-
 
 
     if (colo_shutdown_requested) {
@@ -557,11 +541,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
     ret = 0;
 
-
-
-
     mc_start_buffer();
-    //clock_add(&clock);
 
     /* Resume primary guest */
     qemu_mutex_lock_iothread();
@@ -571,17 +551,9 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     qemu_mutex_unlock_iothread();
     //trace_colo_vm_state_change("stop", "run");
 
+    mc_flush_oldest_buffer();
+    clock_add(&clock);
 
-   
-    //clock_add(&clock);
-    
-
-    //clock_add(&clock);
-
-    mc_flush_oldest_buffer(); //
-    //clock_add(&clock);
-
-    printf("time of save memory\n");
     clock_display(&clock);
 
     colo_compare_do_checkpoint();
