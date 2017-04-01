@@ -359,6 +359,7 @@ static uint64_t mc_receive_message_value(uint32_t expect_msg, Error **errp)
 
 static struct timeval t1, t2;
 
+#define OPEN_FT
 static int colo_do_checkpoint_transaction(MigrationState *s,
                                           QEMUSizedBuffer *buffer)
 {
@@ -411,7 +412,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     qemu_mutex_unlock_iothread();
     //trace_colo_vm_state_change("run", "stop");
     //reset_output_counter();
-
+#ifdef OPEN_FT
     //mc_send_message_value(COLO_MESSAGE_VMSTATE_SIZE, output_counter, &local_err);    
 
 
@@ -538,7 +539,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         /* Fix me: Just let the colo thread exit ? */
         qemu_thread_exit(0);
     }
-
+#endif
     ret = 0;
 
     mc_start_buffer();
