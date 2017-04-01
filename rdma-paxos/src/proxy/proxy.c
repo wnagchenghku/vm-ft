@@ -23,8 +23,6 @@ proxy_node* proxy;
 
 const char* config_path = "../rdma-paxos/target/nodes.local.cfg";
 
-#define TSC_INTERVAL 10
-
 static int checkpoint_req_status;
 
 int dare_main(proxy_node* proxy, uint8_t role)
@@ -201,11 +199,7 @@ static void set_filter_mirror_fd(void*arg, int fd)
 
 int control_tsc(void)
 {
-    if (req_between_ck <= TSC_INTERVAL)
-        return 0; // idle, do tsc sync
-    
-    req_between_ck = 1; //called between vm_resume
-    return 0;
+    return proxy->control_tsc;
 }
 
 static void stablestorage_save_request(void* data,void*arg)

@@ -49,6 +49,8 @@ typedef struct proxy_node_t{
     int stat_log;
     int req_log;
 
+    int control_tsc;
+
     FILE* req_log_file;
     FILE* sys_log_file;
     char* db_name;
