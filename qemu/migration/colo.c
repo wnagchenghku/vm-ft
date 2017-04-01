@@ -831,19 +831,17 @@ static void *backup_reset(void *arg){
         pthread_mutex_unlock(&backup_reset_lock);
         qemu_mutex_lock_iothread();
         qemu_system_reset(VMRESET_SILENT);
-        printf("backup_system_reset_done\n");
-        fflush(stdout);
-        qemu_mutex_unlock_iothread();
-        pthread_spin_lock(&reset_spin_lock);
-        backup_system_reset_done = true;
-        printf("backup_system_reset_done\n");
-        fflush(stdout);
-        pthread_spin_unlock(&reset_spin_lock);
+       
         // /* discard colo disk buffer */
-        // Error *local_err = NULL;
-        // replication_do_checkpoint_all(&local_err);
+        Error *local_err = NULL;
+        replication_do_checkpoint_all(&local_err);
         // if (local_err) {
         // }
+
+         qemu_mutex_unlock_iothread();
+        pthread_spin_lock(&reset_spin_lock);
+        backup_system_reset_done = true;
+        pthread_spin_unlock(&reset_spin_lock);
 
         // backup_disk_reset_done = true;
     }
@@ -1035,9 +1033,6 @@ void *colo_process_incoming_thread(void *opaque)
             error_report("Can't open colo buffer for read");
             goto out;
         }
-        printf("before\n");
-
-        fflush(stdout);
         while (1)
         {
             pthread_spin_lock(&reset_spin_lock);
@@ -1049,9 +1044,6 @@ void *colo_process_incoming_thread(void *opaque)
             pthread_spin_unlock(&reset_spin_lock);
         }
         
-        printf("after\n");
-
-        fflush(stdout);
         qemu_mutex_lock_iothread();
         //qemu_system_reset(VMRESET_SILENT);
         vmstate_loading = true;
@@ -1072,11 +1064,11 @@ void *colo_process_incoming_thread(void *opaque)
             goto out;
         }
         /* discard colo disk buffer */
-        replication_do_checkpoint_all(&local_err);
-        if (local_err) {
-            qemu_mutex_unlock_iothread();
-            goto out;
-        }
+        // replication_do_checkpoint_all(&local_err);
+        // if (local_err) {
+        //     qemu_mutex_unlock_iothread();
+        //     goto out;
+        // }
 
         vmstate_loading = false;
         qemu_mutex_unlock_iothread();
