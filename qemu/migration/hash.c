@@ -812,9 +812,6 @@ void hash_init(void){
 
 void compute_hash_list(unsigned long *bmap, unsigned long len){
 	
-    clock_handler clock;
-    clock_init(&clock);
-    clock_add(&clock);
 
 
     compute_bitmap = bmap;
@@ -823,7 +820,6 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 
 	finished_thread = 0;
 
-    clock_add(&clock);
 
     //xs fix it: slow
 	if (divergent_bitmap == NULL){	
@@ -834,14 +830,12 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 		divergent_bitmap = bitmap_new(ram_bitmap_pages);
 	}
 
-    clock_add(&clock);
 	int i; 
 	for (i = 0; i<nthread; i++){
 		pthread_mutex_lock(&compute_locks[i]);
 		pthread_cond_broadcast(&compute_conds[i]);
 		pthread_mutex_unlock(&compute_locks[i]);
 	}
-	clock_add(&clock);
 	while(1){
 		pthread_spin_lock(&finished_lock);
 		if (finished_thread == nthread){
@@ -851,11 +845,6 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 		pthread_spin_unlock(&finished_lock);
 		usleep(100);
 	}
-    clock_add(&clock);
-    printf("COMPUTE HASH LIST\n");
-    clock_display(&clock);
-
-
 
 }
 

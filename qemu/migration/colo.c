@@ -1083,16 +1083,9 @@ void *colo_process_incoming_thread(void *opaque)
         qemu_mutex_lock_iothread();
         //qemu_system_reset(VMRESET_SILENT);
         vmstate_loading = true;
-        //colo_flush_ram_cache();
-        //XS: GUESS CPU
 
         mc_clear_backup_bmap(); //xs: clear the bakcup bitmap to zeros
-        // printf("\n\n****** before [qemu_load_device_state] *****");
-        // fflush(stdout);
-
-
-        //xs:! This function failed
-        //printf("\n***********\n[RDMA_BUFFER ADDR] :%p\n", rdma_buffer);
+   
         ret = qemu_load_device_state(fb); 
 
         if (ret < 0) {
@@ -1106,7 +1099,6 @@ void *colo_process_incoming_thread(void *opaque)
             qemu_mutex_unlock_iothread();
             goto out;
         }
-        // while(backup_disk_reset_done == false){}
         /* discard colo disk buffer */
         replication_do_checkpoint_all(&local_err);
         if (local_err) {

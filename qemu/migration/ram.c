@@ -2299,22 +2299,14 @@ int backup_prepare_bitmap(void){
     memcpy(rdma_buffer, backup_bitmap, len * sizeof(unsigned long)); 
     //printf("rdma_buffer addr: %p\n", rdma_buffer);
 
-        struct timeval t1, t2, t3;
-        double elapsedTime;
+        
 
-
-    gettimeofday(&t1, NULL);
 
     ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
     if (ret < 0){
         printf("Failed to send bitmap from backup to primary\n");
     }
-    gettimeofday(&t2, NULL);
-    elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
-        elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
-        printf("[put] %f\n",elapsedTime);
-    //printf("[Bitmap] RDMA sent length %lu\n", ret);
-
+  
     //unsigned long *primary_bitmap = (unsigned long*) rdma_buffer;
 
 
@@ -2337,8 +2329,6 @@ int backup_prepare_bitmap(void){
     //printbitmap(xor_bitmap);
 
 
-
-        gettimeofday(&t1, NULL);
 
 
         unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
@@ -2393,10 +2383,6 @@ int backup_prepare_bitmap(void){
     // }
 
    // memcpy(rdma_buffer, hlist->hashes, hlist->len * sizeof(hash_t)); 
-    gettimeofday(&t2, NULL);
-    elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
-        elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
-        printf("[new bit] %f\n",elapsedTime);
 
    
     // printf("\n after memcpy\n");
@@ -2464,11 +2450,8 @@ static void printblocks(void){
 static int ram_save_complete(QEMUFile *f, void *opaque)
 {
 
-    clock_handler clock;
-    clock_init(&clock);
-    clock_add(&clock);
 
-    //printblocks();
+
 
     rdma_buffer = mc_rdma_get_colo_ctrl_buffer_ptr();
     rcu_read_lock();
@@ -2485,27 +2468,17 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
 
 
 
-    //XS: TRY to transfer the dirty bitmap; 
-    // printf("\n Before going into checking of first sync\n");
-    // fflush(stdout);
+
     if (colo_not_first_sync == true){
 
-        clock_add(&clock);
 
-        // printf("\n getting into checking of first sync\n");
-        // fflush(stdout);
         int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
         long len =  BITS_TO_LONGS(ram_bitmap_pages);
         unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
         
 
-        // printf("\n before memcpy\n");
-        // fflush(stdout);
         memcpy(rdma_buffer, bitmap, len * sizeof(unsigned long)); 
-        //int tmp = 4;
-        //memcpy(rdma_buffer, &tmp, sizeof(tmp));
-        // printf("\n after memcpy before put\n");
-        // fflush(stdout);
+        
 
 
 
@@ -2513,8 +2486,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         if (ret < 0){
             printf("Failed to send bitmap from primary to backup\n");
         }
-        // printf("\n after put\n");
-        // fflush(stdout);
+
 
 
         //printf("[Bitmap] RDMA sent length %lu\n", ret);
@@ -2548,33 +2520,19 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         //     printf("\n\nFailed to do the xor operation on the bitmap\n\n");
         // }
         // printf("XOR Bitmap count%"PRId64"\n", slow_bitmap_count(xor_bitmap, ram_bitmap_pages));
-        struct timeval t1, t2, t3;
-        double elapsedTime;
 
-        gettimeofday(&t1, NULL);
 
 
         unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
-        gettimeofday(&t2, NULL);
         bitmap_or(or_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
         //printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
-        gettimeofday(&t3, NULL);
 
-        elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
-        elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
-        printf("[new bit] %f\n",elapsedTime);
-        elapsedTime = (t3.tv_sec - t2.tv_sec) * 1000.0;      // sec to ms
-        elapsedTime += (t3.tv_usec - t2.tv_usec) / 1000.0;   // us to ms
-        printf("[or bit] %f\n",elapsedTime);
+   
 
         //xs: test or bitmap
 
-        clock_add(&clock);
 
         compute_hash_list(or_bitmap, ram_bitmap_pages);
-
-        clock_add(&clock);
-
 
         hash_list *hlist = get_hash_list_pointer();
        
@@ -2586,24 +2544,15 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
 
         uint8_t* src = rdma_buffer;
         
-        gettimeofday(&t1, NULL);
         ret = mc_rdma_get_colo_ctrl_buffer(1);
 
-        gettimeofday(&t2, NULL);
         for (i =0 ; i<nthread; i++){
 
             memcpy(remote_hlist->hashes[i], src, hlist->len[i] * sizeof(hash_t));
             src+=hlist->len[i] * sizeof(hash_t);
         }
 
-        
-
-        elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
-        elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
-
-
-        printf("[Waiting for bakcup bitmap] %f\n",elapsedTime);
-
+  
         // for (i=0; i< nthread; i++){
             
         //     gettimeofday(&t1, NULL);
@@ -2627,8 +2576,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         // }
 
 
-        clock_add(&clock);
-
+       
         //ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
 
        // hash_list *backup_hashlist = (hash_list *) malloc (sizeof (hash_list));
@@ -2667,16 +2615,11 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         // printf("backup hash list\n");
         // print_hash_list(backup_hashlist);
 
-        clock_add(&clock);
-
-
+        
         compare_hash_list();
 
 
-        // free(and_bitmap);
-        // free(xor_bitmap);
-        // free(or_bitmap);
-        // free(backup_hashlist);
+        
 
 
     }
@@ -2694,7 +2637,6 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
     /* flush all remaining blocks regardless of rate limiting */
     //xs: transfer pages
     //if (colo_not_first_sync == false){
-    clock_add(&clock);
 
         while (true) {
             int pages;
@@ -2712,9 +2654,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
                 break;
             }
         }
-    //}
-
-    clock_add(&clock);
+    
     
 
     unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
@@ -2729,9 +2669,6 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
     rcu_read_unlock();
 
     qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
-
-    clock_add(&clock);
-    clock_display(&clock);
 
 
     return 0;
@@ -3458,7 +3395,7 @@ void mc_clear_backup_bmap(void){
 
     int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
     bitmap_zero(backup_bitmap, ram_bitmap_pages);
-    
+
 }
 
 
