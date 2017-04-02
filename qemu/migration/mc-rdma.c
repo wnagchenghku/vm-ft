@@ -19,6 +19,7 @@
 
 #define MC_RDMA_CONTROL_MAX_BUFFER (512 * 1024 * 1024)
 #define MC_RDMA_CONTROL_MAX_COMMANDS_PER_MESSAGE 4096
+#define MC_RDMA_CONTROL_RESERVED_RECV_BUFFER (MC_RDMA_CONTROL_MAX_BUFFER / 2)
 
 #define MC_RDMA_CAPABILITY_PIN_ALL 0x01
 
@@ -2364,7 +2365,7 @@ int mc_rdma_put_colo_ctrl_buffer(uint32_t size)
     MC_RDMAWorkRequestData *wr = &rdma->colo_ctrl_wr_data;
     struct ibv_send_wr *bad_wr;
     struct ibv_sge sge = {
-                           .addr = (uintptr_t)(wr->control),
+                           .addr = (uintptr_t)(wr->control + MC_RDMA_CONTROL_RESERVED_RECV_BUFFER),
                            .length = head.len + sizeof(MC_RDMAControlHeader),
                            .lkey = wr->control_mr->lkey,
                          };
@@ -2375,9 +2376,9 @@ int mc_rdma_put_colo_ctrl_buffer(uint32_t size)
                                    .num_sge = 1,
                                 };
 
-    assert(sge.length <= MC_RDMA_CONTROL_MAX_BUFFER);
-    memcpy(wr->control, &head, sizeof(MC_RDMAControlHeader));
-    mc_control_to_network((void *) wr->control);
+    assert(sge.length <= MC_RDMA_CONTROL_RESERVED_RECV_BUFFER);
+    memcpy(wr->control + MC_RDMA_CONTROL_RESERVED_RECV_BUFFER, &head, sizeof(MC_RDMAControlHeader));
+    mc_control_to_network((void *) (wr->control + MC_RDMA_CONTROL_RESERVED_RECV_BUFFER));
 
     ret = ibv_post_send(rdma->colo_ctrl_qp, &send_wr, &bad_wr);
 
@@ -2407,7 +2408,7 @@ uint8_t *mc_rdma_get_colo_ctrl_buffer_ptr(void)
 {
     MC_RDMAWorkRequestData *wr = &rdma->colo_ctrl_wr_data;
 
-    uint8_t *ptr = wr->control + sizeof(MC_RDMAControlHeader);
+    uint8_t *ptr = wr->control + MC_RDMA_CONTROL_RESERVED_RECV_BUFFER + sizeof(MC_RDMAControlHeader);
 
     return ptr;
 }
@@ -2432,6 +2433,7 @@ ssize_t mc_rdma_get_colo_ctrl_buffer(size_t size)
 
     mc_network_to_control((void *) rdma->colo_ctrl_wr_data.control);
     memcpy(&head, rdma->colo_ctrl_wr_data.control, sizeof(MC_RDMAControlHeader));
+    memcpy(wr->control + MC_RDMA_CONTROL_RESERVED_RECV_BUFFER + sizeof(MC_RDMAControlHeader), wr->control + sizeof(MC_RDMAControlHeader), head.len);
 
     struct ibv_recv_wr *bad_wr;
     struct ibv_sge sge = {
