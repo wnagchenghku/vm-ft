@@ -2416,8 +2416,8 @@ ssize_t mc_rdma_get_colo_ctrl_buffer(size_t size)
 {
     MC_RDMAControlHeader head;
 
-    int poll_result;
-    struct ibv_wc wc;
+    // int poll_result;
+    // struct ibv_wc wc;
 
     // do {
     //     poll_result = ibv_poll_cq(rdma->colo_ctrl_cq, 1, &wc);
