@@ -2433,7 +2433,7 @@ ssize_t mc_rdma_get_colo_ctrl_buffer(size_t size)
 
     mc_network_to_control((void *) rdma->colo_ctrl_wr_data.control);
     memcpy(&head, rdma->colo_ctrl_wr_data.control, sizeof(MC_RDMAControlHeader));
-    memcpy(wr->control + MC_RDMA_CONTROL_RESERVED_RECV_BUFFER + sizeof(MC_RDMAControlHeader), wr->control + sizeof(MC_RDMAControlHeader), head.len);
+    memcpy(rdma->colo_ctrl_wr_data.control + MC_RDMA_CONTROL_RESERVED_RECV_BUFFER + sizeof(MC_RDMAControlHeader), rdma->colo_ctrl_wr_data.control + sizeof(MC_RDMAControlHeader), head.len);
 
     struct ibv_recv_wr *bad_wr;
     struct ibv_sge sge = {
