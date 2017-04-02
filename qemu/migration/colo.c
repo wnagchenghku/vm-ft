@@ -844,10 +844,43 @@ static int wait_output(uint64_t primary_output_counter)
     return 0;
 }
 
+
+static bool backup_system_reset_done;
+static bool backup_disk_reset_done;
+pthread_mutex_t backup_reset_lock;
+pthread_cond_t backup_reset_cond;
+
+static void *backup_reset(void *arg){
+    while(1){
+        pthread_mutex_lock(&backup_reset_lock);
+        pthread_cond_wait(&backup_reset_cond, &backup_reset_lock);
+        pthread_mutex_unlock(&backup_reset_lock);
+        qemu_mutex_lock_iothread();
+        qemu_system_reset(VMRESET_SILENT);
+        qemu_mutex_unlock_iothread();
+        backup_system_reset_done = true;
+        
+        /* discard colo disk buffer */
+        Error *local_err = NULL;
+        replication_do_checkpoint_all(&local_err);
+        if (local_err) {
+        }
+
+        backup_disk_reset_done = true;
+    }
+    return NULL;
+}
+
 //XS: backup thread
 void *colo_process_incoming_thread(void *opaque)
 {
     hash_init();
+
+    pthread_mutex_init(&backup_reset_lock, NULL);
+    pthread_cond_init(&backup_reset_cond, NULL);
+    pthread_t backup_reset_thread;
+    pthread_create(&backup_reset_thread, NULL,backup_reset, NULL);
+
     // printf("\nHASH INIT CALLED\n");
     MigrationIncomingState *mis = opaque;
     QEMUFile *fb = NULL;
@@ -917,7 +950,8 @@ void *colo_process_incoming_thread(void *opaque)
     while (mis->state == MIGRATION_STATUS_COLO) {
         // printf("****************inside Loop\n\n\n\n");
         // fflush(stdout);
-        
+        backup_system_reset_done = false;
+        backup_disk_reset_done = false;
         int request;
         // colo_wait_handle_message(mis->from_src_file, &request, &local_err);
 
@@ -953,7 +987,9 @@ void *colo_process_incoming_thread(void *opaque)
         //trace_colo_vm_state_change("run", "stop");
         qemu_mutex_unlock_iothread();
 
-
+        pthread_mutex_lock(&backup_reset_lock);
+        pthread_cond_broadcast(&backup_reset_cond);
+        pthread_mutex_unlock(&backup_reset_lock);
         
 
         // colo_receive_check_message(mis->from_src_file,
@@ -981,9 +1017,6 @@ void *colo_process_incoming_thread(void *opaque)
         //                          COLO_MESSAGE_VMSTATE_SIZE, &local_err);
         
         value = mc_receive_message_value(COLO_MESSAGE_VMSTATE_SIZE, &local_err);
-
-
-
 
 
         if (local_err) {
@@ -1022,9 +1055,10 @@ void *colo_process_incoming_thread(void *opaque)
             error_report("Can't open colo buffer for read");
             goto out;
         }
+        while(backup_system_reset_done == false){}
 
         qemu_mutex_lock_iothread();
-        qemu_system_reset(VMRESET_SILENT);
+        //qemu_system_reset(VMRESET_SILENT);
         vmstate_loading = true;
         colo_flush_ram_cache();
         //XS: GUESS CPU
@@ -1048,12 +1082,13 @@ void *colo_process_incoming_thread(void *opaque)
             qemu_mutex_unlock_iothread();
             goto out;
         }
-        /* discard colo disk buffer */
-        replication_do_checkpoint_all(&local_err);
-        if (local_err) {
-            qemu_mutex_unlock_iothread();
-            goto out;
-        }
+        while(backup_disk_reset_done == false){}
+        // /* discard colo disk buffer */
+        // replication_do_checkpoint_all(&local_err);
+        // if (local_err) {
+        //     qemu_mutex_unlock_iothread();
+        //     goto out;
+        // }
 
         vmstate_loading = false;
         qemu_mutex_unlock_iothread();
