@@ -2430,8 +2430,8 @@ ssize_t mc_rdma_get_colo_ctrl_buffer(size_t size)
     //     return -1;
     // }
 
-    mc_network_to_control((void *) rdma->colo_ctrl_wr_data.control);
-    memcpy(&head, rdma->colo_ctrl_wr_data.control, sizeof(MC_RDMAControlHeader));
+    // mc_network_to_control((void *) rdma->colo_ctrl_wr_data.control);
+    // memcpy(&head, rdma->colo_ctrl_wr_data.control, sizeof(MC_RDMAControlHeader));
 
     struct ibv_recv_wr *bad_wr;
     struct ibv_sge sge = {
@@ -2464,6 +2464,8 @@ ssize_t mc_rdma_get_colo_ctrl_buffer(size_t size)
         return -1;
     }
 
+    mc_network_to_control((void *) rdma->colo_ctrl_wr_data.control);
+    memcpy(&head, rdma->colo_ctrl_wr_data.control, sizeof(MC_RDMAControlHeader));
 
     return head.len;
 }
