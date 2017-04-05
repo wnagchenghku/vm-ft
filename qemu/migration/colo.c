@@ -369,7 +369,7 @@ static uint64_t wait_guest_finish(MigrationState *s)
 
     if (last_counter == 0)
     {
-        for (i = 0; i < 10; ++i)
+        for (i = 0; i < 30; ++i)
         {
             last_counter = get_output_counter();
             if (last_counter != 0) {
@@ -388,8 +388,8 @@ static uint64_t wait_guest_finish(MigrationState *s)
             g_usleep(sleep_time);
             current_counter = get_output_counter();
             if ((current_counter - last_counter) == 0) {
-                static int zero_count = 0; 
-                const int bound = 0; 
+                int zero_count = 0; 
+                int bound = 4; 
                 while(zero_count < bound){
                     zero_count++;
                     g_usleep(sleep_time);
