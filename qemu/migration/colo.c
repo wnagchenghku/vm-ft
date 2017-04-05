@@ -356,10 +356,14 @@ static uint64_t mc_receive_message_value(uint32_t expect_msg, Error **errp)
 }
 //XS: primary do checkpoint
 //start doing the cehckpoint
-
+static int checkpoint_cnt;
 static uint64_t wait_guest_finish(MigrationState *s)
 {
+    checkpoint_cnt++;
     uint64_t last_counter = get_output_counter();
+    struct timeval t1, t2;
+    fprintf(stderr, "[Leader wait] %"PRIu64"\n", last_counter);
+    gettimeofday(&t1, NULL);
     uint64_t current_counter = 0;
     int i;
 
@@ -386,6 +390,10 @@ static uint64_t wait_guest_finish(MigrationState *s)
             }
         }
     }
+    double elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;
+    elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;
+    gettimeofday(&t2, NULL);
+    fprintf(stderr, "[Leader done %d] %"PRIu64", %f ms\n", checkpoint_cnt, current_counter, elapsedTime);
 
     reset_output_counter();
     
@@ -824,6 +832,9 @@ static int colo_prepare_before_load(QEMUFile *f)
 
 static int wait_output(uint64_t primary_output_counter)
 {
+    checkpoint_cnt++;
+    uint64_t backup_counter = get_output_counter();
+    fprintf(stderr, "[Backup %d] Received primary %"PRIu64", backup is %"PRIu64"\n", checkpoint_cnt, primary_output_counter, backup_counter);
     int i;
     for (i = 0; i < 10; ++i)
     {
