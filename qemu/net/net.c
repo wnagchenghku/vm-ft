@@ -643,16 +643,16 @@ static ssize_t filter_receive_iov(NetClientState *nc,
 
     if (direction == NET_FILTER_DIRECTION_TX) {
 
-        if (is_leader())
-        {
-            ssize_t size = 0;
-            size = iov_size(iov, iovcnt);
-            char *buf;
-            buf = g_malloc(size);
-            iov_to_buf(iov, iovcnt, 0, buf, size);
-            proxy_on_mirror((uint8_t *)buf, size);
-            g_free(buf);
-        }
+        // if (is_leader())
+        // {
+        //     ssize_t size = 0;
+        //     size = iov_size(iov, iovcnt);
+        //     char *buf;
+        //     buf = g_malloc(size);
+        //     iov_to_buf(iov, iovcnt, 0, buf, size);
+        //     proxy_on_mirror((uint8_t *)buf, size);
+        //     g_free(buf);
+        // }
 
         QTAILQ_FOREACH(nf, &nc->filters, next) {
             ret = qemu_netfilter_receive(nf, direction, sender, flags, iov,
