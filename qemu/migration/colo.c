@@ -858,7 +858,9 @@ static int wait_output(uint64_t primary_output_counter)
 }
 
 
-static bool backup_system_reset_done;
+static int backup_system_reset_done;  //0 working, 1: peak; 2:reset
+ 
+
 static bool backup_disk_reset_done;
 pthread_mutex_t backup_reset_lock;
 pthread_cond_t backup_reset_cond;
@@ -880,9 +882,10 @@ static void *backup_reset(void *arg){
         // }
 
          qemu_mutex_unlock_iothread();
-        pthread_spin_lock(&reset_spin_lock);
-        backup_system_reset_done = true;
-        pthread_spin_unlock(&reset_spin_lock);
+        //pthread_spin_lock(&reset_spin_lock);
+        if (backup_system_reset_done ==0 )
+            backup_system_reset_done = 1;
+        //pthread_spin_unlock(&reset_spin_lock);
 
         // backup_disk_reset_done = true;
     }
@@ -969,7 +972,7 @@ void *colo_process_incoming_thread(void *opaque)
     while (mis->state == MIGRATION_STATUS_COLO) {
         // printf("****************inside Loop\n\n\n\n");
         // fflush(stdout);
-        backup_system_reset_done = false;
+        backup_system_reset_done = 0;
         backup_disk_reset_done = false;
         int request;
         // colo_wait_handle_message(mis->from_src_file, &request, &local_err);
@@ -1074,13 +1077,16 @@ void *colo_process_incoming_thread(void *opaque)
         }
         while (1)
         {
-            pthread_spin_lock(&reset_spin_lock);
-            if (backup_system_reset_done == true)
+            //pthread_spin_lock(&reset_spin_lock);
+            if (backup_system_reset_done == 1)
             {
-                pthread_spin_unlock(&reset_spin_lock);
+
+                backup_system_reset_done = 2;
+                //pthread_spin_unlock(&reset_spin_lock);                
                 break;
             }
-            pthread_spin_unlock(&reset_spin_lock);
+            //pthread_spin_unlock(&reset_spin_lock);
+            sched_yield();
         }
         
         qemu_mutex_lock_iothread();
