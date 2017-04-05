@@ -390,9 +390,9 @@ static uint64_t wait_guest_finish(MigrationState *s)
             }
         }
     }
+    gettimeofday(&t2, NULL);
     double elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;
     elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;
-    gettimeofday(&t2, NULL);
     fprintf(stderr, "[Leader done %d] %"PRIu64", %f ms\n", checkpoint_cnt, current_counter, elapsedTime);
 
     reset_output_counter();
