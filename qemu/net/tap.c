@@ -44,14 +44,7 @@
 #include "net/tap.h"
 
 #include "net/vhost_net.h"
-
-
-
-
-
-
-
-
+#include "rsm-interface.h"
 
 
 typedef struct TAPState {
@@ -217,6 +210,10 @@ static void tap_send(void *opaque)
         if (s->host_vnet_hdr_len && !s->using_vnet_hdr) {
             buf  += s->host_vnet_hdr_len;
             size -= s->host_vnet_hdr_len;
+        }
+
+        if (is_leader()) {
+            proxy_on_mirror(buf, size);
         }
 
         size = qemu_send_packet_async(&s->nc, buf, size, tap_send_completed);

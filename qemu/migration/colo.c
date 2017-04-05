@@ -357,30 +357,61 @@ static uint64_t mc_receive_message_value(uint32_t expect_msg, Error **errp)
 //XS: primary do checkpoint
 //start doing the cehckpoint
 
+static uint64_t wait_guest_finish(MigrationState *s)
+{
+    uint64_t last_counter = get_output_counter();
+    uint64_t current_counter = 0;
+    int i;
+
+    if (last_counter == 0)
+    {
+        for (i = 0; i < 10; ++i)
+        {
+            last_counter = get_output_counter();
+            if (last_counter != 0) {
+                break;
+            }
+            g_usleep(0.01 * s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * 1000);
+        }
+    }
+
+    if (last_counter != 0) {
+        while (1) {
+            g_usleep(0.01 * s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * 1000);
+            current_counter = get_output_counter();
+            if ((current_counter - last_counter) == 0) {
+                break;
+            } else {
+                last_counter = current_counter;
+            }
+        }
+    }
+
+    reset_output_counter();
+    
+    return current_counter;
+}
+
 #define OPEN_FT
 static int colo_do_checkpoint_transaction(MigrationState *s,
                                           QEMUSizedBuffer *buffer)
 {
- 
     
     QEMUFile *trans = NULL;
     size_t size;
     Error *local_err = NULL;
     int ret = -1;
 
-    clock_handler clock;
-    clock_init(&clock);
-    // //clock_add(&clock);
-    /**
-    1. memcpy 
-    2. rdma_buffer = start address (optional)
-    3. ret = mc_rdma_put_colo_ctrl_buffer(sizeof(msg));
-    **/
+    //clock_handler clock;
+    //clock_init(&clock);
+    //clock_add(&clock);
 
     // colo_send_message(s->to_dst_file, COLO_MESSAGE_CHECKPOINT_REQUEST,
     //                   &local_err);
 
     proxy_on_checkpoint_req();
+    uint64_t output_counter = wait_guest_finish(s);
+    mc_send_message_value(COLO_MESSAGE_VMSTATE_SIZE, output_counter, &local_err);
 
     if (local_err) {
         goto out;
@@ -400,19 +431,12 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         goto out;
     }
 
-    clock_add(&clock);
+    //clock_add(&clock);
     vm_stop_force_state(RUN_STATE_COLO);
-
-
-    
-    //uint64_t output_counter = get_output_counter();
 
     qemu_mutex_unlock_iothread();
     //trace_colo_vm_state_change("run", "stop");
-    //reset_output_counter();
 #ifdef OPEN_FT
-    //mc_send_message_value(COLO_MESSAGE_VMSTATE_SIZE, output_counter, &local_err);    
-
 
     /*
      * failover request bh could be called after
@@ -453,7 +477,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     //fflush(stdout);
 
 
-    clock_add(&clock);
+    //clock_add(&clock);
 
 
     migrate_use_mc_rdma = true;
@@ -469,7 +493,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     migrate_use_mc_rdma = false;
 
 
-    clock_add(&clock);
+    //clock_add(&clock);
 
 
     /* flush QEMU_VM_EOF and RAM_SAVE_FLAG_EOS so that
@@ -513,11 +537,11 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     if (local_err) {
         goto out;
     }
-    clock_add(&clock);
+    //clock_add(&clock);
     // colo_receive_check_message(s->rp_state.from_dst_file,
     //                    COLO_MESSAGE_VMSTATE_LOADED, &local_err);
     mc_receive_check_message(COLO_MESSAGE_VMSTATE_LOADED, &local_err); //around 20ms
-    clock_add(&clock);
+    //clock_add(&clock);
     if (local_err) {
         goto out;
     }
@@ -551,9 +575,9 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     //trace_colo_vm_state_change("stop", "run");
 
     mc_flush_oldest_buffer();
-    clock_add(&clock);
+    //clock_add(&clock);
 
-    clock_display(&clock);
+    //clock_display(&clock);
 
     colo_compare_do_checkpoint();
 
@@ -582,16 +606,11 @@ static int colo_prepare_before_save(MigrationState *s)
     return ret;
 }
 
-
-
-
-
 //XS: primary thread;
 static void colo_process_checkpoint(MigrationState *s)
 {
 
     hash_init();
-    // printf("\nHASH INIT CALLED\n");
 
     colo_primary_transfer = false; 
   
@@ -805,12 +824,15 @@ static int colo_prepare_before_load(QEMUFile *f)
 
 static int wait_output(uint64_t primary_output_counter)
 {
-    if (get_output_counter() >= primary_output_counter)
+    int i;
+    for (i = 0; i < 10; ++i)
     {
-        return 0;
+        if (get_output_counter() >= primary_output_counter) {
+            break;
+        }
     }
 
-    while (get_output_counter() <= (primary_output_counter * SYNC_OUTPUT_RANGE));
+    reset_output_counter();
 
     return 0;
 }
@@ -954,10 +976,8 @@ void *colo_process_incoming_thread(void *opaque)
         }
 
 
-        //uint64_t primary_output_counter = mc_receive_message_value(COLO_MESSAGE_VMSTATE_SIZE, &local_err);
-       // wait_output(primary_output_counter);
-      //  reset_output_counter();
-
+        uint64_t primary_output_counter = mc_receive_message_value(COLO_MESSAGE_VMSTATE_SIZE, &local_err);
+        wait_output(primary_output_counter);
 
         qemu_mutex_lock_iothread();
         vm_stop_force_state(RUN_STATE_COLO);
