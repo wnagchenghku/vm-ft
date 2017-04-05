@@ -780,7 +780,7 @@ void vm_start(void)
         resume_all_vcpus();
     }
 
-    qapi_event_send_resume(&error_abort);
+    //qapi_event_send_resume(&error_abort);
 }
 
 
