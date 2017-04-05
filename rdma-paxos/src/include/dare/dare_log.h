@@ -71,7 +71,7 @@ struct log_offsets_t {
 typedef struct log_offsets_t log_offsets_t;
 
 /* The log (a circular buffer) used to replicate SM operations */
-#define LOG_SIZE  16384*PAGE_SIZE
+#define LOG_SIZE  16384*PAGE_SIZE*24
 struct dare_log_t
 {
     uint64_t head;  /* offset of the first entry;
