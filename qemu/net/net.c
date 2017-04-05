@@ -662,8 +662,7 @@ static ssize_t filter_receive_iov(NetClientState *nc,
             }
         }
     } else {
-        //count_payload_length((uint8_t *) iov[0].iov_base, iov[0].iov_len, direction, flags, sender->name);
-        //fprintf(stderr, "got output, iovcnt=%d\n", iovcnt);
+        count_payload_length((uint8_t *) iov[0].iov_base, iov[0].iov_len, direction, flags, sender->name);
         QTAILQ_FOREACH_REVERSE(nf, &nc->filters, NetFilterHead, next) {
             ret = qemu_netfilter_receive(nf, direction, sender, flags, iov,
                                          iovcnt, sent_cb);
