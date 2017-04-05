@@ -862,11 +862,20 @@ static int wait_output(uint64_t primary_output_counter)
     //         break;
     //     }
     // }
-    while (1) {
+
+     for (i = 0; i < 20; ++i)
+     {
+         if (get_output_counter() >= primary_output_counter) {
+             break;
+         }
+        g_usleep(100);
+     }
+
+    /* while (1) {
         if (get_output_counter() >= primary_output_counter) {
             break;
         }
-    }
+    }*/
 
     reset_output_counter();
 
