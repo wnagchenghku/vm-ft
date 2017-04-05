@@ -388,19 +388,19 @@ static uint64_t wait_guest_finish(MigrationState *s)
             g_usleep(sleep_time);
             current_counter = get_output_counter();
             if ((current_counter - last_counter) == 0) {
-                int zero_count = 0; 
-                int bound = 4; 
-                while(zero_count < bound){
-                    zero_count++;
-                    g_usleep(sleep_time);
-                    current_counter = get_output_counter();
-                    if (current_counter != last_counter){
-                        last_counter = current_counter; 
-                        break;
-                    }
-                }
+                // int zero_count = 0; 
+                // int bound = 4; 
+                // while(zero_count < bound){
+                //     zero_count++;
+                //     g_usleep(sleep_time);
+                //     current_counter = get_output_counter();
+                //     if (current_counter != last_counter){
+                //         last_counter = current_counter; 
+                //         break;
+                //     }
+                // }
 
-                if (zero_count == bound)
+                // if (zero_count == bound)
                     break;
             } else {
                 last_counter = current_counter;
