@@ -438,7 +438,9 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     uint64_t output_counter = wait_guest_finish(s);
     proxy_on_checkpoint_req();
 
-    mc_send_message_value(COLO_MESSAGE_VMSTATE_SIZE, output_counter, &local_err);
+    //mc_send_message_value(COLO_MESSAGE_VMSTATE_SIZE, output_counter, &local_err);
+    *(uint64_t*)rdma_buffer = output_counter;
+    mc_rdma_put_colo_ctrl_buffer(sizeof(output_counter));
 
     if (local_err) {
         goto out;
@@ -1023,7 +1025,10 @@ void *colo_process_incoming_thread(void *opaque)
         }
 
 
-        uint64_t primary_output_counter = mc_receive_message_value(COLO_MESSAGE_VMSTATE_SIZE, &local_err);
+        //uint64_t primary_output_counter = mc_receive_message_value(COLO_MESSAGE_VMSTATE_SIZE, &local_err);
+        uint64_t primary_output_counter;
+        mc_rdma_get_colo_ctrl_buffer(sizeof(primary_output_counter));
+        primary_output_counter = *(uint64_t*)rdma_buffer;
         wait_output(primary_output_counter);
 
         qemu_mutex_lock_iothread();
