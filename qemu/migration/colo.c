@@ -858,14 +858,14 @@ static int wait_output(uint64_t primary_output_counter)
 }
 
 
-static int backup_system_reset_done;  //0 working, 1: peak; 2:reset
+static volatile int backup_system_reset_done;  //0 working, 1: peak; 2:reset
  
 
 static bool backup_disk_reset_done;
 pthread_mutex_t backup_reset_lock;
 pthread_cond_t backup_reset_cond;
 
-static pthread_spinlock_t reset_spin_lock;
+//static pthread_spinlock_t reset_spin_lock;
 
 static void *backup_reset(void *arg){
     while(1){
@@ -967,7 +967,6 @@ void *colo_process_incoming_thread(void *opaque)
     if (local_err) {
         goto out;
     }
-    pthread_spin_init (&reset_spin_lock, 0); 
 
     while (mis->state == MIGRATION_STATUS_COLO) {
         // printf("****************inside Loop\n\n\n\n");
