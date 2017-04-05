@@ -23,7 +23,7 @@ proxy_node* proxy;
 
 const char* config_path = "../rdma-paxos/target/nodes.local.cfg";
 
-static int checkpoint_req_status;
+volatile static int checkpoint_req_status;
 
 int dare_main(proxy_node* proxy, uint8_t role)
 {
