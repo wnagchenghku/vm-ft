@@ -380,6 +380,7 @@ static uint64_t wait_guest_finish(MigrationState *s)
     }
 
     if (last_counter != 0) {
+        // TODO: if we need an upper bound for checkpointing, change this to a for loop
         while (1) {
             g_usleep(0.01 * s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * 1000);
             current_counter = get_output_counter();
@@ -417,8 +418,10 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     // colo_send_message(s->to_dst_file, COLO_MESSAGE_CHECKPOINT_REQUEST,
     //                   &local_err);
 
-    proxy_on_checkpoint_req();
+    
     uint64_t output_counter = wait_guest_finish(s);
+    proxy_on_checkpoint_req();
+
     mc_send_message_value(COLO_MESSAGE_VMSTATE_SIZE, output_counter, &local_err);
 
     if (local_err) {
@@ -697,12 +700,12 @@ static void colo_process_checkpoint(MigrationState *s)
         //     goto checkpoint_begin;
         // }
         current_time = qemu_clock_get_ms(QEMU_CLOCK_HOST);
-        if ((current_time - checkpoint_time <
-            s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY]) &&
-            !colo_shutdown_requested) {
-            g_usleep(10 * 1000); /* 10 ms */
-            continue;
-        }
+        // if ((current_time - checkpoint_time <
+        //     s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY]) &&
+        //     !colo_shutdown_requested) {
+        //     g_usleep(10 * 1000); /* 10 ms */
+        //     continue;
+        // }
 
 checkpoint_begin:
         /* start a colo checkpoint */
