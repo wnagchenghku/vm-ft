@@ -381,7 +381,7 @@ static uint64_t wait_guest_finish(MigrationState *s)
 
     if (last_counter != 0) {
         // TODO: if we need an upper bound for checkpointing, change this to a for loop
-        int sleep_time = 0.01 * s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * 1000;
+        int sleep_time = 0.01 * s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * 1000; 
 
 
         while (1) {
@@ -389,12 +389,13 @@ static uint64_t wait_guest_finish(MigrationState *s)
             current_counter = get_output_counter();
             if ((current_counter - last_counter) == 0) {
                 static int zero_count = 0; 
-                const int bound = 3; 
+                const int bound = 0; 
                 while(zero_count < bound){
                     zero_count++;
                     g_usleep(sleep_time);
                     current_counter = get_output_counter();
                     if (current_counter != last_counter){
+                        last_counter = current_counter; 
                         break;
                     }
                 }
