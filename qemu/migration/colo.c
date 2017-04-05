@@ -836,8 +836,14 @@ static int wait_output(uint64_t primary_output_counter)
     uint64_t backup_counter = get_output_counter();
     fprintf(stderr, "[Backup %d] Received primary %"PRIu64", backup is %"PRIu64"\n", checkpoint_cnt, primary_output_counter, backup_counter);
     int i;
-    for (i = 0; i < 10; ++i)
-    {
+
+    // for (i = 0; i < 10; ++i)
+    // {
+    //     if (get_output_counter() >= primary_output_counter) {
+    //         break;
+    //     }
+    // }
+    while (1) {
         if (get_output_counter() >= primary_output_counter) {
             break;
         }
