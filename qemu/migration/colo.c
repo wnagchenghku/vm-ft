@@ -369,7 +369,7 @@ static uint64_t wait_guest_finish(MigrationState *s)
 
     if (last_counter == 0)
     {
-        for (i = 0; i < 30; ++i)
+        for (i = 0; i < 10; ++i)
         {
             last_counter = get_output_counter();
             if (last_counter != 0) {
