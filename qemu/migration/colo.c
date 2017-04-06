@@ -363,14 +363,13 @@ static uint64_t wait_guest_finish(MigrationState *s)
     checkpoint_cnt++;
     uint64_t last_counter = get_output_counter();
     struct timeval t1, t2;
-    fprintf(stderr, "[Leader wait] %"PRIu64"\n", last_counter);
     gettimeofday(&t1, NULL);
     uint64_t current_counter = 0;
     int i;
 
     int sleep_time = 0.01 * s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * 1000; 
 
-    for (i = 0; i < 50; i++){
+    for (i = 0; i < 100; i++){
         g_usleep(sleep_time);
         current_counter = get_output_counter();
         if (current_counter >= 0.9 * output_max_avg){
@@ -391,8 +390,7 @@ static uint64_t wait_guest_finish(MigrationState *s)
     gettimeofday(&t2, NULL);
     double elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;
     elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;
-    fprintf(stderr, "[Leader done %d] %"PRIu64", %f ms\n", checkpoint_cnt, current_counter, elapsedTime);
-
+    
     reset_output_counter();
 
     max_output_array[output_array_index] = current_counter; 
@@ -408,6 +406,8 @@ static uint64_t wait_guest_finish(MigrationState *s)
         output_sum += max_output_array[i];
     }
     output_max_avg = output_sum / OUTPUT_ARRAY_MAX_SIZE;
+
+    fprintf(stderr, "[Leader done %d] %"PRIu64", %f ms, %"PRIu64"\n", checkpoint_cnt, current_counter, elapsedTime, output_max_avg);
     
     return current_counter;
 }
