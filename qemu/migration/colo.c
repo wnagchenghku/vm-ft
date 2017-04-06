@@ -351,9 +351,13 @@ static uint64_t mc_receive_message_value(uint32_t expect_msg, Error **errp)
 
     return value;
 }
-//XS: primary do checkpoint
-//start doing the cehckpoint
-static int checkpoint_cnt;
+
+#define OUTPUT_ARRAY_MAX_SIZE 10
+
+uint64_t max_output_array[OUTPUT_ARRAY_MAX_SIZE];
+
+static int checkpoint_cnt, output_array_index;
+static uint64_t output_max_avg;
 static uint64_t wait_guest_finish(MigrationState *s)
 {
     checkpoint_cnt++;
@@ -364,55 +368,46 @@ static uint64_t wait_guest_finish(MigrationState *s)
     uint64_t current_counter = 0;
     int i;
 
-    if (last_counter == 0)
-    {
-        for (i = 0; i < 10; ++i)
-        {
-            last_counter = get_output_counter();
-            if (last_counter != 0) {
-                break;
+    int sleep_time = 0.01 * s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * 1000; 
+
+    for (i = 0; i < 50; i++){
+        g_usleep(sleep_time);
+        current_counter = get_output_counter();
+        if (current_counter >= 0.9 * output_max_avg){
+            int zero_count = 0;
+            int bound = 3;
+            while(zero_count < bound){
+                g_usleep(sleep_time);
+                last_counter = current_counter; 
+                current_counter = get_output_counter();
+                if (current_counter == last_counter){
+                    zero_count++;
+                }
             }
-            g_usleep(0.01 * s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * 1000);
+            break;
         }
     }
-
-    if (last_counter != 0) {
-        // TODO: if we need an upper bound for checkpointing, change this to a for loop
-        int sleep_time = 0.01 * s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * 1000; 
-
-	    int zero_count = 0;
-	    int bound = 4;
-
-        while (1) {
-            g_usleep(sleep_time);
-            current_counter = get_output_counter();
-            if ((current_counter - last_counter) == 0) {
-                // int zero_count = 0; 
-                // int bound = 4; 
-                // while(zero_count < bound){
-                //     zero_count++;
-                //     g_usleep(sleep_time);
-                //     current_counter = get_output_counter();
-                //     if (current_counter != last_counter){
-                //         last_counter = current_counter; 
-                //         break;
-                //     }
-                // }
-		zero_count++; 
-		//g_usleep(sleep_time);
-                if (zero_count == bound)
-                    break;
-            } else {
-                last_counter = current_counter;
-            }
-        }
-    }
+            
     gettimeofday(&t2, NULL);
     double elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;
     elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;
     fprintf(stderr, "[Leader done %d] %"PRIu64", %f ms\n", checkpoint_cnt, current_counter, elapsedTime);
 
     reset_output_counter();
+
+    max_output_array[output_array_index] = current_counter; 
+
+    output_array_index++;
+    if (output_array_index == OUTPUT_ARRAY_MAX_SIZE) {
+        output_array_index = 0;
+    }
+
+
+    uint64_t output_sum = 0;
+    for (i = 0; i < OUTPUT_ARRAY_MAX_SIZE; ++i) {
+        output_sum += max_output_array[i];
+    }
+    output_max_avg = output_sum / OUTPUT_ARRAY_MAX_SIZE;
     
     return current_counter;
 }

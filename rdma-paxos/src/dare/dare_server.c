@@ -76,7 +76,7 @@ dare_log_entry_det_t last_applied_entry;
 
 const char *mirror_sockpath = "/dev/shm/mirror.sock";
 const char *redirector_sockpath = "/dev/shm/redirector.sock";
-static int disable_apply;
+volatile static int disable_apply;
 
 /* ================================================================== */
 /* libEV events */
