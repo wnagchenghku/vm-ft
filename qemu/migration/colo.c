@@ -441,10 +441,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     uint64_t output_counter = wait_guest_finish(s);
     proxy_on_checkpoint_req();
 
-    //mc_send_message_value(COLO_MESSAGE_VMSTATE_SIZE, output_counter, &local_err);
-    *(uint64_t*)rdma_buffer = output_counter;
-    mc_rdma_put_colo_ctrl_buffer(sizeof(output_counter));
-
     if (local_err) {
         goto out;
     }
@@ -468,6 +464,10 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
     qemu_mutex_unlock_iothread();
     //trace_colo_vm_state_change("run", "stop");
+
+    *(uint64_t*)rdma_buffer = output_counter;
+    mc_rdma_put_colo_ctrl_buffer(sizeof(output_counter));
+
 #ifdef OPEN_FT
 
     /*
@@ -505,13 +505,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     * TODO: We may need a timeout mechanism to prevent COLO process
     * to be blocked here.
     */
-    //printf("Called qemu transaction\n");
-    //fflush(stdout);
-
-
-    //clock_add(&clock);
-
-
     migrate_use_mc_rdma = true;
     colo_not_first_sync = true;
 
@@ -999,24 +992,14 @@ void *colo_process_incoming_thread(void *opaque)
     }
 
     while (mis->state == MIGRATION_STATUS_COLO) {
-        // printf("****************inside Loop\n\n\n\n");
-        // fflush(stdout);
         backup_system_reset_done = 0;
         backup_disk_reset_done = false;
         int request;
         // colo_wait_handle_message(mis->from_src_file, &request, &local_err);
 
-
-    // Ret: len; 
-    // COLOMessage msg;
-    // ret = mc_rdma_get_colo_ctrl_buffer();
-    // msg = rdma_buffer;
-
         proxy_wait_checkpoint_req();
         request = 1;
-
-        //TODO: receive primary's bitmap
-        //TODO: Send itself's bitmap. 
+        disable_apply_committed_entries();
 
         if (local_err) {
             goto out;
@@ -1027,8 +1010,6 @@ void *colo_process_incoming_thread(void *opaque)
             goto out;
         }
 
-
-        //uint64_t primary_output_counter = mc_receive_message_value(COLO_MESSAGE_VMSTATE_SIZE, &local_err);
         uint64_t primary_output_counter;
         mc_rdma_get_colo_ctrl_buffer(sizeof(primary_output_counter));
         primary_output_counter = *(uint64_t*)rdma_buffer;
@@ -1038,6 +1019,8 @@ void *colo_process_incoming_thread(void *opaque)
         vm_stop_force_state(RUN_STATE_COLO);
         //trace_colo_vm_state_change("run", "stop");
         qemu_mutex_unlock_iothread();
+
+        resume_apply_committed_entries();
 
         pthread_mutex_lock(&backup_reset_lock);
         pthread_cond_broadcast(&backup_reset_cond);
@@ -1060,8 +1043,6 @@ void *colo_process_incoming_thread(void *opaque)
             error_report("Load VM's live state (ram) error");
             goto out;
         }
-        //printf("\n\n****** qemu_loadvm_state_main returned *****");
-        //fflush(stdout);
 
         migrate_use_mc_rdma = false;
         /* read the VM state total size first */

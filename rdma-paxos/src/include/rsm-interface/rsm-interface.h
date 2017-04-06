@@ -19,7 +19,9 @@ extern "C" {
 	void proxy_wait_checkpoint_req(void);
 	void proxy_on_checkpoint_req(void);
 	int control_tsc(void);
-	
+	void disable_apply_committed_entries(void);
+	void resume_apply_committed_entries(void);
+
 #ifdef __cplusplus
 }
 #endif

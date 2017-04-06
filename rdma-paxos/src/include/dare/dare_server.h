@@ -209,4 +209,6 @@ void server_to_follower();
 int server_update_sid( uint64_t new_sid, uint64_t old_sid );
 int is_leader();
 
+void disable_apply_committed_entries();
+void resume_apply_committed_entries();
 #endif /* DARE_SERVER_H */

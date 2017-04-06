@@ -76,6 +76,7 @@ dare_log_entry_det_t last_applied_entry;
 
 const char *mirror_sockpath = "/dev/shm/mirror.sock";
 const char *redirector_sockpath = "/dev/shm/redirector.sock";
+static int disable_apply;
 
 /* ================================================================== */
 /* libEV events */
@@ -1152,7 +1153,8 @@ polling()
     }
 
     /* Apply new committed entries */
-    apply_committed_entries();
+    if (!disable_apply)
+        apply_committed_entries();
 
     if (IS_CANDIDATE) {
         /* Check the number of votes */
@@ -2356,6 +2358,16 @@ int server_update_sid( uint64_t new_sid, uint64_t old_sid )
 int is_leader() 
 {
     return IS_LEADER;
+}
+
+void disable_apply_committed_entries()
+{
+    disable_apply = 1;
+}
+
+void resume_apply_committed_entries()
+{
+    disable_apply = 0;
 }
 
 static void 
