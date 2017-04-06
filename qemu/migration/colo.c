@@ -45,9 +45,6 @@ bool control_clock;
 /* colo buffer */
 #define COLO_BUFFER_BASE_SIZE (4 * 1024 * 1024)
 
-
-
-
 bool colo_supported(void)
 {
     return true;
@@ -854,13 +851,6 @@ static int wait_output(uint64_t primary_output_counter)
     fprintf(stderr, "[Backup %d] Received primary %"PRIu64", backup is %"PRIu64"\n", checkpoint_cnt, primary_output_counter, backup_counter);
     int i;
 
-    // for (i = 0; i < 10; ++i)
-    // {
-    //     if (get_output_counter() >= primary_output_counter) {
-    //         break;
-    //     }
-    // }
-
      for (i = 0; i < 20; ++i)
      {
          if (get_output_counter() >= primary_output_counter) {
@@ -905,12 +895,8 @@ static void *backup_reset(void *arg){
         // }
 
          qemu_mutex_unlock_iothread();
-        //pthread_spin_lock(&reset_spin_lock);
         if (backup_system_reset_done ==0 )
             backup_system_reset_done = 1;
-        //pthread_spin_unlock(&reset_spin_lock);
-
-        // backup_disk_reset_done = true;
     }
     return NULL;
 }
@@ -1155,9 +1141,6 @@ void *colo_process_incoming_thread(void *opaque)
     }
 
 out:
-    // printf("****************inside out\n\n\n\n");
-    // fflush(stdout);
-
      vmstate_loading = false;
     /* Throw the unreported error message after exited from loop */
     if (local_err) {
@@ -1179,8 +1162,6 @@ out:
     * incoming thread, so here it is not necessary to lock here again,
     * or there will be a deadlock error.
     */
-    //printf("before calling release**********\n\n\n\n\n");
-    // fflush(stdout);
     colo_release_ram_cache();
 
     /* Hope this not to be too long to loop here */
