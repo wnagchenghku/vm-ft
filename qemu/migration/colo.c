@@ -354,6 +354,7 @@ static uint64_t mc_receive_message_value(uint32_t expect_msg, Error **errp)
 
 static int idle_clock_rate_min, idle_clock_rate_max, idle_clock_rate_avg;
 
+#define USE_ESTIMATED_IDLE_CLOCK_RATE
 static void learn_idle_clock_rate(void)
 {
     int learn_cycles = 50000, i;
@@ -378,6 +379,9 @@ static void learn_idle_clock_rate(void)
         }
     }
     idle_clock_rate_avg = clock_sum / learn_cycles;
+#ifdef USE_ESTIMATED_IDLE_CLOCK_RATE
+    idle_clock_rate_avg = 1200;
+#endif
     fprintf(stderr, "idle clock rate max %d, idle clock rate min %d, idle clock rate avg %d, 1ms\n", idle_clock_rate_max, idle_clock_rate_min, idle_clock_rate_avg);
 }
 
