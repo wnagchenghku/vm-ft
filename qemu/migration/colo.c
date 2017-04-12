@@ -352,64 +352,26 @@ static uint64_t mc_receive_message_value(uint32_t expect_msg, Error **errp)
     return value;
 }
 
-#define OUTPUT_ARRAY_MAX_SIZE 10
+static int checkpoint_cnt;
 
-uint64_t max_output_array[OUTPUT_ARRAY_MAX_SIZE];
+#define IDLE_CLOCK_RATE 1200
 
-static int checkpoint_cnt, output_array_index;
-static uint64_t output_max_avg;
 static uint64_t wait_guest_finish(MigrationState *s)
 {
-    checkpoint_cnt++;
-    uint64_t last_counter = get_output_counter();
-    struct timeval t1, t2;
-    gettimeofday(&t1, NULL);
-    uint64_t current_counter = 0;
-    int i;
-
-    int sleep_time = 0.01 * s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * 1000; 
-
-    for (i = 0; i < 100; i++){
-        g_usleep(sleep_time);
-        current_counter = get_output_counter();
-        if (current_counter >= 0.9 * output_max_avg){
-            int zero_count = 0;
-            int bound = 3;
-            while(zero_count < bound){
-                g_usleep(sleep_time);
-                last_counter = current_counter; 
-                current_counter = get_output_counter();
-                if (current_counter == last_counter){
-                    zero_count++;
-                }
-            }
+    clock_t start, end;
+    uint64_t output_counter;
+    while (true) {
+        start = clock();
+        g_usleep(s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * 1000);
+        end = clock();
+        if ((end - start <= s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * IDLE_CLOCK_RATE) && get_output_counter() > 0)
+        // if ((end - start) <= (s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * IDLE_CLOCK_RATE))
             break;
-        }
     }
-            
-    gettimeofday(&t2, NULL);
-    double elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;
-    elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;
-    
+    output_counter = get_output_counter();
     reset_output_counter();
 
-    max_output_array[output_array_index] = current_counter; 
-
-    output_array_index++;
-    if (output_array_index == OUTPUT_ARRAY_MAX_SIZE) {
-        output_array_index = 0;
-    }
-
-
-    uint64_t output_sum = 0;
-    for (i = 0; i < OUTPUT_ARRAY_MAX_SIZE; ++i) {
-        output_sum += max_output_array[i];
-    }
-    output_max_avg = output_sum / OUTPUT_ARRAY_MAX_SIZE;
-
-    fprintf(stderr, "[Leader done %d] %"PRIu64", %f ms, %"PRIu64"\n", checkpoint_cnt, current_counter, elapsedTime, output_max_avg);
-    
-    return current_counter;
+    return output_counter;
 }
 
 #define OPEN_FT
@@ -843,7 +805,7 @@ static int wait_output(uint64_t primary_output_counter)
 {
     checkpoint_cnt++;
     uint64_t backup_counter = get_output_counter();
-    fprintf(stderr, "[Backup %d] Received primary %"PRIu64", backup is %"PRIu64"\n", checkpoint_cnt, primary_output_counter, backup_counter);
+    //fprintf(stderr, "[Backup %d] Received primary %"PRIu64", backup is %"PRIu64"\n", checkpoint_cnt, primary_output_counter, backup_counter);
     int i;
 
      for (i = 0; i < 20; ++i)

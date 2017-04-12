@@ -1748,8 +1748,13 @@ void qemu_devices_reset(void)
     QEMUResetEntry *re, *nre;
 
     /* reset all devices */
+    int i = 0;
     QTAILQ_FOREACH_SAFE(re, &reset_handlers, entry, nre) {
-        re->func(re->opaque);
+        if (i != 13) {
+            re->func(re->opaque);
+        }
+        
+        i++;
     }
 }
 

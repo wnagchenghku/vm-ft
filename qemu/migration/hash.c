@@ -875,7 +875,7 @@ void compare_hash_list(void){
     }
 
 
-    printf("Compared %"PRIu64 " pages, same = %" PRIu64" same rate = %"PRIu64"%%\n", dirty_count, dirty_count - diverse_count, (dirty_count - diverse_count) * 100 / dirty_count);
+    // printf("Compared %"PRIu64 " pages, same = %" PRIu64" same rate = %"PRIu64"%%\n", dirty_count, dirty_count - diverse_count, (dirty_count - diverse_count) * 100 / dirty_count);
 
 	// fprintf(stderr ,"%"PRIu64 ",%" PRIu64", %"PRIu64"%%, %lu\n", hlist->len, hlist->len - diverse_count, (hlist->len - diverse_count) * 100 / hlist->len, get_and_rest_output_counter());
 }
