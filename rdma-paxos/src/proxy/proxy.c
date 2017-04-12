@@ -198,6 +198,21 @@ int control_tsc(void)
     return proxy->control_tsc;
 }
 
+int proxy_get_sync_type(void)
+{
+    return proxy->sync_type;
+}
+
+int proxy_get_recheck_num(void)
+{
+    return proxy->recheck_num;
+}
+
+int proxy_get_colo_debug(void)
+{
+    return proxy->colo_debug;
+}
+
 static void stablestorage_save_request(void* data,void*arg)
 {
     proxy_node* proxy = arg;

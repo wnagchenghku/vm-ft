@@ -21,6 +21,9 @@ extern "C" {
 	int control_tsc(void);
 	void disable_apply_committed_entries(void);
 	void resume_apply_committed_entries(void);
+	int proxy_get_sync_type(void);
+	int proxy_get_recheck_num(void);
+	int proxy_get_colo_debug(void);
 
 #ifdef __cplusplus
 }

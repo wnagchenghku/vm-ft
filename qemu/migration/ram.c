@@ -2210,60 +2210,6 @@ static int ram_save_iterate(QEMUFile *f, void *opaque)
     return pages_sent;
 }
 
-
-
-// //XS: print bitmap encoded in long
-// static char* long_to_binary(long l){
-//     static char b[65];
-//     b[0]='\0';
-//     unsigned long z; 
-//     for (z = 1UL << 63; z > 0; z >>= 1 ){
-//         strcat(b, ((l & z) == z) ? "1" : "0");
-//     }
-//     return b;
-// }
-
-
-//XS: Helper function 
-//Printf the bitmap
-// static void printbitmap(unsigned long *bmap){
-//     int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
-//     long len =  BITS_TO_LONGS(ram_bitmap_pages);
-//     fprintf(stderr, "len: %ld ", len);
-//     int i;
-//     for (i=0; i< len; i++){
-//         fprintf(stderr, "[%d]: %s\n", i, long_to_binary(bmap[i]));
-//     }
-
-// }
-
-/*
-// XS: Helper function, print the number of 1's in the bitmap
-// */
-static int64_t slow_bitmap_count(unsigned long *bmap, int64_t nbits){
-    unsigned long mask; 
-    int64_t i; 
-    int offset; 
-    int64_t count = 0;
-    for (i =0; i * 64 < nbits; ++i){
-        mask = 0x8000000000000000;
-        for (offset = 0; offset <64 && i*64 +offset < nbits; offset++){
-
-            if (mask & bmap[i]){
-                count ++;
-            }
-            mask >>= 1; 
-        }
-    }
-    return count; 
-}
-
-
-
-
-
-
-
 //XS: backup thread's for preparing and comparing bitmap
 int backup_prepare_bitmap(void){
     rcu_read_lock();
@@ -2274,13 +2220,6 @@ int backup_prepare_bitmap(void){
     backup_bitmap_sync();
 
     unsigned long *backup_bitmap = atomic_rcu_read(&backup_bitmap_rcu)->bmap;
-    
-
-
-
-    //printbitmap(backup_bitmap);
-
-
 
     ssize_t ret; 
     ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
@@ -2290,60 +2229,16 @@ int backup_prepare_bitmap(void){
     unsigned long *primary_bitmap = (unsigned long*) malloc(ret);
     memcpy(primary_bitmap, rdma_buffer, ret);
 
-    // printf("Primary Bitmap count: %"PRId64"\n", slow_bitmap_count(primary_bitmap, ram_bitmap_pages));
-
-    // printf("Backup Bitmap count: %"PRId64"\n", slow_bitmap_count(backup_bitmap, ram_bitmap_pages));
-
-
-
-    memcpy(rdma_buffer, backup_bitmap, len * sizeof(unsigned long)); 
-    //printf("rdma_buffer addr: %p\n", rdma_buffer);
-
-        
-
+    memcpy(rdma_buffer, backup_bitmap, len * sizeof(unsigned long));
 
     ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
     if (ret < 0){
         printf("Failed to send bitmap from backup to primary\n");
     }
-  
-    //unsigned long *primary_bitmap = (unsigned long*) rdma_buffer;
-
-
-
-    // unsigned long *and_bitmap = bitmap_new(ram_bitmap_pages);
-    // bitmap_and(and_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
-    // if (ret <= 0){
-    //     printf("\n\nFailed to do the and operation on the bitmap\n\n");
-    // }
-    // printf("And Bitmap count: %"PRId64"\n", slow_bitmap_count(and_bitmap, ram_bitmap_pages));
-    //printbitmap(and_bitmap);
-
-
-    // unsigned long *xor_bitmap = bitmap_new(ram_bitmap_pages);
-    // bitmap_xor(xor_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
-    // if (ret <= 0){
-    //     printf("\n\nFailed to do the xor operation on the bitmap\n\n");
-    // }
-    // printf("XOR Bitmap count%"PRId64"\n", slow_bitmap_count(xor_bitmap, ram_bitmap_pages));
-    //printbitmap(xor_bitmap);
-
-
-
 
         unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
        // gettimeofday(&t2, NULL);
         bitmap_or(or_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
-        //printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
-        //gettimeofday(&t3, NULL);
-
-        // elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
-        // elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
-        // printf("[new bit] %f\n",elapsedTime);
-        // elapsedTime = (t3.tv_sec - t2.tv_sec) * 1000.0;      // sec to ms
-        // elapsedTime += (t3.tv_usec - t2.tv_usec) / 1000.0;   // us to ms
-        // printf("[or bit] %f\n",elapsedTime);
-
 
 
     //xs: test or bitmap
@@ -2373,51 +2268,8 @@ int backup_prepare_bitmap(void){
         hash_nbytes += hlist->len[i]* sizeof(hash_t);
     }
 
-
-    // for (i = 0; i< nthread; i++){
-    //     memcpy(rdma_buffer, hlist->hashes[i], hlist->len[i]* sizeof(hash_t));
-    //     ret = mc_rdma_put_colo_ctrl_buffer(hlist->len[i]* sizeof(hash_t));
-    //     if (ret < 0){
-    //         printf("Failed to send hashes from backup to primary\n");
-    //     }
-    // }
-
-   // memcpy(rdma_buffer, hlist->hashes, hlist->len * sizeof(hash_t)); 
-
-   
-    // printf("\n after memcpy\n");
-    // fflush(stdout);
-
     ret = mc_rdma_put_colo_ctrl_buffer(hash_nbytes);
 
-
-    
-    
-    // hash_list *remote_hlist = get_remote_hash_list_pointer();
-
-    // for (i = 0; i<nthread; i++){
-    //     ret = mc_rdma_get_colo_ctrl_buffer(hlist->len[i] * sizeof(hash_t));
-    //     memcpy(remote_hlist->hashes[i], rdma_buffer, hlist->len[i] * sizeof(hash_t));
-    //     //XS: todo: check the length.
-
-    // }
-
-    //ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
-
-    // hash_list * primary_hashlist = (hash_list*) malloc(sizeof(hash_list));
-    // primary_hashlist -> len = ret / sizeof(hash_t);
-    // primary_hashlist -> hashes = (hash_t*)rdma_buffer;
-
-   // compare_hash_list();
-
-
-    //unsigned long *divergent_bmap = get_divergent_bitmap();
-    //printbitmap(divergent_bmap);
-
-
-
-
-    //bitmap_zero(backup_bitmap, ram_bitmap_pages);
     backup_dirty_pages = 0;
 
     // rcu_read_unlock();
@@ -2426,26 +2278,6 @@ int backup_prepare_bitmap(void){
     return 0;
 
 }
-
-static void printblocks(void){
-    RAMBlock *block; 
-    //uint64_t offset; 
-    int tpb = TARGET_PAGE_BITS;
-    printf("TARGET_PAGE_BITS: %d\n",tpb);
-    int i = 0;
-    QLIST_FOREACH_RCU(block, &ram_list.blocks, next){
-        printf("[%d:%s]: offset:%"PRIu64" used_length%"PRIu64" max_length%"PRIu64"\n",i, block->idstr, block->offset, block->used_length, block->max_length);
-        i++;
-    }
-
-}
-
-
-/* Called with iothread lock */
-//XS: the major function while doing migration. 
-
-
-
 
 static int ram_save_complete(QEMUFile *f, void *opaque)
 {
@@ -2481,41 +2313,8 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
         unsigned long *backup_bitmap = (unsigned long *) rdma_buffer;
         
-        /******
-        Bitmap AND backup_bitmap => Both dirty
-        Bitmap XOR backup_bitmap => Just one dirty
-
-        // */
-        // printf("Primary Bitmap count%"PRId64"\n", slow_bitmap_count(bitmap, ram_bitmap_pages));
-        // printf("Backup Bitmap count%"PRId64"\n", slow_bitmap_count(backup_bitmap, ram_bitmap_pages));
-
-
-        //XS_FIXIT: This is slow, a global variable may be better, otherwise malloc each time is slow
-        // unsigned long *and_bitmap = bitmap_new(ram_bitmap_pages);
-        // bitmap_and(and_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
-        // if (ret <= 0){
-        //     printf("\n\nFailed to do the and operation on the bitmap\n\n");
-        // }
-        // printf("And Bitmap count%"PRId64"\n", slow_bitmap_count(and_bitmap, ram_bitmap_pages));
-
-
-        // unsigned long *xor_bitmap = bitmap_new(ram_bitmap_pages);
-        // bitmap_xor(xor_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
-        // if (ret <= 0){
-        //     printf("\n\nFailed to do the xor operation on the bitmap\n\n");
-        // }
-        // printf("XOR Bitmap count%"PRId64"\n", slow_bitmap_count(xor_bitmap, ram_bitmap_pages));
-
-
-
         unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
         bitmap_or(or_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
-        //printf("OR Bitmap count%"PRId64"\n", slow_bitmap_count(or_bitmap, ram_bitmap_pages));
-
-   
-
-        //xs: test or bitmap
-
 
         compute_hash_list(or_bitmap, ram_bitmap_pages);
 
@@ -2537,83 +2336,10 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
             src+=hlist->len[i] * sizeof(hash_t);
         }
 
-  
-        // for (i=0; i< nthread; i++){
-            
-        //     gettimeofday(&t1, NULL);
-
-        //     ret = mc_rdma_get_colo_ctrl_buffer(hlist->len[i] * sizeof(hash_t));
-        //     memcpy(remote_hlist->hashes[i], rdma_buffer, hlist->len[i] * sizeof(hash_t));
-
-            
-        //     gettimeofday(&t2, NULL);
-        //     elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;      // sec to ms
-        //     elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
-    
-            
-
-        //     printf("[loop - %d] %f\n", i, elapsedTime);
-
-
-
-           
-        //     //xs: todo; check the length
-        // }
-
-
-       
-        //ret = mc_rdma_get_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
-
-       // hash_list *backup_hashlist = (hash_list *) malloc (sizeof (hash_list));
-        //backup_hashlist -> hashes = (hash_t *) rdma_buffer;
-     //   backup_hashlist -> len = ret / sizeof(hash_t);
-        /**
-        primary send hash_list to backup so that backup has the divergent bitmap
-        **/
-      //  backup_hashlist -> hashes = (hash_t*) malloc(backup_hashlist->len * sizeof(hash_t));
-       // memcpy(backup_hashlist->hashes, rdma_buffer, backup_hashlist->len * sizeof(hash_t));
-
-        // for (i = 0; i< nthread; i++){
-        //     memcpy(rdma_buffer, hlist->hashes[i], hlist->len[i]* sizeof(hash_t));
-        //     ret = mc_rdma_put_colo_ctrl_buffer(hlist->len[i]* sizeof(hash_t));
-        //     if (ret < 0){
-        //         printf("Failed to send hashes from backup to primary\n");
-        //     }
-        // }
-
-
-        // memcpy(rdma_buffer, hlist->hashes, hlist->len * sizeof(hash_t));
-        // ret = mc_rdma_put_colo_ctrl_buffer(hlist->len * sizeof(hash_t));
-
-        // if(ret <0){
-        //     printf("failed to send hash_list from primary to backup");
-        // }
-
-
-
-
-        // printf("\nReceived hash list of len %lu\n", backup_hashlist->len);
-        //TODO: compare
-        // printf("primary hash list\n");
-        // print_hash_list(hlist);
-
-        // printf("backup hash list\n");
-        // print_hash_list(backup_hashlist);
-
         
         compare_hash_list();
-
-
         
-
-
     }
-
-
-
-
-
-
 
     ram_control_before_iterate(f, RAM_CONTROL_FINISH);
     
@@ -3274,7 +3000,7 @@ void colo_flush_ram_cache(void)
     void *dst_host;
     void *src_host;
     ram_addr_t offset = 0, host_off = 0, cache_off = 0;
-    uint64_t host_dirty = 0, both_dirty = 0, primary_dirty=0, total = 0, same = 0, backup_dirty = 0,both_dirty_same=0, backup_dirty_same =0, primary_dirty_same = 0;
+    uint64_t host_dirty = 0, both_dirty = 0, total = 0;
 
     trace_colo_flush_ram_cache_begin(migration_dirty_pages);
     address_space_sync_dirty_bitmap(&address_space_memory);
@@ -3302,39 +3028,8 @@ void colo_flush_ram_cache(void)
             if (host_off <= cache_off) {
                 //xs: host dirty
                 offset = host_off;
-                // host_dirty++;
-                // dst_host = block->host + offset;
-                // src_host = block->colo_cache + offset;
-                
-
-                // if (host_off == cache_off){
-                //     both_dirty++; 
-                //     if (memcmp(dst_host, src_host, TARGET_PAGE_SIZE) == 0){
-                //         both_dirty_same++;
-                //     }
-                // }else{
-                //     backup_dirty++;
-                //     if (memcmp(dst_host, src_host, TARGET_PAGE_SIZE) == 0){
-                //         backup_dirty_same++;
-                //     }
-                // }
-                
-                //printf("here\n");
-                //fflush(stdout);
-
-
-
-
             } else {
                 offset = cache_off;
-            //     primary_dirty++;
-            //     dst_host = block->host + offset;
-            //     src_host = block->colo_cache + offset;
-            //     if (memcmp(dst_host, src_host, TARGET_PAGE_SIZE) == 0){
-            //         primary_dirty_same++;
-            //     }
-
-
             }
             dst_host = block->host + offset;
             src_host = block->colo_cache + offset;
@@ -3347,13 +3042,6 @@ void colo_flush_ram_cache(void)
 
         }
     }
-    //primary_dirty+= both_dirty;
-    // printf("\n\n\n*****\ncolo result: backup_dirty=%"PRIu64", primary_dirty=%"PRIu64", both dirty=%"PRIu64"\n", host_dirty,primary_dirty, both_dirty);
-    // printf("only primary_dirty = %"PRIu64", same = %"PRIu64"\n", primary_dirty, primary_dirty_same);
-    // printf("only backup_dirty = %"PRIu64", same = %"PRIu64"\n", backup_dirty, backup_dirty_same);
-    // printf("both_dirty = %"PRIu64", same = %"PRIu64"\n", both_dirty, both_dirty_same);
-    // printf("toal = %"PRIu64", same = %"PRIu64"\n", total, same);
-    // printf("******************\n\n");
 
     rcu_read_unlock();
     assert(migration_dirty_pages == 0);
@@ -3361,9 +3049,6 @@ void colo_flush_ram_cache(void)
     trace_colo_flush_ram_cache_begin(both_dirty);
     // fflush(stdout);
     trace_colo_flush_ram_cache_end();
-
-
-    //xs: 
 
     unsigned long *backup_bitmap;
     backup_bitmap = atomic_rcu_read(&backup_bitmap_rcu)->bmap;

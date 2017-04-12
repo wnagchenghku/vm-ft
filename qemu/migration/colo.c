@@ -352,26 +352,90 @@ static uint64_t mc_receive_message_value(uint32_t expect_msg, Error **errp)
     return value;
 }
 
-static int checkpoint_cnt;
+static int idle_clock_rate_min, idle_clock_rate_max, idle_clock_rate_avg;
 
-#define IDLE_CLOCK_RATE 1200
-
-static uint64_t wait_guest_finish(MigrationState *s)
+static void learn_idle_clock_rate(void)
 {
-    clock_t start, end;
-    uint64_t output_counter;
-    while (true) {
-        start = clock();
-        g_usleep(s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * 1000);
-        end = clock();
-        //if ((end - start <= s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * IDLE_CLOCK_RATE) && get_output_counter() > 0)
-        if ((end - start) <= (s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * IDLE_CLOCK_RATE))
-            break;
+    int learn_cycles = 200000, i;
+    clock_t t1, t2;
+    uint64_t clock_sum = 0;
+    for (i = 0; i < learn_cycles; ++i)
+    {
+        t1 = clock();
+        g_usleep(1000 * 1);
+        t2 = clock();
+        clock_sum += t2 - t1;
+        if (i == 0) {
+            idle_clock_rate_max = t2 - t1;
+            idle_clock_rate_min = t2 - t1;
+        } else {
+            if (t2 - t1 > idle_clock_rate_max) {
+                idle_clock_rate_max = t2 - t1;
+            }
+            if (t2 - t1 < idle_clock_rate_min) {
+                idle_clock_rate_min = t2 - t1;
+            }
+        }
     }
-    output_counter = get_output_counter();
-    reset_output_counter();
+    idle_clock_rate_avg = clock_sum / learn_cycles;
+    fprintf(stderr, "idle clock rate max %d, idle clock rate min %d, idle clock rate avg %d, 1ms\n", idle_clock_rate_max, idle_clock_rate_min, idle_clock_rate_avg);
+}
 
-    return output_counter;
+static int colo_debug;
+
+static int recheck_count;
+static uint64_t checkpoint_cnt;
+
+#define CHECK_IDLE_SYNC 1
+#define STATIC_TIME_SYNC 2
+static int sync_type;
+
+static void wait_guest_finish(MigrationState *s, bool is_primary)
+{
+    clock_t start, end, start_tmp, end_tmp;
+    int i, sleep_time;
+    
+    int migration_checkpoint_delay = 1;
+
+    while (true) {
+        if (is_primary) {
+            migration_checkpoint_delay = s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY];
+        }
+        sleep_time = migration_checkpoint_delay * 1000;
+        start = clock();
+        g_usleep(sleep_time);
+        end = clock();
+        if ((end - start) <= (migration_checkpoint_delay * idle_clock_rate_avg)) {
+            bool new_processing = false;
+            for (i = 0; i < recheck_count; ++i)
+            {
+                start_tmp = clock();
+                g_usleep(sleep_time);
+                end_tmp = clock();
+                if ((end_tmp - start_tmp) <= (migration_checkpoint_delay * idle_clock_rate_avg)) {
+                    new_processing = true;
+                    break;
+                }
+            }
+            if (new_processing == false) {
+                break;
+            }
+        }
+
+    }
+    checkpoint_cnt++;
+    if (colo_debug) {
+        uint64_t output_counter = get_output_counter();
+        reset_output_counter();
+        fprintf(stderr, "[%s %"PRIu64"] output_counter %"PRIu64"\n", is_primary == true ? "LEADER" : "BACKUP", checkpoint_cnt, output_counter);
+    }
+
+    return;
+}
+
+static void static_timing_sync(MigrationState *s)
+{
+    g_usleep(s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * 1000);
 }
 
 #define OPEN_FT
@@ -391,8 +455,12 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     // colo_send_message(s->to_dst_file, COLO_MESSAGE_CHECKPOINT_REQUEST,
     //                   &local_err);
 
+    if (sync_type == CHECK_IDLE_SYNC) {
+        wait_guest_finish(s, true);
+    } else if (sync_type == STATIC_TIME_SYNC) {
+        static_timing_sync(s);
+    }
     
-    uint64_t output_counter = wait_guest_finish(s);
     proxy_on_checkpoint_req();
 
     if (local_err) {
@@ -418,9 +486,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
     qemu_mutex_unlock_iothread();
     //trace_colo_vm_state_change("run", "stop");
-
-    *(uint64_t*)rdma_buffer = output_counter;
-    mc_rdma_put_colo_ctrl_buffer(sizeof(output_counter));
 
 #ifdef OPEN_FT
 
@@ -471,9 +536,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     colo_not_first_sync = false;
     migrate_use_mc_rdma = false;
 
-
     //clock_add(&clock);
-
 
     /* flush QEMU_VM_EOF and RAM_SAVE_FLAG_EOS so that
      * colo_process_incoming_thread can step out of qemu_loadvm_state_main
@@ -585,15 +648,12 @@ static int colo_prepare_before_save(MigrationState *s)
     return ret;
 }
 
-//XS: primary thread;
 static void colo_process_checkpoint(MigrationState *s)
 {
 
     hash_init();
 
-    colo_primary_transfer = false; 
-  
-
+    colo_primary_transfer = false;
 
     QEMUSizedBuffer *buffer = NULL;
     int64_t current_time, checkpoint_time = qemu_clock_get_ms(QEMU_CLOCK_HOST);
@@ -658,6 +718,11 @@ static void colo_process_checkpoint(MigrationState *s)
         goto out;
     }
 
+    learn_idle_clock_rate();
+    sync_type = proxy_get_sync_type();
+    recheck_count = proxy_get_recheck_num();
+    colo_debug = proxy_get_colo_debug();
+
     while (s->state == MIGRATION_STATUS_COLO) {
         if (failover_request_is_active()) {
             error_report("failover request");
@@ -719,9 +784,6 @@ out:
 
 void migrate_start_colo_process(MigrationState *s)
 {
-
-
-
     qemu_mutex_unlock_iothread();
     qemu_sem_init(&s->colo_sem, 0);
     migrate_set_state(&s->state, MIGRATION_STATUS_ACTIVE,
@@ -858,7 +920,7 @@ static void *backup_reset(void *arg){
     return NULL;
 }
 
-//XS: backup thread
+
 void *colo_process_incoming_thread(void *opaque)
 {
     hash_init();
@@ -934,6 +996,11 @@ void *colo_process_incoming_thread(void *opaque)
         goto out;
     }
 
+    learn_idle_clock_rate();
+    sync_type = proxy_get_sync_type();
+    recheck_count = proxy_get_recheck_num();
+    colo_debug = proxy_get_colo_debug();
+
     while (mis->state == MIGRATION_STATUS_COLO) {
         backup_system_reset_done = 0;
         backup_disk_reset_done = false;
@@ -953,10 +1020,9 @@ void *colo_process_incoming_thread(void *opaque)
             goto out;
         }
 
-        uint64_t primary_output_counter;
-        mc_rdma_get_colo_ctrl_buffer(sizeof(primary_output_counter));
-        primary_output_counter = *(uint64_t*)rdma_buffer;
-        wait_output(primary_output_counter);
+        if (sync_type == CHECK_IDLE_SYNC) {
+            wait_guest_finish(NULL, false);
+        }
 
         qemu_mutex_lock_iothread();
         vm_stop_force_state(RUN_STATE_COLO);

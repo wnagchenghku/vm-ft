@@ -50,6 +50,9 @@ typedef struct proxy_node_t{
     int req_log;
 
     int control_tsc;
+    int recheck_num;
+    int sync_type;
+    int colo_debug;
 
     FILE* req_log_file;
     FILE* sys_log_file;
