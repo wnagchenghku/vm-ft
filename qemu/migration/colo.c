@@ -404,7 +404,11 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
     
     int migration_checkpoint_delay = 1;
 
-    // for (i = 0; i < 200; ++i) {
+    struct timeval t1, t2;
+    if (colo_debug) {
+        gettimeofday(&t1, NULL);
+    }
+
     while (true) {
         if (is_primary) {
             migration_checkpoint_delay = s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY];
@@ -434,9 +438,12 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
     }
     checkpoint_cnt++;
     if (colo_debug) {
+        gettimeofday(&t2, NULL);
+        double elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;
+        elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;
         uint64_t output_counter = get_output_counter();
         reset_output_counter();
-        fprintf(stderr, "[%s %"PRIu64"] output_counter %"PRIu64"\n", is_primary == true ? "LEADER" : "BACKUP", checkpoint_cnt, output_counter);
+        fprintf(stderr, "[%s %"PRIu64"] output_counter %"PRIu64", %f\n", is_primary == true ? "LEADER" : "BACKUP", checkpoint_cnt, output_counter, elapsedTime);
     }
 
     return;
