@@ -412,6 +412,7 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
         start = clock();
         g_usleep(sleep_time);
         end = clock();
+        // if (((end - start) <= (migration_checkpoint_delay * idle_clock_rate_avg)) && get_output_counter() > 0) { // for PGSQL
         if ((end - start) <= (migration_checkpoint_delay * idle_clock_rate_avg)) {
             bool new_processing = false;
             for (i = 0; i < recheck_count; ++i)
