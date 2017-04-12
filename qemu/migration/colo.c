@@ -417,6 +417,10 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
         start = clock();
         g_usleep(sleep_time);
         end = clock();
+        if (colo_debug) {
+            fprintf(stderr, "For Loop %d, clock subtraction = %d\n", (int)(end - start));
+        }
+
         // if (((end - start) <= (migration_checkpoint_delay * idle_clock_rate_avg)) && get_output_counter() > 0) { // for PGSQL
         if ((end - start) <= (migration_checkpoint_delay * idle_clock_rate_avg)) {
             bool new_processing = false;
@@ -443,7 +447,7 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
         elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;
         uint64_t output_counter = get_output_counter();
         reset_output_counter();
-        fprintf(stderr, "[%s %"PRIu64"] output_counter %"PRIu64", %f\n", is_primary == true ? "LEADER" : "BACKUP", checkpoint_cnt, output_counter, elapsedTime);
+        fprintf(stderr, "[%s %"PRIu64"] output_counter %"PRIu64", %fms\n", is_primary == true ? "LEADER" : "BACKUP", checkpoint_cnt, output_counter, elapsedTime);
     }
 
     return;
