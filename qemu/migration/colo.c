@@ -355,8 +355,14 @@ static uint64_t mc_receive_message_value(uint32_t expect_msg, Error **errp)
 static int idle_clock_rate_min, idle_clock_rate_max, idle_clock_rate_avg;
 
 #define USE_ESTIMATED_IDLE_CLOCK_RATE
+
 static void learn_idle_clock_rate(void)
 {
+#ifdef USE_ESTIMATED_IDLE_CLOCK_RATE
+    idle_clock_rate_avg = 1200;
+    return;
+#endif
+
     int learn_cycles = 50000, i;
     clock_t t1, t2;
     uint64_t clock_sum = 0;
@@ -379,9 +385,6 @@ static void learn_idle_clock_rate(void)
         }
     }
     idle_clock_rate_avg = clock_sum / learn_cycles;
-#ifdef USE_ESTIMATED_IDLE_CLOCK_RATE
-    idle_clock_rate_avg = 1200;
-#endif
     fprintf(stderr, "idle clock rate max %d, idle clock rate min %d, idle clock rate avg %d, 1ms\n", idle_clock_rate_max, idle_clock_rate_min, idle_clock_rate_avg);
 }
 
@@ -416,7 +419,7 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
                 start_tmp = clock();
                 g_usleep(sleep_time);
                 end_tmp = clock();
-                if ((end_tmp - start_tmp) <= (migration_checkpoint_delay * idle_clock_rate_avg)) {
+                if ((end_tmp - start_tmp) > (migration_checkpoint_delay * idle_clock_rate_avg)) {
                     new_processing = true;
                     break;
                 }
@@ -729,7 +732,7 @@ static void colo_process_checkpoint(MigrationState *s)
     recheck_count = proxy_get_recheck_num();
     colo_debug = proxy_get_colo_debug();
 
-    sleep(5);
+    sleep(2);
 
     learn_idle_clock_rate();
 
@@ -1010,7 +1013,7 @@ void *colo_process_incoming_thread(void *opaque)
     sync_type = *(int*)rdma_buffer;
     recheck_count = proxy_get_recheck_num();
     colo_debug = proxy_get_colo_debug();
-    sleep(5);
+    sleep(2);
     learn_idle_clock_rate();
 
     while (mis->state == MIGRATION_STATUS_COLO) {
