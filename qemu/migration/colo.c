@@ -364,8 +364,8 @@ static uint64_t wait_guest_finish(MigrationState *s)
         start = clock();
         g_usleep(s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * 1000);
         end = clock();
-        if ((end - start <= s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * IDLE_CLOCK_RATE) && get_output_counter() > 0)
-        // if ((end - start) <= (s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * IDLE_CLOCK_RATE))
+        //if ((end - start <= s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * IDLE_CLOCK_RATE) && get_output_counter() > 0)
+        if ((end - start) <= (s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * IDLE_CLOCK_RATE))
             break;
     }
     output_counter = get_output_counter();
@@ -656,6 +656,12 @@ static void colo_process_checkpoint(MigrationState *s)
     ret = global_state_store();
     if (ret < 0) {
         goto out;
+    }
+
+
+    for (i = 0; i < ; ++i)
+    {
+        g_usleep(1000);
     }
 
     while (s->state == MIGRATION_STATUS_COLO) {
