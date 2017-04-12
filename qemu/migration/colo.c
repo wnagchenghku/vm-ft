@@ -400,7 +400,7 @@ static int sync_type;
 static void wait_guest_finish(MigrationState *s, bool is_primary)
 {
     clock_t start, end, start_tmp, end_tmp;
-    int i, sleep_time;
+    int i = 0, sleep_time;
     
     int migration_checkpoint_delay = 1;
 
@@ -418,7 +418,8 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
         g_usleep(sleep_time);
         end = clock();
         if (colo_debug) {
-            fprintf(stderr, "For Loop %d, clock subtraction = %d\n", (int)(end - start));
+            i++;
+            fprintf(stderr, "For Loop %d, clock subtraction = %d\n", i, (int)(end - start));
         }
 
         // if (((end - start) <= (migration_checkpoint_delay * idle_clock_rate_avg)) && get_output_counter() > 0) { // for PGSQL
