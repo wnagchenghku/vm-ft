@@ -718,10 +718,16 @@ static void colo_process_checkpoint(MigrationState *s)
         goto out;
     }
 
-    learn_idle_clock_rate();
     sync_type = proxy_get_sync_type();
+    *(int*)rdma_buffer = sync_type;
+    mc_rdma_put_colo_ctrl_buffer(sizeof(sync_type));
+
     recheck_count = proxy_get_recheck_num();
     colo_debug = proxy_get_colo_debug();
+
+    sleep(5);
+
+    learn_idle_clock_rate();
 
     while (s->state == MIGRATION_STATUS_COLO) {
         if (failover_request_is_active()) {
@@ -996,10 +1002,12 @@ void *colo_process_incoming_thread(void *opaque)
         goto out;
     }
 
-    learn_idle_clock_rate();
-    sync_type = proxy_get_sync_type();
+    mc_rdma_get_colo_ctrl_buffer(sizeof(sync_type));
+    sync_type = *(int*)rdma_buffer;
     recheck_count = proxy_get_recheck_num();
     colo_debug = proxy_get_colo_debug();
+    sleep(5);
+    learn_idle_clock_rate();
 
     while (mis->state == MIGRATION_STATUS_COLO) {
         backup_system_reset_done = 0;
