@@ -404,6 +404,7 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
     
     int migration_checkpoint_delay = 1;
 
+    // for (i = 0; i < 200; ++i) {
     while (true) {
         if (is_primary) {
             migration_checkpoint_delay = s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY];
