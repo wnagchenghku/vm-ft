@@ -356,7 +356,7 @@ static int idle_clock_rate_min, idle_clock_rate_max, idle_clock_rate_avg;
 
 static void learn_idle_clock_rate(void)
 {
-    int learn_cycles = 200000, i;
+    int learn_cycles = 50000, i;
     clock_t t1, t2;
     uint64_t clock_sum = 0;
     for (i = 0; i < learn_cycles; ++i)
