@@ -658,12 +658,6 @@ static void colo_process_checkpoint(MigrationState *s)
         goto out;
     }
 
-
-    for (i = 0; i < ; ++i)
-    {
-        g_usleep(1000);
-    }
-
     while (s->state == MIGRATION_STATUS_COLO) {
         if (failover_request_is_active()) {
             error_report("failover request");
