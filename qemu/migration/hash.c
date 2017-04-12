@@ -29,7 +29,7 @@
 
 #include "migration/hash.h"
 #include "net/net.h"
-
+#include "rsm-interface.h"
 #define nthread 16
 
 //#define ALGO_TEST
@@ -472,17 +472,6 @@ static void *compare_thread_func(void *arg){
 
 	}
 	return NULL;
-}
-
-//XS: print bitmap encoded in long
-static char* long_to_binary(long l){
-    static char b[65];
-    b[0]='\0';
-    unsigned long z; 
-    for (z = 1UL << 63; z > 0; z >>= 1 ){
-        strcat(b, ((l & z) == z) ? "1" : "0");
-    }
-    return b;
 }
 
 int get_n_thread(void){
