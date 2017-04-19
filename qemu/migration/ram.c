@@ -114,20 +114,20 @@ static void XBZRLE_cache_unlock(void)
 }
 
 static int64_t slow_bitmap_count(unsigned long *bmap, int64_t nbits){
-unsigned long mask;
-int64_t i;
-int offset;
-int64_t count = 0;
-for (i =0; i * 64 < nbits; ++i){
-mask = 0x8000000000000000;
-for (offset = 0; offset <64 && i*64 +offset < nbits; offset++){
-if (mask & bmap[i]){
-count ++;
-}
-mask >>= 1;
-}
-}
-return count;
+    unsigned long mask;
+    int64_t i;
+    int offset;
+    int64_t count = 0;
+    for (i =0; i * 64 < nbits; ++i){
+        mask = 0x8000000000000000;
+        for (offset = 0; offset <64 && i*64 +offset < nbits; offset++){
+            if (mask & bmap[i]){
+                count++;
+            }
+            mask >>= 1;
+        }
+    }
+    return count;
 }
 
 
