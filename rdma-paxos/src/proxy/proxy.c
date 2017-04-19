@@ -213,6 +213,11 @@ int proxy_get_colo_debug(void)
     return proxy->colo_debug;
 }
 
+int proxy_get_colo_gettime(void)
+{
+    return proxy->colo_gettime;
+}
+
 static void stablestorage_save_request(void* data,void*arg)
 {
     proxy_node* proxy = arg;

@@ -46,13 +46,13 @@
 #include "migration/colo.h"
 #include "mc-rdma.h"
 #include "migration/hash.h"
-//#include "migration/gettime.h"
+#include "rsm-interface.h"
 
 static uint8_t *rdma_buffer;
 
 extern bool colo_not_first_sync; 
 
-extern bool colo_primary_transfer; 
+extern bool colo_primary_transfer;
 
 #ifdef DEBUG_MIGRATION_RAM
 #define DPRINTF(fmt, ...) \
@@ -112,6 +112,24 @@ static void XBZRLE_cache_unlock(void)
     if (migrate_use_xbzrle())
         qemu_mutex_unlock(&XBZRLE.lock);
 }
+
+static int64_t slow_bitmap_count(unsigned long *bmap, int64_t nbits){
+unsigned long mask;
+int64_t i;
+int offset;
+int64_t count = 0;
+for (i =0; i * 64 < nbits; ++i){
+mask = 0x8000000000000000;
+for (offset = 0; offset <64 && i*64 +offset < nbits; offset++){
+if (mask & bmap[i]){
+count ++;
+}
+mask >>= 1;
+}
+}
+return count;
+}
+
 
 /*
  * called from qmp_migrate_set_cache_size in main thread, possibly while
@@ -2210,7 +2228,7 @@ static int ram_save_iterate(QEMUFile *f, void *opaque)
     return pages_sent;
 }
 
-//XS: backup thread's for preparing and comparing bitmap
+
 int backup_prepare_bitmap(void){
     rcu_read_lock();
     
@@ -2221,13 +2239,25 @@ int backup_prepare_bitmap(void){
 
     unsigned long *backup_bitmap = atomic_rcu_read(&backup_bitmap_rcu)->bmap;
 
+    static int colo_gettime = -1;
+    if (colo_gettime == -1) {
+        colo_gettime = proxy_get_colo_gettime();
+    }
+
+    int64_t backup_dirty_pages;
+    if (colo_gettime) {
+        backup_dirty_pages = slow_bitmap_count(backup_bitmap, ram_bitmap_pages);
+    }
+
     ssize_t ret; 
     ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
-    // printf("[Bitmap] RDMA received length %lu\n", ret);
     
-    //FIXIT: slow; 
     unsigned long *primary_bitmap = (unsigned long*) malloc(ret);
     memcpy(primary_bitmap, rdma_buffer, ret);
+    if (colo_gettime) {
+        int64_t primary_dirty_pages = slow_bitmap_count(primary_bitmap, ram_bitmap_pages);
+        fprintf(stderr, "primary dirty pages: %"PRIu64", backup dirty pages:%"PRIu64"\n", primary_dirty_pages, backup_dirty_pages);
+    }
 
     memcpy(rdma_buffer, backup_bitmap, len * sizeof(unsigned long));
 
@@ -2236,22 +2266,12 @@ int backup_prepare_bitmap(void){
         printf("Failed to send bitmap from backup to primary\n");
     }
 
-        unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
-       // gettimeofday(&t2, NULL);
-        bitmap_or(or_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
+    unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
+    bitmap_or(or_bitmap, primary_bitmap, backup_bitmap, ram_bitmap_pages);
 
-
-    //xs: test or bitmap
     compute_hash_list(or_bitmap, ram_bitmap_pages);
 
-
-    //TODO: compute hash based on xor_bitmapr   
-    hash_list *hlist = get_hash_list_pointer(); 
-
-    // printf("\n before memcpy, size = %ld\n", hlist->len * sizeof(hash_t));
-    // printf("rdma_buffer: %p, hlist->hashes: %p\n", rdma_buffer, hlist->hashes);
-    // fflush(stdout);
-
+    hash_list *hlist = get_hash_list_pointer();
 
     uint8_t * dst = rdma_buffer;
 
@@ -2272,35 +2292,28 @@ int backup_prepare_bitmap(void){
 
     backup_dirty_pages = 0;
 
-    // rcu_read_unlock();
-
-
     return 0;
 
 }
 
 static int ram_save_complete(QEMUFile *f, void *opaque)
 {
-
-
-
-
     rdma_buffer = mc_rdma_get_colo_ctrl_buffer_ptr();
     rcu_read_lock();
 
+    static int colo_gettime = -1;
+    if (colo_gettime == -1) {
+        colo_gettime = proxy_get_colo_gettime();
+    }
 
-    //XS: this line will fit in the bitmap. 
     if (!migration_in_postcopy(migrate_get_current())) {
         migration_bitmap_sync();
     }
 
     if (colo_not_first_sync == true){
-
-
         int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
         long len =  BITS_TO_LONGS(ram_bitmap_pages);
         unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
-        
 
         memcpy(rdma_buffer, bitmap, len * sizeof(unsigned long)); 
         
@@ -2309,14 +2322,22 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
             printf("Failed to send bitmap from primary to backup\n");
         }
 
-        //XS: receive the bitmap from backup. 
         ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
         unsigned long *backup_bitmap = (unsigned long *) rdma_buffer;
         
         unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
         bitmap_or(or_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
 
+        uint64_t compute_hash_start;
+        if (colo_gettime) {
+            compute_hash_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
+        }
         compute_hash_list(or_bitmap, ram_bitmap_pages);
+
+        if (colo_gettime) {
+            uint64_t compute_hash_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - compute_hash_start;
+            fprintf(stderr, "compute_hash_time: %"PRId64"\n", compute_hash_time);
+        }
 
         hash_list *hlist = get_hash_list_pointer();
        
@@ -2330,13 +2351,10 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         
         ret = mc_rdma_get_colo_ctrl_buffer(1);
 
-        for (i =0 ; i<nthread; i++){
-
+        for (i =0 ; i < nthread; i++){
             memcpy(remote_hlist->hashes[i], src, hlist->len[i] * sizeof(hash_t));
             src+=hlist->len[i] * sizeof(hash_t);
         }
-
-        
         compare_hash_list();
         
     }
@@ -2346,27 +2364,27 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
     /* try transferring iterative blocks of memory */
 
     /* flush all remaining blocks regardless of rate limiting */
-    //xs: transfer pages
-    //if (colo_not_first_sync == false){
+    uint64_t transferring_memory_start;
+    if (colo_gettime) {
+        transferring_memory_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
+    }
 
-        while (true) {
-            int pages;
+    while (true) {
+        int pages;
 
-
-            // printf("[ram_find_and_save_block] before\n");
-            // fflush(stdout);
-            pages = ram_find_and_save_block(f, !migration_in_colo_state(),
+        pages = ram_find_and_save_block(f, !migration_in_colo_state(),
                                             &bytes_transferred);
-            // printf("[ram_find_and_save_block] returned pages=%d\n", pages);
-            // fflush(stdout);
 
-            /* no more blocks to sent */
-            if (pages == 0) {
-                break;
-            }
+        /* no more blocks to sent */
+        if (pages == 0) {
+            break;
         }
-    
-    
+    }
+
+    if (colo_gettime) {
+        uint64_t transferring_memory_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - transferring_memory_start;
+        fprintf(stderr, "transferring_memory_time: %"PRId64"\n", transferring_memory_time);
+    }
 
     unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
     int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
@@ -2380,7 +2398,6 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
     rcu_read_unlock();
 
     qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
-
 
     return 0;
 }
@@ -2956,7 +2973,7 @@ out_locked:
     rcu_read_unlock();
     return -errno;
 }
-//xs: xs's function, not called yet
+
 void rdma_backup_init(void){
     //ram_cache_enable = true;
     int64_t ram_cache_pages = last_ram_offset() >> TARGET_PAGE_BITS;
@@ -2965,8 +2982,6 @@ void rdma_backup_init(void){
     migration_dirty_pages = 0;
     memory_global_dirty_log_start();
 }
-
-
 
 void colo_release_ram_cache(void)
 {
@@ -3016,8 +3031,6 @@ void colo_flush_ram_cache(void)
         }
         if (host_off == offset) { /* walk ramblock->host */
             host_off = ramlist_bitmap_find_and_reset_dirty(block, offset);
-            //printf("host_off %ld", host_off);
-            //fflush(stdout);
         }
         if (host_off >= block->used_length &&
             cache_off >= block->used_length) {
@@ -3026,16 +3039,12 @@ void colo_flush_ram_cache(void)
             block = QLIST_NEXT_RCU(block, next);
         } else {
             if (host_off <= cache_off) {
-                //xs: host dirty
                 offset = host_off;
             } else {
                 offset = cache_off;
             }
             dst_host = block->host + offset;
             src_host = block->colo_cache + offset;
-            // if (memcmp(dst_host, src_host, TARGET_PAGE_SIZE) == 0){
-            //     same++;
-            // }
             memcpy(dst_host, src_host, TARGET_PAGE_SIZE);
             
             total++; 
@@ -3047,7 +3056,6 @@ void colo_flush_ram_cache(void)
     assert(migration_dirty_pages == 0);
     trace_colo_flush_ram_cache_begin(host_dirty);
     trace_colo_flush_ram_cache_begin(both_dirty);
-    // fflush(stdout);
     trace_colo_flush_ram_cache_end();
 
     unsigned long *backup_bitmap;

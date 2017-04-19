@@ -459,7 +459,9 @@ static void static_timing_sync(MigrationState *s)
     g_usleep(s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * 1000);
 }
 
-#define OPEN_FT
+static int colo_gettime;
+
+#define TURN_ON_FT
 static int colo_do_checkpoint_transaction(MigrationState *s,
                                           QEMUSizedBuffer *buffer)
 {
@@ -468,10 +470,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     size_t size;
     Error *local_err = NULL;
     int ret = -1;
-
-    //clock_handler clock;
-    //clock_init(&clock);
-    //clock_add(&clock);
 
     // colo_send_message(s->to_dst_file, COLO_MESSAGE_CHECKPOINT_REQUEST,
     //                   &local_err);
@@ -502,13 +500,12 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         goto out;
     }
 
-    //clock_add(&clock);
     vm_stop_force_state(RUN_STATE_COLO);
 
     qemu_mutex_unlock_iothread();
     //trace_colo_vm_state_change("run", "stop");
 
-#ifdef OPEN_FT
+#ifdef TURN_ON_FT
 
     /*
      * failover request bh could be called after
@@ -532,12 +529,10 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
      * packets
      */
 
-    //clock_add(&clock);
     mc_send_message(COLO_MESSAGE_VMSTATE_SEND, &local_err);
     if (local_err) {
         goto out;
     }
-    //clock_add(&clock);
 
     qemu_mutex_lock_iothread();
     /*
@@ -591,8 +586,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         goto out;
     }
 
-    //clock_add(&clock);
-
     // colo_receive_check_message(s->rp_state.from_dst_file,
     //                    COLO_MESSAGE_VMSTATE_RECEIVED, &local_err);
     mc_receive_check_message(COLO_MESSAGE_VMSTATE_RECEIVED, &local_err);
@@ -600,13 +593,22 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     if (local_err) {
         goto out;
     }
-    //clock_add(&clock);
     // colo_receive_check_message(s->rp_state.from_dst_file,
     //                    COLO_MESSAGE_VMSTATE_LOADED, &local_err);
+
+    uint64_t vmstate_loaded_start;
+    if (colo_gettime) {
+        vmstate_loaded_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
+    }
+
     mc_receive_check_message(COLO_MESSAGE_VMSTATE_LOADED, &local_err); //around 20ms
-    //clock_add(&clock);
     if (local_err) {
         goto out;
+    }
+
+    if (colo_gettime) {
+        int64_t vmstate_loaded_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - vmstate_loaded_start;
+        fprintf(stderr, "vmstate_loaded_time: %"PRId64"\n", vmstate_loaded_time);
     }
 
 
@@ -749,6 +751,8 @@ static void colo_process_checkpoint(MigrationState *s)
     sleep(2);
 
     learn_idle_clock_rate();
+
+    colo_gettime = proxy_get_colo_gettime();
 
     while (s->state == MIGRATION_STATUS_COLO) {
         if (failover_request_is_active()) {
@@ -957,7 +961,6 @@ void *colo_process_incoming_thread(void *opaque)
     pthread_t backup_reset_thread;
     pthread_create(&backup_reset_thread, NULL,backup_reset, NULL);
 
-    // printf("\nHASH INIT CALLED\n");
     MigrationIncomingState *mis = opaque;
     QEMUFile *fb = NULL;
     QEMUSizedBuffer *buffer = NULL; /* Cache incoming device state */

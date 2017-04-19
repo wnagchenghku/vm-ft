@@ -24,6 +24,7 @@ extern "C" {
 	int proxy_get_sync_type(void);
 	int proxy_get_recheck_num(void);
 	int proxy_get_colo_debug(void);
+	int proxy_get_colo_gettime(void);
 
 #ifdef __cplusplus
 }

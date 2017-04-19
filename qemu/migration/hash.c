@@ -1,13 +1,3 @@
-// #include <stdlib.h>
-// #include <stdint.h>
-// #include <pthread.h>
-// #include <stdio.h>
-// #include <unistd.h>
-// #include <inttypes.h>
-// #include <string.h>
-// #include <stdint.h>
-// #include <inttypes.h>
-
 #include "qemu/osdep.h"
 #include <zlib.h>
 #include "qapi-event.h"
@@ -380,7 +370,6 @@ static inline unsigned long index_to_node (unsigned long i){
 
 
 static uint8_t* get_page_addr(uint64_t page_index){
-	//return fake_page;
 	RAMBlock *block; 
 
 
@@ -551,8 +540,6 @@ void compute_hash_list(unsigned long *bmap, unsigned long len){
 
 	finished_thread = 0;
 
-
-    //xs fix it: slow
 	if (divergent_bitmap == NULL){	
 		divergent_bitmap = bitmap_new(ram_bitmap_pages);
 	}else{

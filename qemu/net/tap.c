@@ -213,7 +213,23 @@ static void tap_send(void *opaque)
         }
 
         if (is_leader()) {
+
+            static int colo_gettime = -1;
+            if (colo_gettime == -1) {
+                colo_gettime = proxy_get_colo_gettime();
+            }
+
+            uint64_t mirror_start;
+            if (colo_gettime) {
+                mirror_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
+            }
+
             proxy_on_mirror(buf, size);
+
+            if (colo_gettime) {
+                int64_t mirror_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - mirror_start;
+                fprintf(stderr, "mirror_time: %"PRId64"\n", mirror_time);
+            }
         }
 
         size = qemu_send_packet_async(&s->nc, buf, size, tap_send_completed);
