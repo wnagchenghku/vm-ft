@@ -221,14 +221,14 @@ static void tap_send(void *opaque)
 
             uint64_t mirror_start;
             if (colo_gettime) {
-                mirror_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
+                mirror_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
             }
 
             proxy_on_mirror(buf, size);
 
             if (colo_gettime) {
-                int64_t mirror_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - mirror_start;
-                fprintf(stderr, "mirror_time: %"PRId64"\n", mirror_time);
+                int64_t mirror_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - mirror_start;
+                fprintf(stderr, "mirror_time: %"PRId64" ns\n", mirror_time);
             }
         }
 
