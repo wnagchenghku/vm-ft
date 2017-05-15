@@ -79,16 +79,12 @@ The maxfdp1 argument specifies the number of descriptors to be tested.
 The maxfdp1 argument forces us to calculate the largest descriptor that we are interested in and then tell the kernel this value. For example, given the previous code that turns on the indicators for descriptors 1, 4, and 5, the maxfdp1 value is 6. The reason it is 6 and not 5 is that we are specifying the number of descriptor, not the largest value, and descriptors start at 0.
 
 1. A socket is ready for reading if any of the following four conditions is true:
-  
-  a. The number of bytes of data in the socket receive buffer is greater than or equal to the current size of the low-water mark of the socket receive buffer. A read operation on the socket will not block and will return a value greater than 0 (i.e., the data that is ready to be read). We can set this low-water mark using the SO_RCVLOWAT socket option. It defaults to 1 for TCP and UDP sockets.
-
-  b. The socket is a listening socket and the number of completed connections is nonzero.
-
-2. A socket is ready for writing if any of the following conditions is true:
-
-  a. The number of bytes available space in the socket send buffer is greater than or equal to the current size of the low-water mark for the socket send buffer and either: (i) the socket is connected, or (ii) the socket does not require a connection (e.g., UDP).
-
-  b. A socket using a non-blocking `connect` has completed the connection, or the `connect` has failed.
+   1. The number of bytes of data in the socket receive buffer is greater than or equal to the current size of the low-water mark of the socket receive buffer. A read operation on the socket will not block and will return a value greater than 0 (i.e., the data that is ready to be read). We can set this low-water mark using the SO_RCVLOWAT socket option. It defaults to 1 for TCP and UDP sockets.
+   1. The socket is a listening socket and the number of completed connections is nonzero.
+1. A socket is ready for writing if any of the following conditions is true:
+   1. The number of bytes available space in the socket send buffer is greater than or equal to the current size of the low-water mark for the socket send buffer and either: (i) the socket is connected, or (ii) the socket does not require a connection (e.g., UDP).
+   
+   1. A socket using a non-blocking `connect` has completed the connection, or the `connect` has failed.
 
 ### poll Function
 
