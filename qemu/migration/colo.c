@@ -529,10 +529,10 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
      * packets
      */
 
-    mc_send_message(COLO_MESSAGE_VMSTATE_SEND, &local_err);
-    if (local_err) {
-        goto out;
-    }
+    // mc_send_message(COLO_MESSAGE_VMSTATE_SEND, &local_err);
+    // if (local_err) {
+    //     goto out;
+    // }
 
     qemu_mutex_lock_iothread();
     /*
@@ -1070,7 +1070,7 @@ void *colo_process_incoming_thread(void *opaque)
 
         // colo_receive_check_message(mis->from_src_file,
         //                    COLO_MESSAGE_VMSTATE_SEND, &local_err);
-        mc_receive_check_message(COLO_MESSAGE_VMSTATE_SEND, &local_err);
+        // mc_receive_check_message(COLO_MESSAGE_VMSTATE_SEND, &local_err);
 
         backup_prepare_bitmap();
 
