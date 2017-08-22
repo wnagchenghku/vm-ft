@@ -2315,7 +2315,18 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
         long len =  BITS_TO_LONGS(ram_bitmap_pages);
 
+        uint64_t p_get_bmap_start;
+        if (colo_gettime) {
+            p_get_bmap_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
+        }
+
         ssize_t ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
+
+        if (colo_gettime) {
+            uint64_t p_get_bmap_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - p_get_bmap_start;
+            fprintf(stderr, "p_get_bmap_time: %"PRId64"\n", p_get_bmap_time);
+        }
+
         unsigned long *backup_bitmap = (unsigned long *) rdma_buffer;
 
         unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
@@ -2324,10 +2335,20 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         bitmap_or(or_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
 
         memcpy(rdma_buffer, bitmap, len * sizeof(unsigned long)); 
+
+        uint64_t p_put_bmap_start;
+        if (colo_gettime) {
+            p_put_bmap_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
+        }
         
         ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
         if (ret < 0){
             printf("Failed to send bitmap from primary to backup\n");
+        }
+
+        if (colo_gettime) {
+            uint64_t p_put_bmap_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - p_put_bmap_start;
+            fprintf(stderr, "p_put_bmap_time: %"PRId64"\n", p_put_bmap_time);
         }
 
         uint64_t compute_hash_start;
@@ -2350,8 +2371,18 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         int i; 
 
         uint8_t* src = rdma_buffer;
+
+        uint64_t p_put_hash_start;
+        if (colo_gettime) {
+            p_put_hash_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
+        }
         
         ret = mc_rdma_get_colo_ctrl_buffer(1);
+
+        if (colo_gettime) {
+            uint64_t p_put_hash_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - p_put_hash_start;
+            fprintf(stderr, "p_put_hash_time: %"PRId64"\n", p_put_hash_time);
+        }
 
         for (i =0 ; i < nthread; i++){
             memcpy(remote_hlist->hashes[i], src, hlist->len[i] * sizeof(hash_t));
