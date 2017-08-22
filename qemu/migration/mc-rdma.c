@@ -2356,8 +2356,94 @@ connect_qp_exit:
     return rc;
 }
 
+static int mc_rdma_send_ready()
+{
+    // RDMA SEND to inform the source we're ready
+    int ret = 0;
+    MC_RDMAControlHeader head;
+    head.len = 1;
+    MC_RDMAWorkRequestData *wr = &rdma->colo_ctrl_wr_data;
+    struct ibv_send_wr *bad_wr;
+    struct ibv_sge sge = {
+                           .addr = (uintptr_t)(wr->control + MC_RDMA_CONTROL_RESERVED_RECV_BUFFER),
+                           .length = head.len + sizeof(MC_RDMAControlHeader),
+                           .lkey = wr->control_mr->lkey,
+                         };
+    struct ibv_send_wr send_wr = {
+                                   .opcode = IBV_WR_SEND,
+                                   .send_flags = IBV_SEND_SIGNALED,
+                                   .sg_list = &sge,
+                                   .num_sge = 1,
+                                };
+
+    assert(sge.length <= MC_RDMA_CONTROL_RESERVED_RECV_BUFFER);
+    memcpy(wr->control + MC_RDMA_CONTROL_RESERVED_RECV_BUFFER, &head, sizeof(MC_RDMAControlHeader));
+    mc_control_to_network((void *) (wr->control + MC_RDMA_CONTROL_RESERVED_RECV_BUFFER));
+
+    ret = ibv_post_send(rdma->colo_ctrl_qp, &send_wr, &bad_wr);
+
+    if (ret > 0) {
+        error_report("Failed to use post IB SEND for colo control");
+        return -ret;
+    }
+
+    // block until SEND to finish
+    int poll_result;
+    struct ibv_wc wc;
+
+    do {
+        poll_result = ibv_poll_cq(rdma->colo_ctrl_cq, 1, &wc);
+    } while (poll_result == 0);
+
+    if (wc.status != IBV_WC_SUCCESS) {
+        fprintf(stderr, "ibv_poll_cq wc.status=%d %s!\n",
+                        wc.status, ibv_wc_status_str(wc.status));
+
+        return -1;
+    }
+
+    return 0;
+}
+
+static int mc_rdma_recv_ready()
+{
+    // wait for READY
+    int poll_result;
+    struct ibv_wc wc;
+
+    do {
+        poll_result = ibv_poll_cq(rdma->colo_ctrl_cq, 1, &wc);
+    } while (poll_result == 0);
+
+    if (wc.status != IBV_WC_SUCCESS) {
+        fprintf(stderr, "ibv_poll_cq wc.status=%d %s!\n",
+                        wc.status, ibv_wc_status_str(wc.status));
+
+        return -1;
+    }
+
+    // post a WR request for READY
+    struct ibv_recv_wr *bad_wr;
+    struct ibv_sge sge = {
+                            .addr = (uintptr_t)(rdma->colo_ctrl_wr_data.control),
+                            .length = MC_RDMA_CONTROL_MAX_BUFFER,
+                            .lkey = rdma->colo_ctrl_wr_data.control_mr->lkey,
+                         };
+
+    struct ibv_recv_wr recv_wr = {
+                                    .sg_list = &sge,
+                                    .num_sge = 1,
+                                 };
+
+
+    if (ibv_post_recv(rdma->colo_ctrl_qp, &recv_wr, &bad_wr)) {
+        return -1;
+    }
+}
+
 int mc_rdma_put_colo_ctrl_buffer(uint32_t size)
 {
+    mc_rdma_recv_ready();
 
     int ret = 0;
     MC_RDMAControlHeader head;
@@ -2415,7 +2501,7 @@ uint8_t *mc_rdma_get_colo_ctrl_buffer_ptr(void)
 
 ssize_t mc_rdma_get_colo_ctrl_buffer(size_t size)
 {
-    MC_RDMAControlHeader head;
+    mc_rdma_send_ready();
 
     int poll_result;
     struct ibv_wc wc;
@@ -2430,6 +2516,8 @@ ssize_t mc_rdma_get_colo_ctrl_buffer(size_t size)
 
         return -1;
     }
+
+    MC_RDMAControlHeader head;
 
     mc_network_to_control((void *) rdma->colo_ctrl_wr_data.control);
     memcpy(&head, rdma->colo_ctrl_wr_data.control, sizeof(MC_RDMAControlHeader));
