@@ -545,7 +545,19 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
 
     colo_primary_transfer = true;
+
+    uint64_t savevm_start;
+    if (colo_gettime) {
+        savevm_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
+    }
+
     qemu_savevm_live_state(s->to_dst_file);
+
+    if (colo_gettime) {
+        int64_t savevm_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - savevm_start;
+        fprintf(stderr, "qemu_savevm_live_state: %"PRId64"\n", savevm_time);
+    }
+
     colo_primary_transfer = false;
 
 
@@ -559,17 +571,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
      */
     qemu_fflush(s->to_dst_file);
     /* Note: device state is saved into buffer */
-    uint64_t save_device_start;
-    if (colo_gettime) {
-        save_device_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
-    }
-
     ret = qemu_save_device_state(trans);
-
-    if (colo_gettime) {
-        int64_t save_device_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - save_device_start;
-        fprintf(stderr, "qemu_save_device_state: %"PRId64"\n", save_device_time);
-    }
 
     qemu_mutex_unlock_iothread();
     if (ret < 0) {
@@ -604,13 +606,14 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     if (local_err) {
         goto out;
     }
-    colo_receive_check_message(s->rp_state.from_dst_file,
-                        COLO_MESSAGE_VMSTATE_LOADED, &local_err);
 
     uint64_t vmstate_loaded_start;
     if (colo_gettime) {
         vmstate_loaded_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
     }
+
+    colo_receive_check_message(s->rp_state.from_dst_file,
+                        COLO_MESSAGE_VMSTATE_LOADED, &local_err);
 
     //mc_receive_check_message(COLO_MESSAGE_VMSTATE_LOADED, &local_err); //around 20ms
     if (local_err) {
@@ -621,7 +624,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         int64_t vmstate_loaded_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - vmstate_loaded_start;
         fprintf(stderr, "vmstate_loaded_time: %"PRId64"\n", vmstate_loaded_time);
     }
-
 
     if (colo_shutdown_requested) {
         colo_send_message(s->to_dst_file, COLO_MESSAGE_GUEST_SHUTDOWN,
@@ -1159,8 +1161,19 @@ void *colo_process_incoming_thread(void *opaque)
         vmstate_loading = true;
 
         mc_clear_backup_bmap(); //xs: clear the bakcup bitmap to zeros
-   
-        ret = qemu_load_device_state(fb); 
+
+        uint64_t load_device_start;
+        if (colo_gettime) {
+            load_device_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
+        }   
+        ret = qemu_load_device_state(fb);
+
+        if (colo_gettime) {
+            int64_t load_device_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - load_device_start;
+            fprintf(stderr, "qemu_load_device_state: %"PRId64"\n", load_device_time);
+        }
+
+
 
         if (ret < 0) {
             error_report("COLO: load device state failed");
