@@ -2250,6 +2250,14 @@ int backup_prepare_bitmap(void){
     }
 
     ssize_t ret; 
+
+    memcpy(rdma_buffer, backup_bitmap, len * sizeof(unsigned long));
+
+    ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
+    if (ret < 0){
+        printf("Failed to send bitmap from backup to primary\n");
+    }
+
     ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
     
     unsigned long *primary_bitmap = (unsigned long*) malloc(ret);
@@ -2257,13 +2265,6 @@ int backup_prepare_bitmap(void){
     if (colo_gettime) {
         int64_t primary_dirty_pages = slow_bitmap_count(primary_bitmap, ram_bitmap_pages);
         fprintf(stderr, "primary dirty pages: %"PRIu64", backup dirty pages:%"PRIu64"\n", primary_dirty_pages, backup_dirty_pages);
-    }
-
-    memcpy(rdma_buffer, backup_bitmap, len * sizeof(unsigned long));
-
-    ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
-    if (ret < 0){
-        printf("Failed to send bitmap from backup to primary\n");
     }
 
     unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
@@ -2313,18 +2314,19 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
     if (colo_not_first_sync == true){
         int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
         long len =  BITS_TO_LONGS(ram_bitmap_pages);
+
+        ssize_t ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
+        unsigned long *backup_bitmap = (unsigned long *) rdma_buffer;
+
         unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
 
         memcpy(rdma_buffer, bitmap, len * sizeof(unsigned long)); 
         
-        ssize_t ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
+        ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
         if (ret < 0){
             printf("Failed to send bitmap from primary to backup\n");
         }
 
-        ret = mc_rdma_get_colo_ctrl_buffer(len * sizeof(unsigned long));
-        unsigned long *backup_bitmap = (unsigned long *) rdma_buffer;
-        
         unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
         bitmap_or(or_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
 

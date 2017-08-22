@@ -2181,7 +2181,7 @@ static int modify_qp_to_rtr(struct ibv_qp *qp, uint32_t remote_qpn, uint16_t dli
     attr.dest_qp_num = remote_qpn;
     attr.rq_psn = 0;
     attr.max_dest_rd_atomic = 1;
-    attr.min_rnr_timer = 0x12;
+    attr.min_rnr_timer = 1;
     attr.ah_attr.is_global = 0;
     attr.ah_attr.dlid = dlid;
     attr.ah_attr.sl = 0;
@@ -2212,7 +2212,7 @@ static int modify_qp_to_rts(struct ibv_qp *qp)
     int rc;
     memset(&attr, 0, sizeof (attr));
     attr.qp_state = IBV_QPS_RTS;
-    attr.timeout = 0x12;
+    attr.timeout = 1;
     attr.retry_cnt = 7;
     attr.rnr_retry = 7;
     attr.sq_psn = 0;
