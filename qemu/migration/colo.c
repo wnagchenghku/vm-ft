@@ -1046,6 +1046,8 @@ void *colo_process_incoming_thread(void *opaque)
     sleep(2);
     learn_idle_clock_rate();
 
+    colo_gettime = proxy_get_colo_gettime();
+
     while (mis->state == MIGRATION_STATUS_COLO) {
         backup_system_reset_done = 0;
         backup_disk_reset_done = false;
