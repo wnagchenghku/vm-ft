@@ -559,7 +559,18 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
      */
     qemu_fflush(s->to_dst_file);
     /* Note: device state is saved into buffer */
+    uint64_t save_device_start;
+    if (colo_gettime) {
+        save_device_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
+    }
+
     ret = qemu_save_device_state(trans);
+
+    if (colo_gettime) {
+        int64_t save_device_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - save_device_start;
+        fprintf(stderr, "qemu_save_device_state: %"PRId64"\n", save_device_time);
+    }
+
     qemu_mutex_unlock_iothread();
     if (ret < 0) {
         error_report("Save device state error");

@@ -2319,6 +2319,9 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         unsigned long *backup_bitmap = (unsigned long *) rdma_buffer;
 
         unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
+        
+        unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
+        bitmap_or(or_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
 
         memcpy(rdma_buffer, bitmap, len * sizeof(unsigned long)); 
         
@@ -2326,9 +2329,6 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         if (ret < 0){
             printf("Failed to send bitmap from primary to backup\n");
         }
-
-        unsigned long *or_bitmap = bitmap_new(ram_bitmap_pages);
-        bitmap_or(or_bitmap, bitmap, backup_bitmap, ram_bitmap_pages);
 
         uint64_t compute_hash_start;
         if (colo_gettime) {
