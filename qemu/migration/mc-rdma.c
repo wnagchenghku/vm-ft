@@ -2356,7 +2356,7 @@ connect_qp_exit:
     return rc;
 }
 
-static int mc_rdma_send_ready()
+static int mc_rdma_send_ready(void)
 {
     // RDMA SEND to inform the source we're ready
     int ret = 0;
@@ -2405,7 +2405,7 @@ static int mc_rdma_send_ready()
     return 0;
 }
 
-static int mc_rdma_recv_ready()
+static int mc_rdma_recv_ready(void)
 {
     // wait for READY
     int poll_result;
@@ -2439,11 +2439,13 @@ static int mc_rdma_recv_ready()
     if (ibv_post_recv(rdma->colo_ctrl_qp, &recv_wr, &bad_wr)) {
         return -1;
     }
+
+    return 0;
 }
 
 int mc_rdma_put_colo_ctrl_buffer(uint32_t size)
 {
-    mc_rdma_recv_ready();
+    // mc_rdma_recv_ready();
 
     int ret = 0;
     MC_RDMAControlHeader head;
@@ -2501,7 +2503,7 @@ uint8_t *mc_rdma_get_colo_ctrl_buffer_ptr(void)
 
 ssize_t mc_rdma_get_colo_ctrl_buffer(size_t size)
 {
-    mc_rdma_send_ready();
+    // mc_rdma_send_ready();
 
     int poll_result;
     struct ibv_wc wc;
