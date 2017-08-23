@@ -2249,11 +2249,9 @@ int backup_prepare_bitmap(void){
         backup_dirty_pages = slow_bitmap_count(backup_bitmap, ram_bitmap_pages);
     }
 
-    ssize_t ret; 
-
     memcpy(rdma_buffer, backup_bitmap, len * sizeof(unsigned long));
-
-    ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
+     
+    ssize_t ret = mc_rdma_put_colo_ctrl_buffer(len * sizeof(unsigned long));
     if (ret < 0){
         printf("Failed to send bitmap from backup to primary\n");
     }

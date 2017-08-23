@@ -1782,9 +1782,16 @@ static LoadStateEntry *loadvm_find_section_entry(MigrationIncomingState *mis,
     return le;
 }
 //xs: error in this function
+
+
 static int
 qemu_loadvm_section_start_full(QEMUFile *f, MigrationIncomingState *mis)
 {
+    static int colo_gettime = -1;
+    if (colo_gettime == -1) {
+        colo_gettime = proxy_get_colo_gettime();
+    }
+
     uint32_t instance_id, version_id, section_id;
     SaveStateEntry *se;
     LoadStateEntry *le;
@@ -1823,12 +1830,23 @@ qemu_loadvm_section_start_full(QEMUFile *f, MigrationIncomingState *mis)
         le = loadvm_save_section_entry(mis, se, section_id, version_id);
     }
     //xs: error in this function
+    int64_t vmstate_load_start;
+    if (colo_gettime) {
+        vmstate_load_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
+    }
+
     ret = vmstate_load(f, se, version_id);
     if (ret < 0) {
         error_report("error while loading state for instance 0x%x of"
                      " device '%s'", instance_id, idstr);
         return ret;
     }
+
+    if (colo_gettime) {
+        int64_t vmstate_load_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - vmstate_load_start;
+        printf("device %s, %"PRId64" ns\n", idstr, vmstate_load_time);
+    }
+
     if (!check_section_footer(f, le)) {
         return -EINVAL;
     }
