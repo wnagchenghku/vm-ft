@@ -949,7 +949,7 @@ static void *backup_reset(void *arg){
         pthread_cond_wait(&backup_reset_cond, &backup_reset_lock);
         pthread_mutex_unlock(&backup_reset_lock);
         qemu_mutex_lock_iothread();
-        qemu_system_reset(VMRESET_SILENT);
+        // qemu_system_reset(VMRESET_SILENT);
        
         // /* discard colo disk buffer */
         Error *local_err = NULL;
