@@ -1144,6 +1144,12 @@ void *colo_process_incoming_thread(void *opaque)
             error_report("Can't open colo buffer for read");
             goto out;
         }
+
+        uint64_t wait_reset_start;
+        if (colo_gettime) {
+            wait_reset_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
+        }
+
         while (1)
         {
             //pthread_spin_lock(&reset_spin_lock);
@@ -1156,6 +1162,11 @@ void *colo_process_incoming_thread(void *opaque)
             }
             //pthread_spin_unlock(&reset_spin_lock);
             sched_yield();
+        }
+
+        if (colo_gettime) {
+            int64_t wait_reset_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - wait_reset_start;
+            fprintf(stderr, "wait_reset_time: %"PRId64"\n", wait_reset_time);
         }
         
         qemu_mutex_lock_iothread();
@@ -1174,8 +1185,6 @@ void *colo_process_incoming_thread(void *opaque)
             int64_t load_device_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - load_device_start;
             fprintf(stderr, "qemu_load_device_state: %"PRId64"\n", load_device_time);
         }
-
-
 
         if (ret < 0) {
             error_report("COLO: load device state failed");
