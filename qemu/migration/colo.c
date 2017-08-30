@@ -580,6 +580,15 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     }
     qemu_fflush(trans);
 
+    mc_start_buffer();
+
+    /* Resume primary guest */
+    qemu_mutex_lock_iothread();
+    control_clock = true;
+    vm_start();
+    control_clock = false;
+    qemu_mutex_unlock_iothread();
+
     /* we send the total size of the vmstate first */
     size = qsb_get_length(buffer);
     // colo_send_message_value(s->to_dst_file, COLO_MESSAGE_VMSTATE_SIZE,
@@ -641,21 +650,9 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     }
 #endif
     ret = 0;
-
-    mc_start_buffer();
-
-    /* Resume primary guest */
-    qemu_mutex_lock_iothread();
-    control_clock = true;
-    vm_start();
-    control_clock = false;
-    qemu_mutex_unlock_iothread();
     //trace_colo_vm_state_change("stop", "run");
 
     mc_flush_oldest_buffer();
-    //clock_add(&clock);
-
-    //clock_display(&clock);
 
     colo_compare_do_checkpoint();
 
@@ -933,46 +930,9 @@ static int wait_output(uint64_t primary_output_counter)
     return 0;
 }
 
-
-static volatile int backup_system_reset_done;  //0 working, 1: peak; 2:reset
- 
-
-static bool backup_disk_reset_done;
-pthread_mutex_t backup_reset_lock;
-pthread_cond_t backup_reset_cond;
-
-//static pthread_spinlock_t reset_spin_lock;
-
-static void *backup_reset(void *arg){
-    while(1){
-        pthread_mutex_lock(&backup_reset_lock);
-        pthread_cond_wait(&backup_reset_cond, &backup_reset_lock);
-        pthread_mutex_unlock(&backup_reset_lock);
-        qemu_mutex_lock_iothread();
-        // qemu_system_reset(VMRESET_SILENT);
-       
-        // /* discard colo disk buffer */
-        Error *local_err = NULL;
-        replication_do_checkpoint_all(&local_err);
-        // if (local_err) {
-        // }
-
-         qemu_mutex_unlock_iothread();
-        if (backup_system_reset_done ==0 )
-            backup_system_reset_done = 1;
-    }
-    return NULL;
-}
-
-
 void *colo_process_incoming_thread(void *opaque)
 {
     hash_init();
-
-    pthread_mutex_init(&backup_reset_lock, NULL);
-    pthread_cond_init(&backup_reset_cond, NULL);
-    pthread_t backup_reset_thread;
-    pthread_create(&backup_reset_thread, NULL,backup_reset, NULL);
 
     MigrationIncomingState *mis = opaque;
     QEMUFile *fb = NULL;
@@ -1078,11 +1038,6 @@ void *colo_process_incoming_thread(void *opaque)
 
         resume_apply_committed_entries();
 
-        pthread_mutex_lock(&backup_reset_lock);
-        pthread_cond_broadcast(&backup_reset_cond);
-        pthread_mutex_unlock(&backup_reset_lock);
-        
-
         // colo_receive_check_message(mis->from_src_file,
         //                    COLO_MESSAGE_VMSTATE_SEND, &local_err);
         // mc_receive_check_message(COLO_MESSAGE_VMSTATE_SEND, &local_err);
@@ -1144,36 +1099,12 @@ void *colo_process_incoming_thread(void *opaque)
             error_report("Can't open colo buffer for read");
             goto out;
         }
-
-        uint64_t wait_reset_start;
-        if (colo_gettime) {
-            wait_reset_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
-        }
-
-        while (1)
-        {
-            //pthread_spin_lock(&reset_spin_lock);
-            if (backup_system_reset_done == 1)
-            {
-
-                backup_system_reset_done = 2;
-                //pthread_spin_unlock(&reset_spin_lock);                
-                break;
-            }
-            //pthread_spin_unlock(&reset_spin_lock);
-            sched_yield();
-        }
-
-        if (colo_gettime) {
-            int64_t wait_reset_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - wait_reset_start;
-            fprintf(stderr, "wait_reset_time: %"PRId64"\n", wait_reset_time);
-        }
         
         qemu_mutex_lock_iothread();
-        //qemu_system_reset(VMRESET_SILENT);
+        qemu_system_reset(VMRESET_SILENT);
         vmstate_loading = true;
 
-        mc_clear_backup_bmap(); //xs: clear the bakcup bitmap to zeros
+        mc_clear_backup_bmap(); //clear the bakcup bitmap to zeros
 
         uint64_t load_device_start;
         if (colo_gettime) {
@@ -1198,14 +1129,13 @@ void *colo_process_incoming_thread(void *opaque)
             goto out;
         }
         /* discard colo disk buffer */
-        // replication_do_checkpoint_all(&local_err);
-        // if (local_err) {
-        //     qemu_mutex_unlock_iothread();
-        //     goto out;
-        // }
+        replication_do_checkpoint_all(&local_err);
+        if (local_err) {
+            qemu_mutex_unlock_iothread();
+            goto out;
+        }
 
         vmstate_loading = false;
-        qemu_mutex_unlock_iothread();
 
         if (failover_get_state() == FAILOVER_STATUS_RELAUNCH) {
             failover_set_state(FAILOVER_STATUS_RELAUNCH, FAILOVER_STATUS_NONE);
@@ -1220,7 +1150,6 @@ void *colo_process_incoming_thread(void *opaque)
             goto out;
         }
 
-        qemu_mutex_lock_iothread();
         control_clock = true;
         vm_start();
         control_clock = false;
