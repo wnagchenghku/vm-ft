@@ -1099,7 +1099,18 @@ void *colo_process_incoming_thread(void *opaque)
         }
         
         qemu_mutex_lock_iothread();
+        uint64_t system_reset_start;
+        if (colo_gettime) {
+            system_reset_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
+        }  
+
         qemu_system_reset(VMRESET_SILENT);
+        
+        if (colo_gettime) {
+            int64_t system_reset_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - system_reset_start;
+            fprintf(stderr, "system_reset_time: %"PRId64"\n", system_reset_time);
+        }
+
         vmstate_loading = true;
 
         mc_clear_backup_bmap(); //clear the bakcup bitmap to zeros
