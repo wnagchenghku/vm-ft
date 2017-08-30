@@ -427,8 +427,8 @@ static void vmstate_subsection_save(QEMUFile *f, const VMStateDescription *vmsd,
     bool subsection_found = false;
 
     while (sub && *sub && (*sub)->needed) {
-        // if ((*sub)->needed(opaque)) {
-        if ((*sub)->needed(opaque) || migration_in_colo_state()) {
+        if ((*sub)->needed(opaque)) {
+        // if ((*sub)->needed(opaque) || migration_in_colo_state()) {
             const VMStateDescription *vmsd = *sub;
             uint8_t len;
 
