@@ -1137,11 +1137,22 @@ void *colo_process_incoming_thread(void *opaque)
             qemu_mutex_unlock_iothread();
             goto out;
         }
+
+        uint64_t do_checkpoint_all_start;
+        if (colo_gettime) {
+            do_checkpoint_all_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
+        }
+
         /* discard colo disk buffer */
         replication_do_checkpoint_all(&local_err);
         if (local_err) {
             qemu_mutex_unlock_iothread();
             goto out;
+        }
+
+        if (colo_gettime) {
+            int64_t do_checkpoint_all_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - do_checkpoint_all_start;
+            fprintf(stderr, "do_checkpoint_all_time: %"PRId64"\n", do_checkpoint_all_time);
         }
 
         vmstate_loading = false;
