@@ -1009,8 +1009,6 @@ void *colo_process_incoming_thread(void *opaque)
     colo_gettime = proxy_get_colo_gettime();
 
     while (mis->state == MIGRATION_STATUS_COLO) {
-        backup_system_reset_done = 0;
-        backup_disk_reset_done = false;
         int request;
         // colo_wait_handle_message(mis->from_src_file, &request, &local_err);
 
