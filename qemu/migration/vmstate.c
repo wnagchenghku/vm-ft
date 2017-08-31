@@ -113,7 +113,7 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
 
     if (colo_gettime) {
         int64_t preload_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - preload_start;
-        printf("preload_time %"PRId64" ns\n", vmstate_load_time);
+        printf("preload_time %"PRId64" ns\n", preload_time);
     }
 
     int64_t while_start;
