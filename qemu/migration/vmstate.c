@@ -122,6 +122,14 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
     }
 
     while (field->name) {
+
+    int64_t field_start;
+    if (colo_gettime) {
+        field_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
+    }
+
+        
+
         trace_vmstate_load_state_field(vmsd->name, field->name);
         if ((field->field_exists &&
              field->field_exists(opaque, version_id)) ||
@@ -159,6 +167,13 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
             return -1;
         }
         field++;
+
+
+    if (colo_gettime) {
+        int64_t field_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - field_start;
+        printf("field_time %"PRId64" ns, %s\n", field_time, field->name);
+    }
+
     }
 
     if (colo_gettime) {
