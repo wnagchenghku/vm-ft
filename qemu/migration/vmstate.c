@@ -79,6 +79,7 @@ static void *vmstate_base_addr(void *opaque, VMStateField *field, bool alloc)
 int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
                        void *opaque, int version_id)
 {
+    static int colo_gettime = 1;
     VMStateField *field = vmsd->fields;
     int ret = 0;
 
@@ -97,12 +98,29 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
         trace_vmstate_load_state_end(vmsd->name, "too old", -EINVAL);
         return -EINVAL;
     }
+
+    int64_t preload_start;
+    if (colo_gettime) {
+        preload_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
+    }
+
     if (vmsd->pre_load) {
         int ret = vmsd->pre_load(opaque);
         if (ret) {
             return ret;
         }
     }
+
+    if (colo_gettime) {
+        int64_t preload_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - preload_start;
+        printf("preload_time %"PRId64" ns\n", vmstate_load_time);
+    }
+
+    int64_t while_start;
+    if (colo_gettime) {
+        while_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
+    }
+
     while (field->name) {
         trace_vmstate_load_state_field(vmsd->name, field->name);
         if ((field->field_exists &&
@@ -142,12 +160,43 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
         }
         field++;
     }
+
+    if (colo_gettime) {
+        int64_t while_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - while_start;
+        printf("while_time %"PRId64" ns\n", while_time);
+    }
+
+
+    int64_t vmstate_subsection_start;
+    if (colo_gettime) {
+        vmstate_subsection_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
+    }
+
     ret = vmstate_subsection_load(f, vmsd, opaque);
     if (ret != 0) {
         return ret;
     }
+
+
+    if (colo_gettime) {
+        int64_t vmstate_subsection_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - vmstate_subsection_start;
+        printf("vmstate_subsection_time %"PRId64" ns\n", vmstate_subsection_time);
+    }
+
+    int64_t post_load_start;
+    if (colo_gettime) {
+        post_load_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
+    }
+
     if (vmsd->post_load) {
         ret = vmsd->post_load(opaque, version_id);
+    }
+
+
+
+    if (colo_gettime) {
+        int64_t post_load_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - post_load_start;
+        printf("post_load_time %"PRId64" ns\n", post_load_time);
     }
     trace_vmstate_load_state_end(vmsd->name, "end", ret);
     return ret;
