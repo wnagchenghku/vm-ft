@@ -166,14 +166,12 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
                          vmsd->name, field->name);
             return -1;
         }
-        field++;
-
-
     if (colo_gettime) {
         int64_t field_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - field_start;
-        printf("field_time %"PRId64" ns, %s\n", field_time, field->name);
+        printf("field_time %"PRId64" ns, %s, %s\n", field_time, field->name, vmsd->name);
     }
 
+        field++;
     }
 
     if (colo_gettime) {
