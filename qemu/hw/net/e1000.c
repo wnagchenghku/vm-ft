@@ -1278,6 +1278,7 @@ e1000_receive_iov(NetClientState *nc, const struct iovec *iov, int iovcnt)
 
 static ssize_t send_to_guest(E1000State *s, const struct iovec *iov, int iovcnt){
 
+
     PCIDevice *d = PCI_DEVICE(s);
     struct e1000_rx_desc desc;
     dma_addr_t base;
@@ -1293,8 +1294,14 @@ static ssize_t send_to_guest(E1000State *s, const struct iovec *iov, int iovcnt)
     size_t desc_offset;
     size_t desc_size;
     size_t total_size;
+    static const int PRCregs[6] = { PRC64, PRC127, PRC255, PRC511,
+                                    PRC1023, PRC1522 };
 
-    if (!e1000x_hw_rx_enabled(s->mac_reg)) {
+    if (!(s->mac_reg[STATUS] & E1000_STATUS_LU)) {
+        return -1;
+    }
+
+    if (!(s->mac_reg[RCTL] & E1000_RCTL_EN)) {
         return -1;
     }
 
@@ -1302,7 +1309,7 @@ static ssize_t send_to_guest(E1000State *s, const struct iovec *iov, int iovcnt)
     if (size < sizeof(min_buf)) {
         iov_to_buf(iov, iovcnt, 0, min_buf, size);
         memset(&min_buf[size], 0, sizeof(min_buf) - size);
-        e1000x_inc_reg_if_not_full(s->mac_reg, RUC);
+        inc_reg_if_not_full(s, RUC);
         min_iov.iov_base = filter_buf = min_buf;
         min_iov.iov_len = size = sizeof(min_buf);
         iovcnt = 1;
@@ -1314,7 +1321,11 @@ static ssize_t send_to_guest(E1000State *s, const struct iovec *iov, int iovcnt)
     }
 
     /* Discard oversized packets if !LPE and !SBP. */
-    if (e1000x_is_oversized(s->mac_reg, size)) {
+    if ((size > MAXIMUM_ETHERNET_LPE_SIZE ||
+        (size > MAXIMUM_ETHERNET_VLAN_SIZE
+        && !(s->mac_reg[RCTL] & E1000_RCTL_LPE)))
+        && !(s->mac_reg[RCTL] & E1000_RCTL_SBP)) {
+        inc_reg_if_not_full(s, ROC);
         return size;
     }
 
@@ -1322,9 +1333,9 @@ static ssize_t send_to_guest(E1000State *s, const struct iovec *iov, int iovcnt)
         return size;
     }
 
-    if (e1000x_vlan_enabled(s->mac_reg) &&
-        e1000x_is_vlan_packet(filter_buf, le16_to_cpu(s->mac_reg[VET]))) {
-        vlan_special = cpu_to_le16(lduw_be_p(filter_buf + 14));
+    if (vlan_enabled(s) && is_vlan_packet(s, filter_buf)) {
+        vlan_special = cpu_to_le16(be16_to_cpup((uint16_t *)(filter_buf
+                                                                + 14)));
         iov_ofs = 4;
         if (filter_buf == iov->iov_base) {
             memmove(filter_buf + 4, filter_buf, 12);
@@ -1341,33 +1352,21 @@ static ssize_t send_to_guest(E1000State *s, const struct iovec *iov, int iovcnt)
 
     rdh_start = s->mac_reg[RDH];
     desc_offset = 0;
-    total_size = size + e1000x_fcs_len(s->mac_reg);
+    total_size = size + fcs_len(s);
     if (!e1000_has_rxbufs(s, total_size)) {
             set_ics(s, 0, E1000_ICS_RXO);
             return -1;
     }
-
-    //
     do {
-        //desc_size: size to copy this round. 
         desc_size = total_size - desc_offset;
         if (desc_size > s->rxbuf_size) {
             desc_size = s->rxbuf_size;
         }
-        //xs: rx_desc_base: return the address of the rx_base
-        //: RDH: rx_descriptors_head; Question: what is head? seems a count 
-
-
         base = rx_desc_base(s) + sizeof(desc) * s->mac_reg[RDH];
-        //xs: read the dst from the memory
         pci_dma_read(d, base, &desc, sizeof(desc));
-        
-
         desc.special = vlan_special;
         desc.status |= (vlan_status | E1000_RXD_STAT_DD);
         if (desc.buffer_addr) {
-            //xs: size: the total size of the iovs. 
-            //desc_offset: number of bits copied already. 
             if (desc_offset < size) {
                 size_t iov_copy;
                 hwaddr ba = le64_to_cpu(desc.buffer_addr);
@@ -1377,7 +1376,6 @@ static ssize_t send_to_guest(E1000State *s, const struct iovec *iov, int iovcnt)
                 }
                 do {
                     iov_copy = MIN(copy_size, iov->iov_len - iov_ofs);
-                    //xs: copy the content to the buffer. 
                     pci_dma_write(d, ba, iov->iov_base + iov_ofs, iov_copy);
                     copy_size -= iov_copy;
                     ba += iov_copy;
@@ -1402,7 +1400,6 @@ static ssize_t send_to_guest(E1000State *s, const struct iovec *iov, int iovcnt)
         }
         pci_dma_write(d, base, &desc, sizeof(desc));
 
-        //xs: wrap. 
         if (++s->mac_reg[RDH] * sizeof(desc) >= s->mac_reg[RDLEN])
             s->mac_reg[RDH] = 0;
         /* see comment in start_xmit; same here */
@@ -1415,7 +1412,17 @@ static ssize_t send_to_guest(E1000State *s, const struct iovec *iov, int iovcnt)
         }
     } while (desc_offset < total_size);
 
-    e1000x_update_rx_total_stats(s->mac_reg, size, total_size);
+    increase_size_stats(s, PRCregs, total_size);
+    inc_reg_if_not_full(s, TPR);
+    s->mac_reg[GPRC] = s->mac_reg[TPR];
+    /* TOR - Total Octets Received:
+     * This register includes bytes received in a packet from the <Destination
+     * Address> field through the <CRC> field, inclusively.
+     * Always include FCS length (4) in size.
+     */
+    grow_8reg_if_not_full(s, TORL, size+4);
+    s->mac_reg[GORCL] = s->mac_reg[TORL];
+    s->mac_reg[GORCH] = s->mac_reg[TORH];
 
     n = E1000_ICS_RXT0;
     if ((rdt = s->mac_reg[RDT]) < s->mac_reg[RDH])
