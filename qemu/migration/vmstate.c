@@ -8,6 +8,7 @@
 #include "trace.h"
 #include "qjson.h"
 #include "migration/colo.h"
+#include "rsm-interface.h"
 
 static void vmstate_subsection_save(QEMUFile *f, const VMStateDescription *vmsd,
                                     void *opaque, QJSON *vmdesc);
@@ -76,10 +77,15 @@ static void *vmstate_base_addr(void *opaque, VMStateField *field, bool alloc)
     return base_addr;
 }
 
+
 int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
                        void *opaque, int version_id)
 {
-    static int colo_gettime = 1;
+    static int colo_gettime = -1;
+    if (colo_gettime == -1) {
+        colo_gettime = proxy_get_colo_gettime();
+    }
+
     VMStateField *field = vmsd->fields;
     int ret = 0;
 
@@ -123,12 +129,10 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
 
     while (field->name) {
 
-    int64_t field_start;
-    if (colo_gettime) {
-        field_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
-    }
-
-        
+        int64_t field_start;
+        if (colo_gettime) {
+            field_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
+        }
 
         trace_vmstate_load_state_field(vmsd->name, field->name);
         if ((field->field_exists &&
@@ -166,11 +170,10 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
                          vmsd->name, field->name);
             return -1;
         }
-    if (colo_gettime) {
-        int64_t field_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - field_start;
-        printf("field_time %"PRId64" ns, %s, %s\n", field_time, field->name, vmsd->name);
-    }
-
+        if (colo_gettime) {
+            int64_t field_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - field_start;
+            printf("field_time %"PRId64" ns, field->name = %s, vmsd->name = %s, n_elems = %d\n", field_time, field->name, vmsd->name, n_elems);
+        }
         field++;
     }
 
