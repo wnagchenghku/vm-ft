@@ -40,33 +40,6 @@
 #include "rsm-interface.h"
 
 
-/*
-VMFT's code. 
-*/
-
-static int init_done = 0; 
-
-static pthread_spinlock_t list_lock;
-static pthread_t consensus_thread; 
-static int myfd[2]; 
-
-#define iov_list_maxlen 33554432
-static struct iovec iov_list[iov_list_maxlen]; 
-static int buffer_head = 0; 
-static int consensus_head = 0;
-static int buffer_tail = 0; 
-static int buffer_wrap = 0; 
-static int consensus_wrap = 0;
-
-
-/* the thread func to make consensus */
-static void *make_consensus(void *foo);
-
-/* on consensus handler */
-static void rhandler(void * opaque);
-
-/* for the consensus handler to call for transferrring packets */
-static ssize_t send_to_guest(E1000State *s, const struct iovec *iov, int iovcnt);
 
 
 static const uint8_t bcast[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
@@ -224,6 +197,37 @@ enum {
     defreg(PTC127),  defreg(PTC255),  defreg(PTC511),  defreg(PTC1023),
     defreg(PTC1522), defreg(MPTC),    defreg(BPTC)
 };
+
+
+/*
+VMFT's code. 
+*/
+
+static int init_done = 0; 
+
+static pthread_spinlock_t list_lock;
+static pthread_t consensus_thread; 
+static int myfd[2]; 
+
+#define iov_list_maxlen 33554432
+static struct iovec iov_list[iov_list_maxlen]; 
+static int buffer_head = 0; 
+static int consensus_head = 0;
+static int buffer_tail = 0; 
+static int buffer_wrap = 0; 
+static int consensus_wrap = 0;
+
+
+/* the thread func to make consensus */
+static void *make_consensus(void *foo);
+
+/* on consensus handler */
+static void rhandler(void * opaque);
+
+/* for the consensus handler to call for transferrring packets */
+static ssize_t send_to_guest(E1000State *s, const struct iovec *iov, int iovcnt);
+
+
 
 static void
 e1000_link_down(E1000State *s)
