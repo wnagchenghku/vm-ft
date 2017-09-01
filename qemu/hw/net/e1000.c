@@ -1482,7 +1482,7 @@ static void rhandler(void * opaque){
 
 
 static void *make_consensus(void *foo){
-    printf("consensus thread created\n");
+    printf("consensus thread created\n\n\n");
     sleep(5);
     int val = 0; 
     while(1){   
