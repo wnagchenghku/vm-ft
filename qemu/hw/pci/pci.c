@@ -456,7 +456,7 @@ static int get_pci_config_device(QEMUFile *f, void *pv, size_t size)
     }
 
     if (colo_gettime) {
-            printf("pci_update_mappings time %"PRId64" ns\n", qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - pci_update_mappings_start;);
+            printf("pci_update_mappings time %"PRId64" ns\n", qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - pci_update_mappings_start);
     }
 
     memory_region_set_enabled(&s->bus_master_enable_region,
