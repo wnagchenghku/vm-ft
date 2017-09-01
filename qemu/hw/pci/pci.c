@@ -1194,6 +1194,11 @@ static void pci_update_mappings(PCIDevice *d)
     int i;
     pcibus_t new_addr;
 
+    static int colo_gettime = -1;
+
+    if (colo_gettime == -1) {
+        colo_gettime = proxy_get_colo_gettime();
+    }
 
     int64_t memory_region_start;
     if (colo_gettime) {
