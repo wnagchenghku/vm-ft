@@ -216,6 +216,11 @@ void pci_device_deassert_intx(PCIDevice *dev)
 
 static void pci_do_device_reset(PCIDevice *dev)
 {
+    static int colo_gettime = -1;
+    if (colo_gettime == -1) {
+        colo_gettime = proxy_get_colo_gettime();
+    }
+
     int r;
 
     pci_device_deassert_intx(dev);
@@ -243,6 +248,11 @@ static void pci_do_device_reset(PCIDevice *dev)
             pci_set_long(dev->config + pci_bar(dev, r), region->type);
         }
     }
+
+    if (colo_gettime) {
+        printf("dev->name = %s\n", dev->name);
+    }
+
     pci_update_mappings(dev);
 
     msi_reset(dev);
@@ -415,10 +425,9 @@ int pci_bus_numa_node(PCIBus *bus)
     return PCI_BUS_GET_CLASS(bus)->numa_node(bus);
 }
 
-static int colo_gettime = -1;
-
 static int get_pci_config_device(QEMUFile *f, void *pv, size_t size)
 {
+    static int colo_gettime = -1;
     if (colo_gettime == -1) {
         colo_gettime = proxy_get_colo_gettime();
     }
@@ -453,7 +462,7 @@ static int get_pci_config_device(QEMUFile *f, void *pv, size_t size)
     pci_update_mappings(s);
 
     if (colo_gettime) {
-            printf("pci_update_mappings time %"PRId64" ns\n", qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - pci_update_mappings_start);
+            printf("pci_update_mappings %"PRId64" ns, s->name = %s\n", qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - pci_update_mappings_start, s->name);
     }
 
     if (pc->is_bridge) {
