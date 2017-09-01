@@ -10,6 +10,11 @@
 #include "migration/colo.h"
 #include "rsm-interface.h"
 
+#define debug_log(args...) do { \
+    fprintf(stderr,args); \
+}while(0);
+#define DEBUG_ENTER debug_log("Entering %s\n",__PRETTY_FUNCTION__)
+
 static void vmstate_subsection_save(QEMUFile *f, const VMStateDescription *vmsd,
                                     void *opaque, QJSON *vmdesc);
 static int vmstate_subsection_load(QEMUFile *f, const VMStateDescription *vmsd,
@@ -533,6 +538,7 @@ static void vmstate_subsection_save(QEMUFile *f, const VMStateDescription *vmsd,
 
 static int get_bool(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     bool *v = pv;
     *v = qemu_get_byte(f);
     return 0;
@@ -554,6 +560,7 @@ const VMStateInfo vmstate_info_bool = {
 
 static int get_int8(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     int8_t *v = pv;
     qemu_get_s8s(f, v);
     return 0;
@@ -575,6 +582,7 @@ const VMStateInfo vmstate_info_int8 = {
 
 static int get_int16(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     int16_t *v = pv;
     qemu_get_sbe16s(f, v);
     return 0;
@@ -596,6 +604,7 @@ const VMStateInfo vmstate_info_int16 = {
 
 static int get_int32(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     int32_t *v = pv;
     qemu_get_sbe32s(f, v);
     return 0;
@@ -618,6 +627,7 @@ const VMStateInfo vmstate_info_int32 = {
 
 static int get_int32_equal(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     int32_t *v = pv;
     int32_t v2;
     qemu_get_sbe32s(f, &v2);
@@ -640,6 +650,7 @@ const VMStateInfo vmstate_info_int32_equal = {
 
 static int get_int32_le(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     int32_t *cur = pv;
     int32_t loaded;
     qemu_get_sbe32s(f, &loaded);
@@ -661,6 +672,7 @@ const VMStateInfo vmstate_info_int32_le = {
 
 static int get_int64(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     int64_t *v = pv;
     qemu_get_sbe64s(f, v);
     return 0;
@@ -682,6 +694,7 @@ const VMStateInfo vmstate_info_int64 = {
 
 static int get_uint8(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     uint8_t *v = pv;
     qemu_get_8s(f, v);
     return 0;
@@ -703,6 +716,7 @@ const VMStateInfo vmstate_info_uint8 = {
 
 static int get_uint16(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     uint16_t *v = pv;
     qemu_get_be16s(f, v);
     return 0;
@@ -724,6 +738,7 @@ const VMStateInfo vmstate_info_uint16 = {
 
 static int get_uint32(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     uint32_t *v = pv;
     qemu_get_be32s(f, v);
     return 0;
@@ -746,6 +761,7 @@ const VMStateInfo vmstate_info_uint32 = {
 
 static int get_uint32_equal(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     uint32_t *v = pv;
     uint32_t v2;
     qemu_get_be32s(f, &v2);
@@ -766,6 +782,7 @@ const VMStateInfo vmstate_info_uint32_equal = {
 
 static int get_uint64(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     uint64_t *v = pv;
     qemu_get_be64s(f, v);
     return 0;
@@ -788,6 +805,7 @@ const VMStateInfo vmstate_info_uint64 = {
 
 static int get_uint64_equal(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     uint64_t *v = pv;
     uint64_t v2;
     qemu_get_be64s(f, &v2);
@@ -809,6 +827,7 @@ const VMStateInfo vmstate_info_uint64_equal = {
 
 static int get_uint8_equal(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     uint8_t *v = pv;
     uint8_t v2;
     qemu_get_8s(f, &v2);
@@ -830,6 +849,7 @@ const VMStateInfo vmstate_info_uint8_equal = {
 
 static int get_uint16_equal(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     uint16_t *v = pv;
     uint16_t v2;
     qemu_get_be16s(f, &v2);
@@ -850,6 +870,7 @@ const VMStateInfo vmstate_info_uint16_equal = {
 
 static int get_float64(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     float64 *v = pv;
 
     *v = make_float64(qemu_get_be64(f));
@@ -873,6 +894,7 @@ const VMStateInfo vmstate_info_float64 = {
 
 static int get_cpudouble(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     CPU_DoubleU *v = pv;
     qemu_get_be32s(f, &v->l.upper);
     qemu_get_be32s(f, &v->l.lower);
@@ -896,6 +918,7 @@ const VMStateInfo vmstate_info_cpudouble = {
 
 static int get_buffer(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     uint8_t *v = pv;
     qemu_get_buffer(f, v, size);
     return 0;
@@ -918,6 +941,7 @@ const VMStateInfo vmstate_info_buffer = {
 
 static int get_unused_buffer(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     uint8_t buf[1024];
     int block_len;
 
@@ -956,6 +980,7 @@ const VMStateInfo vmstate_info_unused_buffer = {
 #define BITS_TO_U64S(nr) DIV_ROUND_UP(nr, 64)
 static int get_bitmap(QEMUFile *f, void *pv, size_t size)
 {
+    DEBUG_ENTER;
     unsigned long *bmp = pv;
     int i, idx = 0;
     for (i = 0; i < BITS_TO_U64S(size); i++) {
