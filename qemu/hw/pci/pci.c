@@ -415,9 +415,10 @@ int pci_bus_numa_node(PCIBus *bus)
     return PCI_BUS_GET_CLASS(bus)->numa_node(bus);
 }
 
+static int colo_gettime = -1;
+
 static int get_pci_config_device(QEMUFile *f, void *pv, size_t size)
 {
-    static int colo_gettime = -1;
     if (colo_gettime == -1) {
         colo_gettime = proxy_get_colo_gettime();
     }
@@ -455,19 +456,11 @@ static int get_pci_config_device(QEMUFile *f, void *pv, size_t size)
             printf("pci_update_mappings time %"PRId64" ns\n", qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - pci_update_mappings_start);
     }
 
-    int64_t pci_bridge_update_mappings_start;
-    if (colo_gettime) {
-        pci_bridge_update_mappings_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
-    }
-
     if (pc->is_bridge) {
         PCIBridge *b = PCI_BRIDGE(s);
         pci_bridge_update_mappings(b);
     }
 
-    if (colo_gettime) {
-            printf("pci_bridge_update_mappings_start time %"PRId64" ns\n", qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - pci_bridge_update_mappings_start);
-    }
     memory_region_set_enabled(&s->bus_master_enable_region,
                               pci_get_word(s->config + PCI_COMMAND)
                               & PCI_COMMAND_MASTER);
@@ -1192,6 +1185,12 @@ static void pci_update_mappings(PCIDevice *d)
     int i;
     pcibus_t new_addr;
 
+
+    int64_t memory_region_start;
+    if (colo_gettime) {
+        memory_region_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
+    }
+
     for(i = 0; i < PCI_NUM_REGIONS; i++) {
         r = &d->io_regions[i];
 
@@ -1222,6 +1221,10 @@ static void pci_update_mappings(PCIDevice *d)
             memory_region_add_subregion_overlap(r->address_space,
                                                 r->addr, r->memory, 1);
         }
+    }
+
+    if (colo_gettime) {
+            printf("memory_region time %"PRId64" ns\n", qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - memory_region_start);
     }
 
     pci_update_vga(d);
