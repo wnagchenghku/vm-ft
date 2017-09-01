@@ -1327,7 +1327,16 @@ static void *make_consensus(void *foo){
         if ( buffer_head > consensus_head || buffer_wrap == 1){
             pthread_spin_unlock(&list_lock);
 
-            usleep(10); //make consensus on consensus_head; 
+//#define batching
+
+#ifdef batching
+
+#else
+            proxy_on_mirror(iov_list[consensus_head].iov_base, iov_list[consensus_head].iov_size);
+
+#endif // batching
+
+            //usleep(10); //make consensus on consensus_head; 
 
             int ret = write(myfd[1], &val, sizeof(val));
             if (ret < 0){
@@ -1336,7 +1345,6 @@ static void *make_consensus(void *foo){
             val++; 
 
             pthread_spin_lock(&list_lock);
-//#define batching
 
 #ifdef batching
 
