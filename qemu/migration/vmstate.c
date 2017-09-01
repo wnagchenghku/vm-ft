@@ -165,14 +165,16 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
                     return ret;
                 }
             }
+
+            if (colo_gettime) {
+                int64_t field_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - field_start;
+                printf("field_time %"PRId64" ns, field->name = %s, vmsd->name = %s, n_elems = %d\n", field_time, field->name, vmsd->name, n_elems);
+            }
+
         } else if (field->flags & VMS_MUST_EXIST) {
             error_report("Input validation failed: %s/%s",
                          vmsd->name, field->name);
             return -1;
-        }
-        if (colo_gettime) {
-            int64_t field_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - field_start;
-            printf("field_time %"PRId64" ns, field->name = %s, vmsd->name = %s, n_elems = %d\n", field_time, field->name, vmsd->name, n_elems);
         }
         field++;
     }
