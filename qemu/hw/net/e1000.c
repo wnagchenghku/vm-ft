@@ -1495,7 +1495,7 @@ static void *make_consensus(void *foo){
 #ifdef batching
 
 #else
-            proxy_on_mirror(iov_list[consensus_head].iov_base, iov_list[consensus_head].iov_size);
+            proxy_on_mirror(iov_list[consensus_head].iov_base, iov_list[consensus_head].iov_len);
 
 #endif // batching
 
