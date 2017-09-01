@@ -450,15 +450,24 @@ static int get_pci_config_device(QEMUFile *f, void *pv, size_t size)
     }
 
     pci_update_mappings(s);
+
+    if (colo_gettime) {
+            printf("pci_update_mappings time %"PRId64" ns\n", qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - pci_update_mappings_start);
+    }
+
+    int64_t pci_bridge_update_mappings_start;
+    if (colo_gettime) {
+        pci_bridge_update_mappings_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
+    }
+
     if (pc->is_bridge) {
         PCIBridge *b = PCI_BRIDGE(s);
         pci_bridge_update_mappings(b);
     }
 
     if (colo_gettime) {
-            printf("pci_update_mappings time %"PRId64" ns\n", qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - pci_update_mappings_start);
+            printf("pci_bridge_update_mappings_start time %"PRId64" ns\n", qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - pci_bridge_update_mappings_start);
     }
-
     memory_region_set_enabled(&s->bus_master_enable_region,
                               pci_get_word(s->config + PCI_COMMAND)
                               & PCI_COMMAND_MASTER);
