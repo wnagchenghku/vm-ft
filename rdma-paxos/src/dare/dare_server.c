@@ -1978,7 +1978,7 @@ apply_entry:
             //else {
             //    if (SID_GET_TERM(data.ctrl_data->sid) < 50) sleep(1);
             //}
-            data.sm->proxy_store_cmd(&entry->clt_id, data.sm->up_para);
+            //data.sm->proxy_store_cmd(&entry->clt_id, data.sm->up_para);
             if (!IS_LEADER)
                 data.sm->proxy_do_action(entry->clt_id, entry->type, entry->data.cmd.len, &entry->data.cmd.cmd, data.sm->up_para);
             else
