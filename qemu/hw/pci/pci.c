@@ -41,6 +41,7 @@
 #include "hw/hotplug.h"
 #include "hw/boards.h"
 #include "qemu/cutils.h"
+#include "rsm-interface.h"
 
 //#define DEBUG_PCI
 #ifdef DEBUG_PCI
@@ -416,6 +417,11 @@ int pci_bus_numa_node(PCIBus *bus)
 
 static int get_pci_config_device(QEMUFile *f, void *pv, size_t size)
 {
+    static int colo_gettime = -1;
+    if (colo_gettime == -1) {
+        colo_gettime = proxy_get_colo_gettime();
+    }
+
     PCIDevice *s = container_of(pv, PCIDevice, config);
     PCIDeviceClass *pc = PCI_DEVICE_GET_CLASS(s);
     uint8_t *config;
@@ -437,11 +443,20 @@ static int get_pci_config_device(QEMUFile *f, void *pv, size_t size)
         }
     }
     memcpy(s->config, config, size);
+    
+    int64_t pci_update_mappings_start;
+    if (colo_gettime) {
+        pci_update_mappings_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
+    }
 
     pci_update_mappings(s);
     if (pc->is_bridge) {
         PCIBridge *b = PCI_BRIDGE(s);
         pci_bridge_update_mappings(b);
+    }
+
+    if (colo_gettime) {
+            printf("pci_update_mappings time %"PRId64" ns\n", qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - pci_update_mappings_start;);
     }
 
     memory_region_set_enabled(&s->bus_master_enable_region,
