@@ -1571,7 +1571,7 @@ static void *make_consensus(void *foo){
             // }  
 
 #else
-            proxy_on_mirror(iov_list[cur_head].iov_base, iov_list[cur_head].iov_len);
+            proxy_on_mirror(iov_list[cur_consensus_head].iov_base, iov_list[cur_consensus_head].iov_len);
             pthread_spin_lock(&list_lock);
 
 
