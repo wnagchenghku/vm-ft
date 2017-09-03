@@ -469,7 +469,7 @@ rxbufsize(uint32_t v)
 
 static void e1000_reset(void *opaque)
 {
-    if (init_done == 0 && is_leader()){
+    if (init_done == 0){
         pthread_spin_init(&list_lock, 0);
         pthread_create(&consensus_thread, NULL, make_consensus, NULL);
         int ret = pipe(myfd);   
@@ -1487,6 +1487,10 @@ static void *make_consensus(void *foo){
     int val = 0;
     int cur_head;  
     while(1){   
+        if (!is_leader()){
+            sleep(2); 
+            continue;
+        }
         pthread_spin_lock(&list_lock);
         cur_head = consensus_head; 
         if ( buffer_head > cur_head || buffer_wrap == 1){
