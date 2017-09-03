@@ -1494,7 +1494,7 @@ static void *make_consensus(void *foo){
         }
         pthread_spin_lock(&list_lock);
         cur_head = consensus_head;
-        printf("buffer_head =  %d, cur_head= %d\n", buffer_head, cur_head); 
+        //printf("buffer_head =  %d, cur_head= %d\n", buffer_head, cur_head); 
         if ( buffer_head > cur_head || buffer_wrap == 1){
             pthread_spin_unlock(&list_lock);
 
