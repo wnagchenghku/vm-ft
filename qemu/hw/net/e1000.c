@@ -1484,33 +1484,17 @@ static void rhandler(void * opaque){
 static void *make_consensus(void *foo){
     printf("consensus thread created\n\n\n");
     sleep(5);
-    int val = 0; 
+    int val = 0;
+    int cur_head;  
     while(1){   
         pthread_spin_lock(&list_lock);
-        if ( buffer_head > consensus_head || buffer_wrap == 1){
+        cur_head = consensus_head; 
+        if ( buffer_head > cur_head || buffer_wrap == 1){
             pthread_spin_unlock(&list_lock);
 
 //#define batching
 
 #ifdef batching
-
-#else
-            proxy_on_mirror(iov_list[consensus_head].iov_base, iov_list[consensus_head].iov_len);
-
-#endif // batching
-
-            //usleep(10); //make consensus on consensus_head; 
-
-            int ret = write(myfd[1], &val, sizeof(val));
-            if (ret < 0){
-                printf("Error B\n");
-            }
-            val++; 
-
-            pthread_spin_lock(&list_lock);
-
-#ifdef batching
-
             if (buffer_wrap == 0){
                 consensus_head = buffer_head; 
             } 
@@ -1519,9 +1503,13 @@ static void *make_consensus(void *foo){
                 consensus_head = buffer_head; 
                 buffer_wrap = 0; 
                 consensus_wrap =1 ; 
-            }            
+            }  
 
 #else
+            proxy_on_mirror(iov_list[cur_head].iov_base, iov_list[cur_head].iov_len);
+            pthread_spin_lock(&list_lock);
+
+
             consensus_head++; 
             if (consensus_head >= iov_list_maxlen){
                 consensus_head -= iov_list_maxlen; 
@@ -1538,8 +1526,19 @@ static void *make_consensus(void *foo){
                 }
             }
 #endif
+            //usleep(10); //make consensus on consensus_head; 
+
+            int ret = write(myfd[1], &val, sizeof(val));
+            if (ret < 0){
+                printf("Error B\n");
+            }
+            val++; 
+
+
+
             pthread_spin_unlock(&list_lock);
-        }else{
+        }
+        else{
             pthread_spin_unlock(&list_lock);
             sched_yield();
         }
