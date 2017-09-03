@@ -474,16 +474,11 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     // colo_send_message(s->to_dst_file, COLO_MESSAGE_CHECKPOINT_REQUEST,
     //                   &local_err);
 
-    printf("Here A\n\n\n\n");
-
-
     if (sync_type == CHECK_IDLE_SYNC) {
         wait_guest_finish(s, true);
     } else if (sync_type == STATIC_TIME_SYNC) {
         static_timing_sync(s);
     }
-
-    printf("Here B\n\n\n\n");
     
     proxy_on_checkpoint_req();
 
@@ -498,7 +493,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         error_report("Open colo buffer for write failed");
         goto out;
     }
-    printf("Here C\n\n\n\n");
 
     qemu_mutex_lock_iothread();
     if (failover_request_is_active()) {
@@ -509,8 +503,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     vm_stop_force_state(RUN_STATE_COLO);
 
     qemu_mutex_unlock_iothread();
-
-    printf("Here D\n\n\n\n");
     //trace_colo_vm_state_change("run", "stop");
 
 #ifdef TURN_ON_FT
