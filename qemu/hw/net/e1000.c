@@ -1441,6 +1441,9 @@ static ssize_t send_to_guest(E1000State *s, const struct iovec *iov, int iovcnt)
 }
 
 static void rhandler(void * opaque){
+
+
+    printf("rhandler called\n");
     //int i = *((int *)opaque);
     E1000State *s = (E1000State *)opaque; 
 
@@ -1473,6 +1476,8 @@ static void rhandler(void * opaque){
         }
     }
     pthread_spin_unlock(&list_lock);
+
+    printf("rhandler returned\n");
     return; 
 }
 
