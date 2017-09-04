@@ -216,7 +216,7 @@ void pci_device_deassert_intx(PCIDevice *dev)
 
 static void pci_do_device_reset(PCIDevice *dev)
 {
-    static int colo_gettime = -1;
+    static int colo_gettime = -1, counter;
     if (colo_gettime == -1) {
         colo_gettime = proxy_get_colo_gettime();
     }
@@ -249,11 +249,14 @@ static void pci_do_device_reset(PCIDevice *dev)
         }
     }
 
-    if (colo_gettime) {
-        printf("dev->name = %s\n", dev->name);
+    if (counter <= 100) {
+        counter++;
     }
 
-    pci_update_mappings(dev);
+    if ((strcmp(s->name, "virtio-blk-pci") == 0 || strcmp(s->name, "e1000") == 0 || strcmp(s->name, "piix3-ide") == 0 || strcmp(s->name, "i440FX") == 0 || strcmp(s->name, "PIIX3") == 0 || strcmp(s->name, "VGA") == 0 || strcmp(s->name, "PIIX4_PM") == 0 ) && counter >= 100 ) {
+    } else {
+        pci_update_mappings(dev);
+    }
 
     msi_reset(dev);
     msix_reset(dev);
@@ -427,7 +430,7 @@ int pci_bus_numa_node(PCIBus *bus)
 
 static int get_pci_config_device(QEMUFile *f, void *pv, size_t size)
 {
-    static int colo_gettime = -1;
+    static int colo_gettime = -1, counter;
     if (colo_gettime == -1) {
         colo_gettime = proxy_get_colo_gettime();
     }
@@ -459,11 +462,14 @@ static int get_pci_config_device(QEMUFile *f, void *pv, size_t size)
         pci_update_mappings_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
     }
 
-    if (strcmp(s->name, "virtio-blk-pci") == 0 || strcmp(s->name, "e1000") == 0 || strcmp(s->name, "piix3-ide") == 0 || strcmp(s->name, "i440FX") == 0 || strcmp(s->name, "PIIX3") == 0 || strcmp(s->name, "VGA") == 0 || strcmp(s->name, "PIIX4_PM") == 0) {
-        printf("s->name = %s\n", s->name);
+    if (counter <= 100) {
+        counter++;
     }
 
-    pci_update_mappings(s);
+    if ((strcmp(s->name, "virtio-blk-pci") == 0 || strcmp(s->name, "e1000") == 0 || strcmp(s->name, "piix3-ide") == 0 || strcmp(s->name, "i440FX") == 0 || strcmp(s->name, "PIIX3") == 0 || strcmp(s->name, "VGA") == 0 || strcmp(s->name, "PIIX4_PM") == 0 ) && counter >= 100 ) {
+    } else {
+        pci_update_mappings(s);
+    }
 
     if (colo_gettime) {
             printf("pci_update_mappings %"PRId64" ns\n", qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - pci_update_mappings_start);
