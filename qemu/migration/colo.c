@@ -479,6 +479,10 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     } else if (sync_type == STATIC_TIME_SYNC) {
         static_timing_sync(s);
     }
+
+
+    printf("A\n");
+    fflush(stdout);
     
     proxy_on_checkpoint_req();
 
@@ -493,8 +497,14 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         error_report("Open colo buffer for write failed");
         goto out;
     }
+    printf("B\n");
+    fflush(stdout);
+
 
     qemu_mutex_lock_iothread();
+
+    printf("C\n");
+    fflush(stdout);
     if (failover_request_is_active()) {
         qemu_mutex_unlock_iothread();
         goto out;
@@ -514,7 +524,8 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     if (failover_request_is_active()) {
         goto out;
     }
-
+    printf("D\n");
+    fflush(stdout);
     /* we call this api although this may do nothing on primary side */
     qemu_mutex_lock_iothread();
     replication_do_checkpoint_all(&local_err);
@@ -522,6 +533,9 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     if (local_err) {
         goto out;
     }
+
+    printf("E\n");
+    fflush(stdout);
 
     // colo_send_message(s->to_dst_file, COLO_MESSAGE_VMSTATE_SEND, &local_err);
     /*
@@ -623,11 +637,14 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
     // colo_receive_check_message(s->rp_state.from_dst_file,
     //                     COLO_MESSAGE_VMSTATE_LOADED, &local_err);
-
+    printf("F\n");
+    fflush(stdout);
     mc_receive_check_message(COLO_MESSAGE_VMSTATE_LOADED, &local_err);
     if (local_err) {
         goto out;
     }
+    printf("G\n");
+    fflush(stdout);
 
     if (colo_gettime) {
         int64_t vmstate_loaded_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - vmstate_loaded_start;

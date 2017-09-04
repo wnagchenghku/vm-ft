@@ -731,8 +731,6 @@ static void
 e1000_send_packet(E1000State *s, const uint8_t *buf, int size)
 {
 
-    printf("send called\n");
-    fflush(stdout);
     static const int PTCregs[6] = { PTC64, PTC127, PTC255, PTC511,
                                     PTC1023, PTC1522 };
 
@@ -745,9 +743,6 @@ e1000_send_packet(E1000State *s, const uint8_t *buf, int size)
     inc_tx_bcast_or_mcast_count(s, buf);
     increase_size_stats(s, PTCregs, size);
 
-
-    printf("send returned\n");
-    fflush(stdout);
 }
 
 static void
