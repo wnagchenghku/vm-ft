@@ -114,11 +114,6 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
              field->field_exists(opaque, version_id)) ||
             (!field->field_exists &&
              field->version_id <= version_id)) {
-            
-            int64_t field_start;
-            if (colo_gettime) {
-                field_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
-            }
 
             void *base_addr = vmstate_base_addr(opaque, field, true);
             int i, n_elems = vmstate_n_elems(opaque, field);
