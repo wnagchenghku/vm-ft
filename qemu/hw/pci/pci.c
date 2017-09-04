@@ -459,6 +459,11 @@ static int get_pci_config_device(QEMUFile *f, void *pv, size_t size)
         pci_update_mappings_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
     }
 
+    if (strcmp(s->name, "virtio-blk-pci") == 0)
+    {
+        /* code */
+    }
+
     pci_update_mappings(s);
 
     if (colo_gettime) {
