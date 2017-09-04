@@ -1093,8 +1093,6 @@ e1000_receive_iov(NetClientState *nc, const struct iovec *iov, int iovcnt)
 {
 
     if (is_leader()){
-        printf("received entered\n");
-        fflush(stdout);
 
         void *buf = malloc(iov->iov_len);
         memcpy(buf, iov->iov_base, iov->iov_len);
@@ -1118,8 +1116,6 @@ e1000_receive_iov(NetClientState *nc, const struct iovec *iov, int iovcnt)
         }
         //ssize_t total_size = 0; 
         pthread_spin_unlock(&list_lock);
-        printf("received returned\n");
-        fflush(stdout);
         return 100; 
     }
 
@@ -1450,9 +1446,6 @@ static void rhandler(void * opaque){
 
     //int i = *((int *)opaque);
 
-    printf("rhandler called\n");
-    fflush(stdout);
-
     E1000State *s = (E1000State *)opaque; 
 
     uint8_t buf[1024]; 
@@ -1484,8 +1477,6 @@ static void rhandler(void * opaque){
         }
     }
     pthread_spin_unlock(&list_lock);
-    printf("rhandler returned\n");
-    fflush(stdout);
 
 
     return; 
