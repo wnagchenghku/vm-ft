@@ -1204,17 +1204,6 @@ static void pci_update_mappings(PCIDevice *d)
     int i;
     pcibus_t new_addr;
 
-    static int colo_gettime = -1;
-
-    if (colo_gettime == -1) {
-        colo_gettime = proxy_get_colo_gettime();
-    }
-
-    int64_t memory_region_start;
-    if (colo_gettime) {
-        memory_region_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
-    }
-
     for(i = 0; i < PCI_NUM_REGIONS; i++) {
         r = &d->io_regions[i];
 
@@ -1245,10 +1234,6 @@ static void pci_update_mappings(PCIDevice *d)
             memory_region_add_subregion_overlap(r->address_space,
                                                 r->addr, r->memory, 1);
         }
-    }
-
-    if (colo_gettime) {
-            printf("memory_region time %"PRId64" ns\n", qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - memory_region_start);
     }
 
     pci_update_vga(d);
