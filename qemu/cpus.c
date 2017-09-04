@@ -735,35 +735,19 @@ static int do_vm_stop(RunState state)
     int ret = 0;
 
     if (runstate_is_running()) {
-        printf("A\n");
-        fflush(stdout);
-
-
         cpu_disable_ticks();
-        printf("B\n");
-        fflush(stdout);
-
-
         pause_all_vcpus();
-             printf("C\n");
-        fflush(stdout);
-
         runstate_set(state);
-             printf("D\n");
-        fflush(stdout);
-
         vm_state_notify(0, state);
         //qapi_event_send_stop(&error_abort);
     }
-     printf("E\n");
-        fflush(stdout);
 
     bdrv_drain_all();
+    printf("A\n");
+    fflush(stdout);
     ret = blk_flush_all();
-         printf("F\n");
-        fflush(stdout);
-
-
+    printf("B\n");
+    fflush(stdout);
     return ret;
 }
 
