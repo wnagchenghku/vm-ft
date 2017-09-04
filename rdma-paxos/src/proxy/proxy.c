@@ -290,13 +290,13 @@ static void do_action_send(size_t data_size,void* data,void* arg)
     proxy_node* proxy = arg;
     uint32_t len = htonl(data_size);
     batching = proxy_get_batching();
-    int dbg = 0; 
+    //int dbg = 0; 
 
     if (batching)
     {
         ssize_t npackets; 
         memcpy(&npackets, data, sizeof(npackets));
-        printf("[%d], Received %ld consensued packets\n\n", dbg++, npackets);
+        //printf("[%d], Received %ld consensued packets\n\n", dbg++, npackets);
 
         ssize_t offset = (npackets+1) * sizeof(ssize_t);
 
