@@ -1510,8 +1510,7 @@ static void *make_consensus(void *foo){
             sleep(2); 
             continue;
         }
-        printf("while loop entered\n");
-        fflush(stdout);
+
 
 
         pthread_spin_lock(&list_lock);
@@ -1616,8 +1615,7 @@ static void *make_consensus(void *foo){
             pthread_spin_unlock(&list_lock);
             sched_yield();
         }
-        printf("while loop exited\n");
-        fflush(stdout);
+
 
     }
 
