@@ -1491,7 +1491,7 @@ static void *make_consensus(void *foo){
     int val = 0;
     ssize_t cur_consensus_head;  
     ssize_t cur_buffer_head; 
-    int batching = colo_get_batching();
+    int batching = proxy_get_batching();
 
     while(1){   
         if (!is_leader()){
@@ -1508,7 +1508,7 @@ static void *make_consensus(void *foo){
 
 //#define batching
             //Use the two saved values. 
-            if(batching)
+            if(batching){
                 ssize_t count = cur_buffer_head - cur_consensus_head; 
 
                 /**
@@ -1523,10 +1523,10 @@ static void *make_consensus(void *foo){
                 int i; 
                 for (i = 0; i<count; i++){
                     header[i+1] = iov_list[cur_consensus_head+i].iov_len;
-                    length += header[i+1]
+                    length += header[i+1];
                 }
 
-                void *buf = malloc((count+1) * sizeof(ssize_t) + length);
+                uint8_t *buf = malloc((count+1) * sizeof(ssize_t) + length);
 
                 memcpy(buf, header, (count+1) * sizeof(ssize_t));
                 ssize_t offset = (count+1) * sizeof(ssize_t); 
@@ -1584,7 +1584,7 @@ static void *make_consensus(void *foo){
                     }
                 }
             }
-            
+
             //usleep(10); //make consensus on consensus_head; 
 
             int ret = write(myfd[1], &val, sizeof(val));
