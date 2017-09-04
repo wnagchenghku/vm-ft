@@ -2429,10 +2429,10 @@ int bdrv_flush(BlockDriverState *bs)
         co = qemu_coroutine_create(bdrv_flush_co_entry);
         qemu_coroutine_enter(co, &rwco);
         while (rwco.ret == NOT_DONE) {
-            printf("A\n");
+            printf("C\n");
             fflush(stdout);
             aio_poll(aio_context, true);
-            printf("A\n");
+            printf("D\n");
             fflush(stdout);
         }
     }
