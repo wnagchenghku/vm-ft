@@ -295,7 +295,7 @@ static void do_action_send(size_t data_size,void* data,void* arg)
     if (batching)
     {
         ssize_t npackets; 
-        memcpy(data, &npackets, sizeof(npackets));
+        memcpy(&npackets, data, sizeof(npackets));
         printf("[%d], Received %ld consensued packets\n\n", dbg++, npackets);
 
         ssize_t offset = (npackets+1) * sizeof(ssize_t);
