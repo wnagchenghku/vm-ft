@@ -459,15 +459,14 @@ static int get_pci_config_device(QEMUFile *f, void *pv, size_t size)
         pci_update_mappings_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
     }
 
-    if (strcmp(s->name, "virtio-blk-pci") == 0)
-    {
-        /* code */
+    if (strcmp(s->name, "virtio-blk-pci") == 0 || strcmp(s->name, "e1000") == 0 || strcmp(s->name, "piix3-ide") == 0 || strcmp(s->name, "i440FX") == 0 || strcmp(s->name, "PIIX3") == 0 || strcmp(s->name, "VGA") == 0 || strcmp(s->name, "PIIX4_PM") == 0) {
+        printf("s->name = %s\n", s->name);
     }
 
     pci_update_mappings(s);
 
     if (colo_gettime) {
-            printf("pci_update_mappings %"PRId64" ns, s->name = %s\n", qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - pci_update_mappings_start, s->name);
+            printf("pci_update_mappings %"PRId64" ns\n", qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - pci_update_mappings_start);
     }
 
     if (pc->is_bridge) {
