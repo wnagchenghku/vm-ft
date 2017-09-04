@@ -743,11 +743,8 @@ static int do_vm_stop(RunState state)
     }
 
     bdrv_drain_all();
-    printf("A\n");
-    fflush(stdout);
     ret = blk_flush_all();
-    printf("B\n");
-    fflush(stdout);
+
     return ret;
 }
 

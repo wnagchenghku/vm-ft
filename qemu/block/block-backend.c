@@ -1610,33 +1610,18 @@ int blk_flush_all(void)
     BlockBackend *blk = NULL;
     int result = 0;
 
-    printf("A\n");
-    fflush(stdout);
-
     while ((blk = blk_all_next(blk)) != NULL) {
-        printf("B\n");
-        fflush(stdout);
         AioContext *aio_context = blk_get_aio_context(blk);
-        printf("C\n");
-        fflush(stdout);
         int ret;
 
         aio_context_acquire(aio_context);
-        printf("D\n");
-        fflush(stdout);
         if (blk_is_inserted(blk)) {
             ret = blk_flush(blk);
-            printf("E\n");
-            fflush(stdout);
             if (ret < 0 && !result) {
                 result = ret;
             }
         }
-        printf("F\n");
-        fflush(stdout);
         aio_context_release(aio_context);
-        printf("G\n");
-        fflush(stdout);
     }
 
     return result;
