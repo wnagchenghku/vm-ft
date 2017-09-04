@@ -1498,7 +1498,7 @@ static void rhandler(void * opaque){
 
 static void *make_consensus(void *foo){
     printf("consensus thread created\n\n\n");
-    sleep(5);
+    sleep(20);
     int val = 0;
     ssize_t cur_consensus_head;  
     ssize_t cur_buffer_head; 
