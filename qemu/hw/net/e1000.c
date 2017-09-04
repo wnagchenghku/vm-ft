@@ -1492,7 +1492,7 @@ static void *make_consensus(void *foo){
     ssize_t cur_consensus_head;  
     ssize_t cur_buffer_head; 
     int batching = proxy_get_batching();
-    //int dbg = 0; 
+    int dbg = 0; 
     while(1){   
         if (!is_leader()){
             printf("I am not leader\n");
@@ -1535,7 +1535,7 @@ static void *make_consensus(void *foo){
                     offset += iov_list[cur_consensus_head+i].iov_len; 
                 }
 
-                //printf("[%d] make consensus on %ld packets\n", dbg++, count);
+                printf("[%d] make consensus on %ld packets\n", dbg++, count);
                 proxy_on_mirror(buf, (count+1) * sizeof(ssize_t) + length);
 
 
