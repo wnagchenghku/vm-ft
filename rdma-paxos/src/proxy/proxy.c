@@ -301,7 +301,7 @@ static void do_action_send(size_t data_size,void* data,void* arg)
 
         ssize_t *length = (ssize_t*) malloc(npackets * sizeof(ssize_t));
 
-        memcpy (length, &(data+sizeof(ssize_t)),npackets * sizeof(ssize_t));
+        memcpy (length, data+sizeof(ssize_t),npackets * sizeof(ssize_t));
 
         int i, n; 
         for (i = 0; i<npackets; i++){
