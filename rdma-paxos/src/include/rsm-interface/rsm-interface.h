@@ -25,6 +25,7 @@ extern "C" {
 	int proxy_get_recheck_num(void);
 	int proxy_get_colo_debug(void);
 	int proxy_get_colo_gettime(void);
+	int proxy_get_batching(void);
 
 #ifdef __cplusplus
 }

@@ -218,6 +218,12 @@ int proxy_get_colo_gettime(void)
     return proxy->colo_gettime;
 }
 
+int proxy_get_batching(void)
+{
+    return proxy->batching;
+}
+
+
 static void stablestorage_save_request(void* data,void*arg)
 {
     proxy_node* proxy = arg;
@@ -277,44 +283,50 @@ static int stablestorage_load_records(void*buf,uint32_t size,void*arg)
     return 0;
 }
 
+static int batching; 
+
 static void do_action_send(size_t data_size,void* data,void* arg)
 {
     proxy_node* proxy = arg;
     uint32_t len = htonl(data_size);
-
-#ifdef batching
-    ssize_t npackets; 
-    memcpy(data, &npackets, sizeof(npackets));
-    ssize_t offset = (npackets+1) * sizeof(ssize_t);
+    batching = proxy_get_batching();
 
 
-    ssize_t *length = (ssize_t*) malloc(npackets * sizeof(ssize_t));
+    if (batching)
+    {
+        ssize_t npackets; 
+        memcpy(data, &npackets, sizeof(npackets));
+        ssize_t offset = (npackets+1) * sizeof(ssize_t);
 
-    memcpy (length, &(data+sizeof(ssize_t)),npackets * sizeof(ssize_t));
 
-    int i, n; 
-    for (i = 0; i<npackets; i++){
-        //xs: seems need to in network order
-        uint32_t len = htonl(length[i]); 
-        n = send(proxy->mirror_clientfd, len, sizeof(len), 0);
-        if (n < 0)
-            fprintf(stderr, "ERROR writing to socket!\n");
+        ssize_t *length = (ssize_t*) malloc(npackets * sizeof(ssize_t));
 
-        n = send(proxy->mirror_clientfd, &data[offset], length[i], 0);
-        if (n < 0)
-            fprintf(stderr, "ERROR writing to socket!\n");
-        offset += length[i]; 
+        memcpy (length, &(data+sizeof(ssize_t)),npackets * sizeof(ssize_t));
+
+        int i, n; 
+        for (i = 0; i<npackets; i++){
+            //xs: seems need to in network order
+            uint32_t len = htonl(length[i]); 
+            n = send(proxy->mirror_clientfd, len, sizeof(len), 0);
+            if (n < 0)
+                fprintf(stderr, "ERROR writing to socket!\n");
+
+            n = send(proxy->mirror_clientfd, &data[offset], length[i], 0);
+            if (n < 0)
+                fprintf(stderr, "ERROR writing to socket!\n");
+            offset += length[i]; 
+        }
     }
+    else{
+        int n = send(proxy->mirror_clientfd, &len, sizeof(len), 0);
+        if (n < 0)
+            fprintf(stderr, "ERROR writing to socket!\n");
 
-#else
-    int n = send(proxy->mirror_clientfd, &len, sizeof(len), 0);
-    if (n < 0)
-        fprintf(stderr, "ERROR writing to socket!\n");
+        n = send(proxy->mirror_clientfd, data, data_size, 0);
+        if (n < 0)
+            fprintf(stderr, "ERROR writing to socket!\n");
 
-    n = send(proxy->mirror_clientfd, data, data_size, 0);
-    if (n < 0)
-        fprintf(stderr, "ERROR writing to socket!\n");
-#endif
+    }
     proxy->sync_req_id++;
 }
 

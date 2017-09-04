@@ -1491,6 +1491,8 @@ static void *make_consensus(void *foo){
     int val = 0;
     ssize_t cur_consensus_head;  
     ssize_t cur_buffer_head; 
+    int batching = colo_get_batching();
+
     while(1){   
         if (!is_leader()){
             printf("I am not leader\n");
@@ -1506,90 +1508,83 @@ static void *make_consensus(void *foo){
 
 //#define batching
             //Use the two saved values. 
-#ifdef batching
-            ssize_t count = cur_buffer_head - cur_consensus_head; 
+            if(batching)
+                ssize_t count = cur_buffer_head - cur_consensus_head; 
 
-            /**
+                /**
+                
+                | # of packets | len1, len2, ..., lenx | pkt1, pkt2, ... , pktx |
+
+                **/
+                ssize_t* header = (ssize_t *) malloc((count+1) * sizeof(ssize_t));
+                ssize_t length = 0; 
+                header[0] = count;  
+
+                int i; 
+                for (i = 0; i<count; i++){
+                    header[i+1] = iov_list[cur_consensus_head+i].iov_len;
+                    length += header[i+1]
+                }
+
+                void *buf = malloc((count+1) * sizeof(ssize_t) + length);
+
+                memcpy(buf, header, (count+1) * sizeof(ssize_t));
+                ssize_t offset = (count+1) * sizeof(ssize_t); 
+                for (i = 0; i<count; i++){
+                    memcpy(&buf[offset], iov_list[cur_consensus_head+i].iov_base, iov_list[cur_consensus_head+i].iov_len);
+                    offset += iov_list[cur_consensus_head+i].iov_len; 
+                }
+
+
+                proxy_on_mirror(buf, (count+1) * sizeof(ssize_t) + length);
+
+
+                free(buf); 
+                free(header);
+
+                pthread_spin_lock(&list_lock);
+
+                consensus_head += count; 
+
+                if (consensus_head >= iov_list_maxlen){
+                    consensus_head -= iov_list_maxlen; 
+                    if (buffer_wrap == 1){
+                        buffer_wrap = 0;
+                    }else{
+                        printf("Error\n");
+                    }
+
+                    if (consensus_wrap == 0){
+                        consensus_wrap = 1;
+                    }else{
+                        printf("[ERROR] consensued buffer full !\n");
+                    }
+                }
+            }
+            else
+            {
+                /**no batching, consensus one by one **/
+                proxy_on_mirror(iov_list[cur_consensus_head].iov_base, iov_list[cur_consensus_head].iov_len);
+                pthread_spin_lock(&list_lock);
+
+
+                consensus_head++; 
+                if (consensus_head >= iov_list_maxlen){
+                    consensus_head -= iov_list_maxlen; 
+                    if (buffer_wrap == 1){
+                        buffer_wrap = 0;
+                    }else{
+                        printf("Error\n");
+                    }
+
+                    if (consensus_wrap == 0){
+                        consensus_wrap = 1;
+                    }else{
+                        printf("[ERROR] consensued buffer full !\n");
+                    }
+                }
+            }
             
-            | # of packets | len1, len2, ..., lenx | pkt1, pkt2, ... , pktx |
-
-            **/
-            ssize_t* header = (ssize_t *) malloc((count+1) * sizeof(ssize_t));
-            ssize_t length = 0; 
-            header[0] = count;  
-
-            int i; 
-            for (i = 0; i<count; i++){
-                header[i+1] = iov_list[cur_consensus_head+i].iov_len;
-                length += header[i+1]
-            }
-
-            void *buf = malloc((count+1) * sizeof(ssize_t) + length);
-
-            memcpy(buf, header, (count+1) * sizeof(ssize_t));
-            ssize_t offset = (count+1) * sizeof(ssize_t); 
-            for (i = 0; i<count; i++){
-                memcpy(&buf[offset], iov_list[cur_consensus_head+i].iov_base, iov_list[cur_consensus_head+i].iov_len);
-                offset += iov_list[cur_consensus_head+i].iov_len; 
-            }
-
-
-            proxy_on_mirror(buf, (count+1) * sizeof(ssize_t) + length);
-
-
-            free(buf); 
-            free(header);
-
-            pthread_spin_lock(&list_lock);
-
-            consensus_head += count; 
-
-            if (consensus_head >= iov_list_maxlen){
-                consensus_head -= iov_list_maxlen; 
-                if (buffer_wrap == 1){
-                    buffer_wrap = 0;
-                }else{
-                    printf("Error\n");
-                }
-
-                if (consensus_wrap == 0){
-                    consensus_wrap = 1;
-                }else{
-                    printf("[ERROR] consensued buffer full !\n");
-                }
-            }
-
-            // if (buffer_wrap == 0){
-            //     consensus_head = buffer_head; 
-            // } 
-            // //printf("consensus : %d,%d,%d\n", buffer_tail,consensus_head,buffer_head);
-            // else{
-            //     consensus_head = buffer_head; 
-            //     buffer_wrap = 0; 
-            //     consensus_wrap =1 ; 
-            // }  
-
-#else
-            proxy_on_mirror(iov_list[cur_consensus_head].iov_base, iov_list[cur_consensus_head].iov_len);
-            pthread_spin_lock(&list_lock);
-
-
-            consensus_head++; 
-            if (consensus_head >= iov_list_maxlen){
-                consensus_head -= iov_list_maxlen; 
-                if (buffer_wrap == 1){
-                    buffer_wrap = 0;
-                }else{
-                    printf("Error\n");
-                }
-
-                if (consensus_wrap == 0){
-                    consensus_wrap = 1;
-                }else{
-                    printf("[ERROR] consensued buffer full !\n");
-                }
-            }
-#endif
             //usleep(10); //make consensus on consensus_head; 
 
             int ret = write(myfd[1], &val, sizeof(val));
