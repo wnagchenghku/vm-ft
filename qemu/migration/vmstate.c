@@ -81,11 +81,6 @@ static void *vmstate_base_addr(void *opaque, VMStateField *field, bool alloc)
 int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
                        void *opaque, int version_id)
 {
-    static int colo_gettime = -1;
-    if (colo_gettime == -1) {
-        colo_gettime = proxy_get_colo_gettime();
-    }
-
     VMStateField *field = vmsd->fields;
     int ret = 0;
 
@@ -105,26 +100,11 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
         return -EINVAL;
     }
 
-    int64_t preload_start;
-    if (colo_gettime) {
-        preload_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
-    }
-
     if (vmsd->pre_load) {
         int ret = vmsd->pre_load(opaque);
         if (ret) {
             return ret;
         }
-    }
-
-    if (colo_gettime) {
-        int64_t preload_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - preload_start;
-        printf("preload_time %"PRId64" ns\n", preload_time);
-    }
-
-    int64_t while_start;
-    if (colo_gettime) {
-        while_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
     }
 
     while (field->name) {
@@ -167,12 +147,6 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
                 }
             }
 
-            if (colo_gettime) {
-                int64_t field_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - field_start;
-                printf("field_time %"PRId64" ns, field->name = %s, vmsd->name = %s, n_elems = %d, vmstate_size = %d\n", field_time, field->name, vmsd->name, n_elems, size);
-                // field->info->get => get_pci_config_device
-            }
-
         } else if (field->flags & VMS_MUST_EXIST) {
             error_report("Input validation failed: %s/%s",
                          vmsd->name, field->name);
@@ -181,43 +155,15 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
         field++;
     }
 
-    if (colo_gettime) {
-        int64_t while_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - while_start;
-        printf("while_time %"PRId64" ns\n", while_time);
-    }
-
-
-    int64_t vmstate_subsection_start;
-    if (colo_gettime) {
-        vmstate_subsection_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
-    }
-
     ret = vmstate_subsection_load(f, vmsd, opaque);
     if (ret != 0) {
         return ret;
-    }
-
-
-    if (colo_gettime) {
-        int64_t vmstate_subsection_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - vmstate_subsection_start;
-        printf("vmstate_subsection_time %"PRId64" ns\n", vmstate_subsection_time);
-    }
-
-    int64_t post_load_start;
-    if (colo_gettime) {
-        post_load_start = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
     }
 
     if (vmsd->post_load) {
         ret = vmsd->post_load(opaque, version_id);
     }
 
-
-
-    if (colo_gettime) {
-        int64_t post_load_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - post_load_start;
-        printf("post_load_time %"PRId64" ns\n", post_load_time);
-    }
     trace_vmstate_load_state_end(vmsd->name, "end", ret);
     return ret;
 }

@@ -639,16 +639,8 @@ void vmstate_unregister(DeviceState *dev, const VMStateDescription *vmsd,
 
 static int vmstate_load(QEMUFile *f, SaveStateEntry *se, int version_id)
 {
-    static int colo_gettime = -1;
-    if (colo_gettime == -1) {
-        colo_gettime = proxy_get_colo_gettime();
-    }
-
     trace_vmstate_load(se->idstr, se->vmsd ? se->vmsd->name : "(old)");
     if (!se->vmsd) {         /* Old style */
-        if (colo_gettime) {
-            printf("(old)\n");
-        }
         return se->ops->load_state(f, se->opaque, version_id);
     }
     return vmstate_load_state(f, se->vmsd, se->opaque, version_id);
