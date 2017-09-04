@@ -253,7 +253,7 @@ static void pci_do_device_reset(PCIDevice *dev)
         counter++;
     }
 
-    if ((strcmp(s->name, "virtio-blk-pci") == 0 || strcmp(s->name, "e1000") == 0 || strcmp(s->name, "piix3-ide") == 0 || strcmp(s->name, "i440FX") == 0 || strcmp(s->name, "PIIX3") == 0 || strcmp(s->name, "VGA") == 0 || strcmp(s->name, "PIIX4_PM") == 0 ) && counter >= 100 ) {
+    if ((strcmp(dev->name, "virtio-blk-pci") == 0 || strcmp(dev->name, "e1000") == 0 || strcmp(dev->name, "piix3-ide") == 0 || strcmp(dev->name, "i440FX") == 0 || strcmp(dev->name, "PIIX3") == 0 || strcmp(dev->name, "VGA") == 0 || strcmp(dev->name, "PIIX4_PM") == 0 ) && counter >= 100 ) {
     } else {
         pci_update_mappings(dev);
     }
