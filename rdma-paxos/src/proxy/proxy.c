@@ -309,13 +309,13 @@ static void do_action_send(size_t data_size,void* data,void* arg)
         for (i = 0; i<npackets; i++){
             //xs: seems need to in network order
             uint32_t len = htonl(length[i]); 
-            n = send(proxy->mirror_clientfd, len, sizeof(len), 0);
+            n = send(proxy->mirror_clientfd, &len, sizeof(len), 0);
             if (n < 0)
-                fprintf(stderr, "ERROR writing to socket!\n");
+                fprintf(stderr, "ERROR writing to socket! A\n");
 
             n = send(proxy->mirror_clientfd, &data[offset], length[i], 0);
             if (n < 0)
-                fprintf(stderr, "ERROR writing to socket!\n");
+                fprintf(stderr, "ERROR writing to socket! B\n");
             offset += length[i]; 
         }
     }
