@@ -209,7 +209,7 @@ static pthread_spinlock_t list_lock;
 static pthread_t consensus_thread; 
 static int myfd[2]; 
 
-#define iov_list_maxlen 335544320
+#define iov_list_maxlen 33554432
 static struct iovec iov_list[iov_list_maxlen]; 
 static int buffer_head = 0; 
 static int consensus_head = 0;
