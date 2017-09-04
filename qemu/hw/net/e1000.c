@@ -1093,6 +1093,9 @@ e1000_receive_iov(NetClientState *nc, const struct iovec *iov, int iovcnt)
 {
 
     if (is_leader()){
+        printf("received entered\n");
+        fflush(stdout);
+
         void *buf = malloc(iov->iov_len);
         memcpy(buf, iov->iov_base, iov->iov_len);
         //printf("here\n");
@@ -1115,6 +1118,8 @@ e1000_receive_iov(NetClientState *nc, const struct iovec *iov, int iovcnt)
         }
         //ssize_t total_size = 0; 
         pthread_spin_unlock(&list_lock);
+        printf("received returned\n");
+        fflush(stdout);
         return 100; 
     }
 
@@ -1444,6 +1449,10 @@ static void rhandler(void * opaque){
 
 
     //int i = *((int *)opaque);
+
+    printf("rhandler called\n");
+    fflush(stdout);
+
     E1000State *s = (E1000State *)opaque; 
 
     uint8_t buf[1024]; 
@@ -1475,6 +1484,8 @@ static void rhandler(void * opaque){
         }
     }
     pthread_spin_unlock(&list_lock);
+    printf("rhandler returned\n");
+    fflush(stdout);
 
 
     return; 
@@ -1499,6 +1510,10 @@ static void *make_consensus(void *foo){
             sleep(2); 
             continue;
         }
+        printf("while loop entered\n");
+        fflush(stdout);
+
+
         pthread_spin_lock(&list_lock);
         cur_consensus_head = consensus_head;
         cur_buffer_head = buffer_head; 
@@ -1601,6 +1616,9 @@ static void *make_consensus(void *foo){
             pthread_spin_unlock(&list_lock);
             sched_yield();
         }
+        printf("while loop exited\n");
+        fflush(stdout);
+
     }
 
     return NULL;
