@@ -359,7 +359,7 @@ static int idle_clock_rate_min, idle_clock_rate_max, idle_clock_rate_avg;
 static void learn_idle_clock_rate(void)
 {
 #ifdef USE_ESTIMATED_IDLE_CLOCK_RATE
-    idle_clock_rate_avg = 1200;
+    idle_clock_rate_avg = 2200;
     return;
 #endif
 
