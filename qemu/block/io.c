@@ -2399,7 +2399,7 @@ int coroutine_fn bdrv_co_flush(BlockDriverState *bs)
     }
 
 
-    printf("returned bdrv_co_flush: %s\n", s->node_name );
+    printf("returned bdrv_co_flush: %s\n", bs->node_name );
     fflush(stdout);
 
 
