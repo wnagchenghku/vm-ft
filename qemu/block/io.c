@@ -2333,6 +2333,9 @@ int coroutine_fn bdrv_co_flush(BlockDriverState *bs)
 {
     int ret;
     BdrvTrackedRequest req;
+    printf("bdrv_co_flush: %s\n", s->node_name );
+    fflush(stdout);
+
 
     if (!bs || !bdrv_is_inserted(bs) || bdrv_is_read_only(bs) ||
         bdrv_is_sg(bs)) {
@@ -2395,6 +2398,11 @@ int coroutine_fn bdrv_co_flush(BlockDriverState *bs)
         goto out;
     }
 
+
+    printf("returned bdrv_co_flush: %s\n", s->node_name );
+    fflush(stdout);
+
+
     /* Now flush the underlying protocol.  It will also have BDRV_O_NO_FLUSH
      * in the case of cache=unsafe, so there are no useless flushes.
      */
@@ -2431,7 +2439,9 @@ int bdrv_flush(BlockDriverState *bs)
         while (rwco.ret == NOT_DONE) {
             printf("C\n");
             fflush(stdout);
+            
             aio_poll(aio_context, true);
+            
             printf("D\n");
             fflush(stdout);
         }
