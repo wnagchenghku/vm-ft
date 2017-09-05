@@ -1425,7 +1425,7 @@ int vm_stop(RunState state)
          */
         cpu_stop_current();
         return 0;
-    }
+    }   
 
     return do_vm_stop(state);
 }

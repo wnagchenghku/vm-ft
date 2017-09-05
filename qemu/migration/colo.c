@@ -479,6 +479,9 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     } else if (sync_type == STATIC_TIME_SYNC) {
         static_timing_sync(s);
     }
+
+
+
     
     proxy_on_checkpoint_req();
 
@@ -494,7 +497,11 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         goto out;
     }
 
+
+
     qemu_mutex_lock_iothread();
+
+
     if (failover_request_is_active()) {
         qemu_mutex_unlock_iothread();
         goto out;
@@ -522,6 +529,8 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     if (local_err) {
         goto out;
     }
+
+
 
     // colo_send_message(s->to_dst_file, COLO_MESSAGE_VMSTATE_SEND, &local_err);
     /*
@@ -628,6 +637,7 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     if (local_err) {
         goto out;
     }
+
 
     if (colo_gettime) {
         int64_t vmstate_loaded_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - vmstate_loaded_start;
