@@ -2333,9 +2333,6 @@ int coroutine_fn bdrv_co_flush(BlockDriverState *bs)
 {
     int ret;
     BdrvTrackedRequest req;
-    printf("bdrv_co_flush: %s\n", bs->node_name );
-    fflush(stdout);
-
 
     if (!bs || !bdrv_is_inserted(bs) || bdrv_is_read_only(bs) ||
         bdrv_is_sg(bs)) {
@@ -2366,16 +2363,12 @@ int coroutine_fn bdrv_co_flush(BlockDriverState *bs)
 
     BLKDBG_EVENT(bs->file, BLKDBG_FLUSH_TO_DISK);
     if (bs->drv->bdrv_co_flush_to_disk) {
-        printf("A\n");
-        fflush(stdout);
+
         ret = bs->drv->bdrv_co_flush_to_disk(bs);
-        printf("AA\n");
-        fflush(stdout);
 
 
     } else if (bs->drv->bdrv_aio_flush) {
-        printf("B\n");
-        fflush(stdout);
+
         BlockAIOCB *acb;
         CoroutineIOCompletion co = {
             .coroutine = qemu_coroutine_self(),
@@ -2383,8 +2376,6 @@ int coroutine_fn bdrv_co_flush(BlockDriverState *bs)
 
         acb = bs->drv->bdrv_aio_flush(bs, bdrv_co_io_em_complete, &co);
 
-        printf("BB\n");
-        fflush(stdout);
 
         if (acb == NULL) {
             ret = -EIO;
@@ -2410,9 +2401,6 @@ int coroutine_fn bdrv_co_flush(BlockDriverState *bs)
         goto out;
     }
 
-
-    printf("returned bdrv_co_flush: %s\n", bs->node_name );
-    fflush(stdout);
 
 
     /* Now flush the underlying protocol.  It will also have BDRV_O_NO_FLUSH
