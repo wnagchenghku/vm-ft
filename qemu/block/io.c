@@ -2366,14 +2366,26 @@ int coroutine_fn bdrv_co_flush(BlockDriverState *bs)
 
     BLKDBG_EVENT(bs->file, BLKDBG_FLUSH_TO_DISK);
     if (bs->drv->bdrv_co_flush_to_disk) {
+        printf("A\n");
+        fflush(stdout);
         ret = bs->drv->bdrv_co_flush_to_disk(bs);
+        printf("AA\n");
+        fflush(stdout);
+
+
     } else if (bs->drv->bdrv_aio_flush) {
+        printf("B\n");
+        fflush(stdout);
         BlockAIOCB *acb;
         CoroutineIOCompletion co = {
             .coroutine = qemu_coroutine_self(),
         };
 
         acb = bs->drv->bdrv_aio_flush(bs, bdrv_co_io_em_complete, &co);
+
+        printf("BB\n");
+        fflush(stdout);
+
         if (acb == NULL) {
             ret = -EIO;
         } else {
@@ -2423,13 +2435,9 @@ int bdrv_flush(BlockDriverState *bs)
 
     if (qemu_in_coroutine()) {
         /* Fast-path if already in coroutine context */
-        printf("A\n");
-        fflush(stdout);
         
         bdrv_flush_co_entry(&rwco);
 
-        printf("B\n");
-        fflush(stdout);
 
     } else {
         AioContext *aio_context = bdrv_get_aio_context(bs);
@@ -2437,13 +2445,9 @@ int bdrv_flush(BlockDriverState *bs)
         co = qemu_coroutine_create(bdrv_flush_co_entry);
         qemu_coroutine_enter(co, &rwco);
         while (rwco.ret == NOT_DONE) {
-            printf("C\n");
-            fflush(stdout);
-            
+
+            //xs: this function does not return.
             aio_poll(aio_context, true);
-            
-            printf("D\n");
-            fflush(stdout);
         }
     }
 
