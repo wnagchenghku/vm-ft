@@ -166,7 +166,6 @@ int nl_blk_delay(void)
 	int len = 0;
 	int count = 0;
 	int fd = 0;
-	pid_t tid = 0;
 	pid_t rtid = 0;
 
 	int loop = 0;
