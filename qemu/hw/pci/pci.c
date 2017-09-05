@@ -243,7 +243,7 @@ static void pci_do_device_reset(PCIDevice *dev)
             pci_set_long(dev->config + pci_bar(dev, r), region->type);
         }
     }
-
+    static int counter;
     if (counter <= 100) {
         counter++;
     }
@@ -447,6 +447,7 @@ static int get_pci_config_device(QEMUFile *f, void *pv, size_t size)
     }
     memcpy(s->config, config, size);
 
+    static int counter;
     if (counter <= 100) {
         counter++;
     }
