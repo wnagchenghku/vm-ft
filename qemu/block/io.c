@@ -2333,7 +2333,7 @@ int coroutine_fn bdrv_co_flush(BlockDriverState *bs)
 {
     int ret;
     BdrvTrackedRequest req;
-    printf("bdrv_co_flush: %s\n", s->node_name );
+    printf("bdrv_co_flush: %s\n", bs->node_name );
     fflush(stdout);
 
 
