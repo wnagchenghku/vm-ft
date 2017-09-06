@@ -2395,10 +2395,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
     /* try transferring iterative blocks of memory */
 
     /* flush all remaining blocks regardless of rate limiting */
-    uint64_t transferring_memory_start;
-    if (colo_gettime) {
-        transferring_memory_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
-    }
+    uint64_t transferring_memory_start = qemu_clock_get_ms(QEMU_CLOCK_REALTIME);
 
     while (true) {
         int pages;
@@ -2412,10 +2409,7 @@ static int ram_save_complete(QEMUFile *f, void *opaque)
         }
     }
 
-    if (colo_gettime) {
-        uint64_t transferring_memory_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - transferring_memory_start;
-        fprintf(stderr, "transferring_memory_time: %"PRId64"\n", transferring_memory_time);
-    }
+    fprintf(stderr, "transferring_memory_time: %"PRId64"\n", qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - transferring_memory_start);
 
     unsigned long *bitmap = atomic_rcu_read(&migration_bitmap_rcu)->bmap;
     int64_t ram_bitmap_pages = last_ram_offset() >> TARGET_PAGE_BITS;
