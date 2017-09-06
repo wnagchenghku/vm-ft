@@ -580,15 +580,6 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     }
     qemu_fflush(trans);
 
-    mc_start_buffer();
-
-    /* Resume primary guest */
-    qemu_mutex_lock_iothread();
-    control_clock = true;
-    vm_start();
-    control_clock = false;
-    qemu_mutex_unlock_iothread();
-
     /* we send the total size of the vmstate first */
     size = qsb_get_length(buffer);
     // colo_send_message_value(s->to_dst_file, COLO_MESSAGE_VMSTATE_SIZE,
@@ -651,6 +642,15 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 #endif
     ret = 0;
     //trace_colo_vm_state_change("stop", "run");
+
+    mc_start_buffer();
+
+    /* Resume primary guest */
+    qemu_mutex_lock_iothread();
+    control_clock = true;
+    vm_start();
+    control_clock = false;
+    qemu_mutex_unlock_iothread();
 
     mc_flush_oldest_buffer();
 
