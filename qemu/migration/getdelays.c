@@ -14,8 +14,6 @@
 #include "qemu/osdep.h"
 #include "sysemu/sysemu.h"
 
-static int recheck_count;
-
 #define GENLMSG_DATA(glh)	((void *)(NLMSG_DATA(glh) + GENL_HDRLEN))
 #define GENLMSG_PAYLOAD(glh)	(NLMSG_PAYLOAD(glh, 0) - GENL_HDRLEN)
 #define NLA_DATA(na)		((void *)((char*)(na) + NLA_HDRLEN))
@@ -162,8 +160,6 @@ int nl_init(void)
 		fprintf(stderr, "Error getting family id, errno %d\n", errno);
 	}
 	PRINTF("family id %d\n", id);
-
-	recheck_count = proxy_get_recheck_num();
 }
 
 static unsigned long long nl_blk_delay(void)
