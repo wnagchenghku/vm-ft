@@ -288,30 +288,15 @@ err:
 int check_disk_usage(void)
 {
 	int i = 0;
-	unsigned long long start, end, start_tmp, end_tmp;
+	unsigned long long start, end;
 
-	while (true) {
-        start = nl_blk_delay();
-        g_usleep(disk_sleep_time);
-        end = nl_blk_delay();
+    start = nl_blk_delay();
+    g_usleep(disk_sleep_time);
+    end = nl_blk_delay();
 
-        if ((end - start) <= disk_threshold) {
-            bool new_processing = false;
-            for (i = 0; i < recheck_count; ++i)
-            {
-                start_tmp = nl_blk_delay();
-                g_usleep(disk_sleep_time);
-                end_tmp = nl_blk_delay();
-                if ((end_tmp - start_tmp) > disk_threshold) {
-                    new_processing = true;
-                    break;
-                }
-            }
-            if (new_processing == false) {
-                break;
-            }
-        }		
-	}
+    if (end - start > disk_threshold) {
+    	return 1;
+    }
 
 	return 0;
 }
@@ -321,29 +306,15 @@ int check_disk_usage(void)
 
 int check_cpu_usage(void)
 {
-	int i = 0;
-	clock_t start, end, start_tmp, end_tmp;
-    while (true) {
-        start = clock();
-        g_usleep(cpu_sleep_time);
-        end = clock();
+	clock_t start, end;
 
-        if ((end - start) <= cpu_threshold) {
-            bool new_processing = false;
-            for (i = 0; i < recheck_count; ++i)
-            {
-                start_tmp = clock();
-                g_usleep(cpu_sleep_time);
-                end_tmp = clock();
-                if ((end_tmp - start_tmp) > cpu_threshold) {
-                    new_processing = true;
-                    break;
-                }
-            }
-            if (new_processing == false) {
-                break;
-            }
-        }
+    start = clock();
+    g_usleep(cpu_sleep_time);
+    end = clock();
+
+    if ((end - start) > cpu_threshold) {
+    	return 1;
     }
+
     return 0;
 }

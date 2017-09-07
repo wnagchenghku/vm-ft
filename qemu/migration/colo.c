@@ -405,8 +405,19 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
         gettimeofday(&t1, NULL);
     }
 
-    check_cpu_usage(); // spin until CPU idle
-    check_disk_usage();
+    int idle_counter = 0;
+    do
+    {
+        if (check_cpu_usage()) { // 1 means working, 0 means idle
+            idle_counter = 0;
+        } else {
+            if (check_disk_usage()) {
+                idle_counter = 0;
+            } else {
+                idle_counter++;
+            }
+        }
+    } while (idle_counter < recheck_count);
 
     checkpoint_cnt++;
     if (colo_debug) {
