@@ -176,6 +176,8 @@ static unsigned long long nl_blk_delay(void)
 	int fd = 0;
 	pid_t rtid = 0;
 
+	int loop = 0;
+	loop = 1; /* listen forever */
 	print_delays = 1;
 	unsigned long long ret;
 
@@ -197,7 +199,7 @@ static unsigned long long nl_blk_delay(void)
 		if (rep_len < 0) {
 			fprintf(stderr, "nonfatal reply error: errno %d\n",
 				errno);
-			continue;
+			//continue;
 		}
 		if (msg.n.nlmsg_type == NLMSG_ERROR ||
 		    !NLMSG_OK((&msg.n), rep_len)) {
@@ -285,6 +287,7 @@ err:
 
 int check_disk_usage(void)
 {
+	int i = 0;
 	unsigned long long start, end, start_tmp, end_tmp;
 
 	while (true) {
@@ -318,6 +321,7 @@ int check_disk_usage(void)
 
 int check_cpu_usage(void)
 {
+	int i = 0;
 	clock_t start, end, start_tmp, end_tmp;
     while (true) {
         start = clock();
