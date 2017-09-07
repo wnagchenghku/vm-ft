@@ -419,7 +419,7 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
         end = clock();
         if (colo_debug) {
             i++;
-            //fprintf(stderr, "For Loop %d, clock subtraction = %d, %"PRIu64"\n", i, (int)(end - start), get_output_counter());
+            fprintf(stderr, "For Loop %d, clock subtraction = %d, %"PRIu64"\n", i, (int)(end - start), get_output_counter());
         }
 
         // if (((end - start) <= (migration_checkpoint_delay * idle_clock_rate_avg)) && get_output_counter() > 0) { // for PGSQL
