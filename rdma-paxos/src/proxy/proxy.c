@@ -287,7 +287,7 @@ static void do_action_send(size_t data_size,void* data,void* arg)
 {
     proxy_node* proxy = arg;
     uint32_t len = htonl(data_size);
-    batching = proxy_get_batching();
+    int batching = proxy_get_batching();
     //int dbg = 0; 
 
     if (batching)
