@@ -740,6 +740,8 @@ static void colo_process_checkpoint(MigrationState *s)
 
     learn_idle_clock_rate();
 
+    nl_init();
+
     colo_gettime = proxy_get_colo_gettime();
 
     while (s->state == MIGRATION_STATUS_COLO) {
@@ -983,6 +985,8 @@ void *colo_process_incoming_thread(void *opaque)
     colo_debug = proxy_get_colo_debug();
     sleep(2);
     learn_idle_clock_rate();
+
+    nl_init();
 
     colo_gettime = proxy_get_colo_gettime();
 
