@@ -9,6 +9,12 @@
 
 #include <linux/genetlink.h>
 #include <linux/taskstats.h>
+#include "rsm-interface.h"
+
+#include "qemu/osdep.h"
+#include "sysemu/sysemu.h"
+
+static int recheck_count;
 
 #define GENLMSG_DATA(glh)	((void *)(NLMSG_DATA(glh) + GENL_HDRLEN))
 #define GENLMSG_PAYLOAD(glh)	(NLMSG_PAYLOAD(glh, 0) - GENL_HDRLEN)
@@ -156,9 +162,11 @@ int nl_init(void)
 		fprintf(stderr, "Error getting family id, errno %d\n", errno);
 	}
 	PRINTF("family id %d\n", id);
+
+	recheck_count = proxy_get_recheck_num();
 }
 
-int nl_blk_delay(void)
+static unsigned long long nl_blk_delay(void)
 {
 	struct nlattr *na;
 	int rc, rep_len, aggr_len, len2;
@@ -168,15 +176,12 @@ int nl_blk_delay(void)
 	int fd = 0;
 	pid_t rtid = 0;
 
-	int loop = 0;
-	loop = 1; /* listen forever */
 	print_delays = 1;
+	unsigned long long ret;
 
 	struct msgtemplate msg;
 
-	unsigned long long delta = 0;
-	unsigned long long curr = 0;
-	do {
+	// do {
 
 		rc = send_cmd(nl_sd, id, mypid, TASKSTATS_CMD_GET,
 			      cmd_type, &tid, sizeof(__u32));
@@ -237,9 +242,7 @@ int nl_blk_delay(void)
 					case TASKSTATS_TYPE_STATS:
 						count++;
 						struct taskstats *t = (struct taskstats *) NLA_DATA(na);
-						delta = t->blkio_delay_total - curr;
-						curr = t->blkio_delay_total;
-						printf("delta = %llu\n", (unsigned long long)delta);
+						ret = t->blkio_delay_total;
 
 						if (fd) {
 							if (write(fd, NLA_DATA(na), na->nla_len) < 0) {
@@ -268,16 +271,75 @@ int nl_blk_delay(void)
 			}
 			na = (struct nlattr *) (GENLMSG_DATA(&msg) + len);
 		}
-		// if (/* delta */) {
-			/* break */
-		// } else {
-			// usleep
-		// }
-	} while (loop);
+	// } while (loop);
 done:
 err:
 	// close(nl_sd);
 	// if (fd)
 	// 	close(fd);
+	return ret;
+}
+
+#define disk_sleep_time 1000
+#define disk_threshold 100
+
+int check_disk_usage(void)
+{
+	unsigned long long start, end, start_tmp, end_tmp;
+
+	while (true) {
+        start = nl_blk_delay();
+        g_usleep(disk_sleep_time);
+        end = nl_blk_delay();
+
+        if ((end - start) <= disk_threshold) {
+            bool new_processing = false;
+            for (i = 0; i < recheck_count; ++i)
+            {
+                start_tmp = nl_blk_delay();
+                g_usleep(disk_sleep_time);
+                end_tmp = nl_blk_delay();
+                if ((end_tmp - start_tmp) > disk_threshold) {
+                    new_processing = true;
+                    break;
+                }
+            }
+            if (new_processing == false) {
+                break;
+            }
+        }		
+	}
+
 	return 0;
+}
+
+#define cpu_sleep_time 100
+#define cpu_threshold 150
+
+int check_cpu_usage(void)
+{
+	clock_t start, end, start_tmp, end_tmp;
+    while (true) {
+        start = clock();
+        g_usleep(cpu_sleep_time);
+        end = clock();
+
+        if ((end - start) <= cpu_threshold) {
+            bool new_processing = false;
+            for (i = 0; i < recheck_count; ++i)
+            {
+                start_tmp = clock();
+                g_usleep(cpu_sleep_time);
+                end_tmp = clock();
+                if ((end_tmp - start_tmp) > cpu_threshold) {
+                    new_processing = true;
+                    break;
+                }
+            }
+            if (new_processing == false) {
+                break;
+            }
+        }
+    }
+    return 0;
 }

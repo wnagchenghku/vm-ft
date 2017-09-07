@@ -409,6 +409,14 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
         gettimeofday(&t1, NULL);
     }
 
+    int idle_counter = 0;
+    // 1 working
+    while (true) {
+        check_cpu_usage(); // spin until CPU idle
+        if (nl_blk_delay())
+            break;
+    }
+
     while (true) {
         if (is_primary) {
             migration_checkpoint_delay = s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY];
