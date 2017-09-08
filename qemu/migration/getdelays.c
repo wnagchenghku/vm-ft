@@ -289,6 +289,12 @@ int check_disk_usage(void)
     start = nl_blk_delay();
     g_usleep(disk_sleep_time);
     end = nl_blk_delay();
+    static int colo_gettime = -1; 
+    if(colo_gettime==-1)
+        proxy_get_colo_gettime();
+
+    if (colo_gettime)
+        fprintf(stderr, "DISK: %llu/n", end - start);
 
     if (end - start > disk_threshold) {
     	return 1;
@@ -307,7 +313,12 @@ int check_cpu_usage(void)
     start = clock();
     g_usleep(cpu_sleep_time);
     end = clock();
+    static int colo_gettime = -1;
+    if(colo_gettime==-1)
+	proxy_get_colo_gettime();
 
+    if (colo_gettime)
+        fprintf(stderr, "CPU: %d/n", (int)(end-start));
     if ((end - start) > cpu_threshold) {
     	return 1;
     }
