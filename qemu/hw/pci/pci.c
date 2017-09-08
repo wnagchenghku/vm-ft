@@ -283,9 +283,9 @@ static void pcibus_reset(BusState *qbus)
         }
     }
 
-    for (i = 0; i < bus->nirq; i++) {
-        assert(bus->irq_count[i] == 0);
-    }
+    // for (i = 0; i < bus->nirq; i++) {
+    //     assert(bus->irq_count[i] == 0);
+    // }
 }
 
 static void pci_host_bus_register(DeviceState *host)
