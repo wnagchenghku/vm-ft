@@ -229,13 +229,13 @@ static unsigned long long nl_blk_delay(void)
 					switch (na->nla_type) {
 					case TASKSTATS_TYPE_PID:
 						rtid = *(int *) NLA_DATA(na);
-						if (print_delays)
-							printf("PID\t%d\n", rtid);
+						//if (print_delays)
+							//printf("PID\t%d\n", rtid);
 						break;
 					case TASKSTATS_TYPE_TGID:
 						rtid = *(int *) NLA_DATA(na);
-						if (print_delays)
-							printf("TGID\t%d\n", rtid);
+						//if (print_delays)
+							//printf("TGID\t%d\n", rtid);
 						break;
 					case TASKSTATS_TYPE_STATS:
 						count++;
@@ -294,7 +294,7 @@ int check_disk_usage(void)
         proxy_get_colo_gettime();
 
     if (colo_gettime)
-        fprintf(stderr, "DISK: %llu/n", end - start);
+        fprintf(stderr, "DISK: %llu\n", end - start);
 
     if (end - start > disk_threshold) {
     	return 1;
@@ -318,7 +318,7 @@ int check_cpu_usage(void)
 	proxy_get_colo_gettime();
 
     if (colo_gettime)
-        fprintf(stderr, "CPU: %d/n", (int)(end-start));
+        fprintf(stderr, "CPU: %d\n", (int)(end-start));
     if ((end - start) > cpu_threshold) {
     	return 1;
     }
