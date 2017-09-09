@@ -212,6 +212,7 @@ static int consensus_head = 0;
 static int buffer_tail = 0; 
 static int buffer_wrap = 0; 
 static int consensus_wrap = 0;
+static int colo_debug; 
 
 
 /* the thread func to make consensus */
@@ -478,6 +479,7 @@ static void e1000_reset(void *opaque)
             printf("Error A\n");
         }
         qemu_set_fd_handler(myfd[0], rhandler, NULL, opaque);
+        colo_debug = proxy_get_colo_debug();
         init_done = 1; 
     }
 
@@ -1102,8 +1104,13 @@ e1000_receive_iov(NetClientState *nc, const struct iovec *iov, int iovcnt)
         pthread_spin_lock(&list_lock);
         iov_list[buffer_head].iov_base = buf; 
         iov_list[buffer_head].iov_len = iov->iov_len;
+        
+        ssize_t cur_head; 
+        if (colo_debug)
+            cur_head = buffer_head; 
         buffer_head++;
         //printf("buffer : %d,%d,%d\n", buffer_tail,consensus_head,buffer_head);
+
 
         //xs: wrap around;
         if( buffer_head >= iov_list_maxlen){
@@ -1115,7 +1122,11 @@ e1000_receive_iov(NetClientState *nc, const struct iovec *iov, int iovcnt)
                 printf("[ERROR] buffer full\n");
             }
         }
-        //ssize_t total_size = 0; 
+        //ssize_t total_size = 0;
+        if (colo_debug)
+            printf("[Append] append to buffer %ld => %ld, %ld, %ld\n",  cur_head, buffer_tail, consensus_head, buffer_head);
+
+
         pthread_spin_unlock(&list_lock);
         return 100; 
     }
@@ -1464,6 +1475,11 @@ static void rhandler(void * opaque){
         ret = send_to_guest(s, iov, iovcnt);
         if (ret < 0)
             break;
+
+        ssize_t cur_tail; // for debug;  
+
+        if (colo_debug)
+            cur_tail = buffer_tail;
         buffer_tail++; 
         //printf("guest : %d,%d,%d\n", buffer_tail,consensus_head,buffer_head);
 
@@ -1475,6 +1491,12 @@ static void rhandler(void * opaque){
                 printf("[ERROR] un-consensused full");
             }
         }
+
+        if(colo_debug){
+            printf("[GUEST]: send to guest: %ld => %ld, %ld, %ld\n", cur_tail, buffer_tail, consensus_head, buffer_head);
+        }
+
+
     }
     pthread_spin_unlock(&list_lock);
 
@@ -1584,7 +1606,8 @@ static void *make_consensus(void *foo){
                     }
                 }
             }
-
+            if (colo_debug)
+                printf("[Consensus]: make consensus on %ld => %ld, %ld, %ld\n",cur_consensus_head, buffer_tail, consensus_head, buffer_head);
             //usleep(10); //make consensus on consensus_head; 
 
             int ret = write(myfd[1], &val, sizeof(val));
