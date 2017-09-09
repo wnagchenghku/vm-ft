@@ -619,6 +619,8 @@ static ssize_t nbd_receive_request(QIOChannel *ioc, struct nbd_request *request)
     }
 
     if (ret != sizeof(buf)) {
+        printf("ret = %ld, size of buf = %ld\n", ret, sizeof(buf));
+
         LOG("read failed");
         return -EINVAL;
     }
