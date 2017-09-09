@@ -212,7 +212,7 @@ static int consensus_head = 0;
 static int buffer_tail = 0; 
 static int buffer_wrap = 0; 
 static int consensus_wrap = 0;
-static int colo_debug; 
+static int colo_gettime; 
 
 
 /* the thread func to make consensus */
@@ -479,7 +479,7 @@ static void e1000_reset(void *opaque)
             printf("Error A\n");
         }
         qemu_set_fd_handler(myfd[0], rhandler, NULL, opaque);
-        colo_debug = proxy_get_colo_debug();
+        colo_gettime = proxy_get_colo_gettime();
         init_done = 1; 
     }
 
@@ -1106,7 +1106,7 @@ e1000_receive_iov(NetClientState *nc, const struct iovec *iov, int iovcnt)
         iov_list[buffer_head].iov_len = iov->iov_len;
         
         ssize_t cur_head; 
-        if (colo_debug)
+        if (colo_gettime)
             cur_head = buffer_head; 
         buffer_head++;
         //printf("buffer : %d,%d,%d\n", buffer_tail,consensus_head,buffer_head);
@@ -1123,7 +1123,7 @@ e1000_receive_iov(NetClientState *nc, const struct iovec *iov, int iovcnt)
             }
         }
         //ssize_t total_size = 0;
-        if (colo_debug)
+        if (colo_gettime)
             printf("[Append] append to buffer %ld => %ld, %ld, %ld\n",  cur_head, buffer_tail, consensus_head, buffer_head);
 
 
@@ -1473,14 +1473,15 @@ static void rhandler(void * opaque){
         iov = &(iov_list[buffer_tail]);
         iovcnt =  1; 
         ret = send_to_guest(s, iov, iovcnt);
-        free(iov_list[buffer_tail].iov_base);
+        if (iov_list[buffer_tail].iov_base != NULL)
+            free(iov_list[buffer_tail].iov_base);
 
         if (ret < 0)
             break;
 
         ssize_t cur_tail; // for debug;  
 
-        if (colo_debug)
+        if (colo_gettime)
             cur_tail = buffer_tail;
         buffer_tail++; 
         //printf("guest : %d,%d,%d\n", buffer_tail,consensus_head,buffer_head);
@@ -1494,7 +1495,7 @@ static void rhandler(void * opaque){
             }
         }
 
-        if(colo_debug){
+        if(colo_gettime){
             printf("[GUEST]: send to guest: %ld => %ld, %ld, %ld\n", cur_tail, buffer_tail, consensus_head, buffer_head);
         }
 
@@ -1608,7 +1609,7 @@ static void *make_consensus(void *foo){
                     }
                 }
             }
-            if (colo_debug)
+            if (colo_gettime)
                 printf("[Consensus]: make consensus on %ld => %ld, %ld, %ld\n",cur_consensus_head, buffer_tail, consensus_head, buffer_head);
             //usleep(10); //make consensus on consensus_head; 
 
