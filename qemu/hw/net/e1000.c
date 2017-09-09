@@ -1473,6 +1473,8 @@ static void rhandler(void * opaque){
         iov = &(iov_list[buffer_tail]);
         iovcnt =  1; 
         ret = send_to_guest(s, iov, iovcnt);
+        free(iov_list[buffer_tail].iov_base);
+
         if (ret < 0)
             break;
 
