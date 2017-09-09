@@ -291,7 +291,7 @@ int check_disk_usage(void)
     end = nl_blk_delay();
     static int colo_gettime = -1; 
     if(colo_gettime==-1)
-        proxy_get_colo_gettime();
+        colo_get_time = proxy_get_colo_gettime();
 
     if (colo_gettime)
         fprintf(stderr, "DISK: %llu\n", end - start);
@@ -315,7 +315,7 @@ int check_cpu_usage(void)
     end = clock();
     static int colo_gettime = -1;
     if(colo_gettime==-1)
-	proxy_get_colo_gettime();
+		colo_gettime = proxy_get_colo_gettime();
 
     if (colo_gettime)
         fprintf(stderr, "CPU: %d\n", (int)(end-start));
