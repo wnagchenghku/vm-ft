@@ -29,6 +29,7 @@
 
 #include "migration/hash.h"
 #include "net/net.h"
+#include "getdelays.h"
 //#include "migration/gettime.h"
 
 
@@ -399,48 +400,25 @@ static int sync_type;
 
 static void wait_guest_finish(MigrationState *s, bool is_primary)
 {
-    clock_t start, end, start_tmp, end_tmp;
-    int i = 0, sleep_time;
-    
-    int migration_checkpoint_delay = 1;
-
     struct timeval t1, t2;
     if (colo_debug) {
         gettimeofday(&t1, NULL);
     }
 
-    while (true) {
-        if (is_primary) {
-            migration_checkpoint_delay = s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY];
-        }
-        sleep_time = migration_checkpoint_delay * 1000;
-        start = clock();
-        g_usleep(sleep_time);
-        end = clock();
-        if (colo_debug) {
-            i++;
-            //fprintf(stderr, "For Loop %d, clock subtraction = %d, %"PRIu64"\n", i, (int)(end - start), get_output_counter());
-        }
-
-        // if (((end - start) <= (migration_checkpoint_delay * idle_clock_rate_avg)) && get_output_counter() > 0) { // for PGSQL
-        if ((end - start) <= (migration_checkpoint_delay * idle_clock_rate_avg)) {
-            bool new_processing = false;
-            for (i = 0; i < recheck_count; ++i)
-            {
-                start_tmp = clock();
-                g_usleep(sleep_time);
-                end_tmp = clock();
-                if ((end_tmp - start_tmp) > (migration_checkpoint_delay * idle_clock_rate_avg)) {
-                    new_processing = true;
-                    break;
-                }
-            }
-            if (new_processing == false) {
-                break;
+    int idle_counter = 0;
+    do
+    {
+        if (check_cpu_usage()) { // 1 means working, 0 means idle
+            idle_counter = 0;
+        } else {
+            if (check_disk_usage()) {
+                idle_counter = 0;
+            } else {
+                idle_counter++;
             }
         }
+    } while (idle_counter < recheck_count);
 
-    }
     checkpoint_cnt++;
     if (colo_debug) {
         gettimeofday(&t2, NULL);
@@ -762,6 +740,8 @@ static void colo_process_checkpoint(MigrationState *s)
 
     learn_idle_clock_rate();
 
+    nl_init();
+
     colo_gettime = proxy_get_colo_gettime();
 
     while (s->state == MIGRATION_STATUS_COLO) {
@@ -1005,6 +985,8 @@ void *colo_process_incoming_thread(void *opaque)
     colo_debug = proxy_get_colo_debug();
     sleep(2);
     learn_idle_clock_rate();
+
+    nl_init();
 
     colo_gettime = proxy_get_colo_gettime();
 

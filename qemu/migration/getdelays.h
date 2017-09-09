@@ -2,6 +2,7 @@
 #define GETDELAY_H
 
 int nl_init(void);
-int nl_blk_delay(void);
+int check_cpu_usage(void);
+int check_disk_usage(void);
 
 #endif /* GETDELAY_H */

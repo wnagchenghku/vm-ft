@@ -9,6 +9,10 @@
 
 #include <linux/genetlink.h>
 #include <linux/taskstats.h>
+#include "rsm-interface.h"
+
+#include "qemu/osdep.h"
+#include "sysemu/sysemu.h"
 
 #define GENLMSG_DATA(glh)	((void *)(NLMSG_DATA(glh) + GENL_HDRLEN))
 #define GENLMSG_PAYLOAD(glh)	(NLMSG_PAYLOAD(glh, 0) - GENL_HDRLEN)
@@ -158,7 +162,7 @@ int nl_init(void)
 	PRINTF("family id %d\n", id);
 }
 
-int nl_blk_delay(void)
+static unsigned long long nl_blk_delay(void)
 {
 	struct nlattr *na;
 	int rc, rep_len, aggr_len, len2;
@@ -171,12 +175,11 @@ int nl_blk_delay(void)
 	int loop = 0;
 	loop = 1; /* listen forever */
 	print_delays = 1;
+	unsigned long long ret;
 
 	struct msgtemplate msg;
 
-	unsigned long long delta = 0;
-	unsigned long long curr = 0;
-	do {
+	// do {
 
 		rc = send_cmd(nl_sd, id, mypid, TASKSTATS_CMD_GET,
 			      cmd_type, &tid, sizeof(__u32));
@@ -192,7 +195,7 @@ int nl_blk_delay(void)
 		if (rep_len < 0) {
 			fprintf(stderr, "nonfatal reply error: errno %d\n",
 				errno);
-			continue;
+			//continue;
 		}
 		if (msg.n.nlmsg_type == NLMSG_ERROR ||
 		    !NLMSG_OK((&msg.n), rep_len)) {
@@ -226,20 +229,18 @@ int nl_blk_delay(void)
 					switch (na->nla_type) {
 					case TASKSTATS_TYPE_PID:
 						rtid = *(int *) NLA_DATA(na);
-						if (print_delays)
-							printf("PID\t%d\n", rtid);
+						//if (print_delays)
+							//printf("PID\t%d\n", rtid);
 						break;
 					case TASKSTATS_TYPE_TGID:
 						rtid = *(int *) NLA_DATA(na);
-						if (print_delays)
-							printf("TGID\t%d\n", rtid);
+						//if (print_delays)
+							//printf("TGID\t%d\n", rtid);
 						break;
 					case TASKSTATS_TYPE_STATS:
 						count++;
 						struct taskstats *t = (struct taskstats *) NLA_DATA(na);
-						delta = t->blkio_delay_total - curr;
-						curr = t->blkio_delay_total;
-						printf("delta = %llu\n", (unsigned long long)delta);
+						ret = t->blkio_delay_total;
 
 						if (fd) {
 							if (write(fd, NLA_DATA(na), na->nla_len) < 0) {
@@ -268,16 +269,59 @@ int nl_blk_delay(void)
 			}
 			na = (struct nlattr *) (GENLMSG_DATA(&msg) + len);
 		}
-		// if (/* delta */) {
-			/* break */
-		// } else {
-			// usleep
-		// }
-	} while (loop);
+	// } while (loop);
 done:
 err:
 	// close(nl_sd);
 	// if (fd)
 	// 	close(fd);
+	return ret;
+}
+
+#define disk_sleep_time 1000
+#define disk_threshold 100
+
+int check_disk_usage(void)
+{
+	int i = 0;
+	unsigned long long start, end;
+
+    start = nl_blk_delay();
+    g_usleep(disk_sleep_time);
+    end = nl_blk_delay();
+    static int colo_gettime = -1; 
+    if(colo_gettime==-1)
+        proxy_get_colo_gettime();
+
+    if (colo_gettime)
+        fprintf(stderr, "DISK: %llu\n", end - start);
+
+    if (end - start > disk_threshold) {
+    	return 1;
+    }
+
 	return 0;
+}
+
+#define cpu_sleep_time 100
+#define cpu_threshold 150
+
+int check_cpu_usage(void)
+{
+	clock_t start, end;
+
+    start = clock();
+    g_usleep(cpu_sleep_time);
+    end = clock();
+    static int colo_gettime = -1;
+    if(colo_gettime==-1)
+	proxy_get_colo_gettime();
+
+    if (colo_gettime)
+        fprintf(stderr, "CPU: %d\n", (int)(end-start));
+    if ((end - start) > cpu_threshold) {
+    	return 1;
+    }
+
+    return 0;
 }
