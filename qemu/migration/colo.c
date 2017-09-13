@@ -398,6 +398,8 @@ static uint64_t checkpoint_cnt;
 #define STATIC_TIME_SYNC 2
 static int sync_type;
 
+
+
 static void wait_guest_finish(MigrationState *s, bool is_primary)
 {
     struct timeval t1, t2;
@@ -411,6 +413,7 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
         if (check_cpu_usage()) { // 1 means working, 0 means idle
             idle_counter = 0;
         } else {
+            uint64_t start_counter = get_output_counter();
             if (check_disk_usage()) {
                 idle_counter = 0;
             } else {
