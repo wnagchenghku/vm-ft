@@ -413,11 +413,18 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
         if (check_cpu_usage()) { // 1 means working, 0 means idle
             idle_counter = 0;
         } else {
-            uint64_t start_counter = get_output_counter();
+            uint64_t start_counter, end_counter;
+            start_counter = get_output_counter();
             if (check_disk_usage()) {
                 idle_counter = 0;
             } else {
-                idle_counter++;
+                end_counter = get_output_counter();
+                if (end_counter == start_counter){
+                    idle_counter++;
+                }
+                else {
+                    idle_counter = 0;
+                } 
             }
         }
     } while (idle_counter < recheck_count);
