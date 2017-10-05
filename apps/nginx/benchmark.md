@@ -1,1 +1,0 @@
-- ab -n 1000 -c http://10.22.1.15/index.html
