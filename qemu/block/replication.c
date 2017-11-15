@@ -282,7 +282,7 @@ static void secondary_do_checkpoint(BDRVReplicationState *s, Error **errp)
         return;
     }
 
-    // (todo) merge hidden_disk to secondary disk
+    // (todo: bxli) merge hidden_disk to secondary disk (block commit)
     
     ret = s->hidden_disk->bs->drv->bdrv_make_empty(s->hidden_disk->bs);
     if (ret < 0) {
@@ -397,6 +397,21 @@ static void replication_start(ReplicationState *rs, ReplicationMode mode,
             return;
         }
 
+        s->secondary_disk = s->active_disk->bs->backing;
+        if (!s->secondary_disk->bs || !s->secondary_disk->bs->blk) {
+            error_setg(errp, "The secondary disk doesn't have block backend");
+            aio_context_release(aio_context);
+            return;
+        }
+
+        // (todo: bxli) retrieve s->hidden_disk
+        if (!s->hidden_disk->bs || !s->hidden_disk->bs->backing) {
+            error_setg(errp, "Hidden disk doesn't have backing file");
+            aio_context_release(aio_context);
+            return;
+        }
+
+        /* COLO code 
         s->hidden_disk = s->active_disk->bs->backing;
         if (!s->hidden_disk->bs || !s->hidden_disk->bs->backing) {
             error_setg(errp, "Hidden disk doesn't have backing file");
@@ -409,7 +424,7 @@ static void replication_start(ReplicationState *rs, ReplicationMode mode,
             error_setg(errp, "The secondary disk doesn't have block backend");
             aio_context_release(aio_context);
             return;
-        }
+        }*/
 
         /* verify the length */
         active_length = bdrv_getlength(s->active_disk->bs);
