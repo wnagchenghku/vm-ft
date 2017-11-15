@@ -282,6 +282,8 @@ static void secondary_do_checkpoint(BDRVReplicationState *s, Error **errp)
         return;
     }
 
+    // (todo) merge hidden_disk to secondary disk
+    
     ret = s->hidden_disk->bs->drv->bdrv_make_empty(s->hidden_disk->bs);
     if (ret < 0) {
         error_setg(errp, "Cannot make hidden disk empty");
