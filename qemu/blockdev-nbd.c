@@ -145,7 +145,7 @@ void qmp_nbd_server_start(SocketAddress *addr,
 void qmp_nbd_server_add(const char *device, bool has_writable, bool writable,
                         Error **errp)
 {
-    BlockBackend *blk;
+    BlockDriverState *bs = NULL;
     NBDExport *exp;
 
     if (!nbd_server) {
@@ -158,25 +158,21 @@ void qmp_nbd_server_add(const char *device, bool has_writable, bool writable,
         return;
     }
 
-    blk = blk_by_name(device);
-    if (!blk) {
+    bs = bdrv_lookup_bs(device, device, errp);
+    if (!bs) {
         error_set(errp, ERROR_CLASS_DEVICE_NOT_FOUND,
                   "Device '%s' not found", device);
-        return;
-    }
-    if (!blk_is_inserted(blk)) {
-        error_setg(errp, QERR_DEVICE_HAS_NO_MEDIUM, device);
         return;
     }
 
     if (!has_writable) {
         writable = false;
     }
-    if (blk_is_read_only(blk)) {
+    if (bdrv_is_read_only(bs)) {
         writable = false;
     }
 
-    exp = nbd_export_new(blk, 0, -1, writable ? 0 : NBD_FLAG_READ_ONLY, NULL,
+    exp = nbd_export_new(bs, 0, -1, writable ? 0 : NBD_FLAG_READ_ONLY, NULL,
                          errp);
     if (!exp) {
         return;
