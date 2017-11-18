@@ -265,16 +265,16 @@ static void secondary_do_checkpoint(BDRVReplicationState *s, Error **errp)
     Error *local_err = NULL;
     int ret;
 
-    if (!s->secondary_disk->bs->job) {
-        error_setg(errp, "Backup job was cancelled unexpectedly");
-        return;
-    }
+    //if (!s->secondary_disk->bs->job) {
+    //    error_setg(errp, "Backup job was cancelled unexpectedly");
+    //    return;
+    //}
 
-    backup_do_checkpoint(s->secondary_disk->bs->job, &local_err);
-    if (local_err) {
-        error_propagate(errp, local_err);
-        return;
-    }
+    //backup_do_checkpoint(s->secondary_disk->bs->job, &local_err);
+    //if (local_err) {
+    //    error_propagate(errp, local_err);
+    //    return;
+    //}
 
     ret = s->active_disk->bs->drv->bdrv_make_empty(s->active_disk->bs);
     if (ret < 0) {
@@ -472,42 +472,42 @@ static void replication_start(ReplicationState *rs, ReplicationMode mode,
         }
 
         /* reopen the backing file in r/w mode */
-        reopen_backing_file(s, true, &local_err);
-        if (local_err) {
-            error_propagate(errp, local_err);
-            aio_context_release(aio_context);
-            return;
-        }
+        //reopen_backing_file(s, true, &local_err);
+        //if (local_err) {
+        //    error_propagate(errp, local_err);
+        //    aio_context_release(aio_context);
+        //    return;
+        //}
 
         /* start backup job now */
-        error_setg(&s->blocker,
-                   "block device is in use by internal backup job");
+        //error_setg(&s->blocker,
+        //           "block device is in use by internal backup job");
 
-        top_bs = bdrv_lookup_bs(s->top_id, s->top_id, errp);
-        if (!top_bs) {
-            aio_context_release(aio_context);
-            return;
-        }
-        bdrv_op_block_all(top_bs, s->blocker);
-        bdrv_op_unblock(top_bs, BLOCK_OP_TYPE_DATAPLANE, s->blocker);
+        //top_bs = bdrv_lookup_bs(s->top_id, s->top_id, errp);
+        //if (!top_bs) {
+        //    aio_context_release(aio_context);
+        //    return;
+        //}
+        //bdrv_op_block_all(top_bs, s->blocker);
+        //bdrv_op_unblock(top_bs, BLOCK_OP_TYPE_DATAPLANE, s->blocker);
 
-        /*
-         * Must protect backup target if backup job was stopped/cancelled
-         * unexpectedly
-         */
-        bdrv_ref(s->hidden_disk->bs);
+        ///*
+        // * Must protect backup target if backup job was stopped/cancelled
+        // * unexpectedly
+        // */
+        //bdrv_ref(s->hidden_disk->bs);
 
-        backup_start(s->secondary_disk->bs, s->hidden_disk->bs, 0,
-                     MIRROR_SYNC_MODE_NONE, NULL, BLOCKDEV_ON_ERROR_REPORT,
-                     BLOCKDEV_ON_ERROR_REPORT, backup_job_completed,
-                     s, NULL, &local_err);
-        if (local_err) {
-            error_propagate(errp, local_err);
-            backup_job_cleanup(s);
-            bdrv_unref(s->hidden_disk->bs);
-            aio_context_release(aio_context);
-            return;
-        }
+        //backup_start(s->secondary_disk->bs, s->hidden_disk->bs, 0,
+        //             MIRROR_SYNC_MODE_NONE, NULL, BLOCKDEV_ON_ERROR_REPORT,
+        //             BLOCKDEV_ON_ERROR_REPORT, backup_job_completed,
+        //             s, NULL, &local_err);
+        //if (local_err) {
+        //    error_propagate(errp, local_err);
+        //    backup_job_cleanup(s);
+        //    bdrv_unref(s->hidden_disk->bs);
+        //    aio_context_release(aio_context);
+        //    return;
+        //}
         break;
     default:
         aio_context_release(aio_context);
