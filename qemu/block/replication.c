@@ -107,6 +107,11 @@ static int replication_open(BlockDriverState *bs, QDict *options,
             error_setg(&local_err, "Missing the option top-id");
             goto fail;
         }
+    } else if (!strcmp(mode, "sync")) {
+        fprintf(stderr, "mode is sync\n");
+        s->mode = REPLICATION_MODE_SYNC;
+        // (todo: bxli)
+        // get top_id here?
     } else {
         error_setg(&local_err,
                    "The option mode's value should be primary or secondary");
@@ -419,21 +424,14 @@ static void replication_start(ReplicationState *rs, ReplicationMode mode,
         s->active_disk = bs->file;
         if (!s->active_disk || !s->active_disk->bs ||
                                     !s->active_disk->bs->backing) {
-            error_setg(errp, "Active disk doesn't have backing file");
+            error_setg(errp, "SECONDARY MODE : Active disk doesn't have backing file");
             aio_context_release(aio_context);
             return;
         }
 
         s->secondary_disk = s->active_disk->bs->backing;
         if (!s->secondary_disk->bs || !s->secondary_disk->bs->blk) {
-            error_setg(errp, "The secondary disk doesn't have block backend");
-            aio_context_release(aio_context);
-            return;
-        }
-
-        s->hidden_disk = s->active_disk->bs->file;
-        if (!s->hidden_disk->bs || !s->hidden_disk->bs->backing) {
-            error_setg(errp, "Hidden disk doesn't have backing file");
+            error_setg(errp, "SECONDARY MODE : The secondary disk doesn't have block backend");
             aio_context_release(aio_context);
             return;
         }
@@ -455,20 +453,15 @@ static void replication_start(ReplicationState *rs, ReplicationMode mode,
 
         /* verify the length */
         active_length = bdrv_getlength(s->active_disk->bs);
-        hidden_length = bdrv_getlength(s->hidden_disk->bs);
         disk_length = bdrv_getlength(s->secondary_disk->bs);
-        if (active_length < 0 || hidden_length < 0 || disk_length < 0 ||
-            active_length != hidden_length || hidden_length != disk_length) {
-            error_setg(errp, "active disk, hidden disk, secondary disk's length"
-                       " are not the same");
+        if (active_length < 0 || disk_length < 0 || active_length != disk_length) {
+            error_setg(errp, "active disk & secondary disk's length are not the same");
             aio_context_release(aio_context);
             return;
         }
 
-        if (!s->active_disk->bs->drv->bdrv_make_empty ||
-            !s->hidden_disk->bs->drv->bdrv_make_empty) {
-            error_setg(errp,
-                       "active disk or hidden disk doesn't support make_empty");
+        if (!s->active_disk->bs->drv->bdrv_make_empty) {
+            error_setg(errp, "active disk doesn't support make_empty");
             aio_context_release(aio_context);
             return;
         }
@@ -511,6 +504,37 @@ static void replication_start(ReplicationState *rs, ReplicationMode mode,
         //    return;
         //}
         break;
+    case REPLICATION_MODE_SYNC:
+        s->hidden_disk = bs->file;
+        if (!s->hidden_disk || !s->hidden_disk->bs ||
+                                    !s->hidden_disk->bs->backing) {
+            error_setg(errp, "SYNC MODE : hidden disk doesn't have backing file");
+            aio_context_release(aio_context);
+            return;
+        }
+
+        s->secondary_disk = s->hidden_disk->bs->backing;
+        if (!s->secondary_disk->bs || !s->secondary_disk->bs->blk) {
+            error_setg(errp, "SYNC MODE : The secondary disk doesn't have block backend");
+            aio_context_release(aio_context);
+            return;
+        }
+
+        /* verify the length */
+        hidden_length = bdrv_getlength(s->hidden_disk->bs);
+        if (hidden_length < 0 || disk_length < 0 || hidden_length != disk_length) {
+            error_setg(errp, "SYNC MODE : hidden disk, secondary disk's length are not the same");
+            aio_context_release(aio_context);
+            return;
+        }
+
+        if (!s->hidden_disk->bs->drv->bdrv_make_empty) {
+            error_setg(errp, "SYNC MODE : hidden disk doesn't support make_empty");
+            aio_context_release(aio_context);
+            return;
+        }
+
+        break;
     default:
         aio_context_release(aio_context);
         abort();
@@ -520,6 +544,8 @@ static void replication_start(ReplicationState *rs, ReplicationMode mode,
 
     if (s->mode == REPLICATION_MODE_SECONDARY) {
         secondary_do_checkpoint(s, errp);
+    } else if (s->mode == REPLCIATION_MODE_SYNC) {
+        sync_do_checkpoint(s, errp);
     }
 
     s->error = 0;
