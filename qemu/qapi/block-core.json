@@ -2090,7 +2090,7 @@
 #
 # Since: 2.7
 ##
-{ 'enum' : 'ReplicationMode', 'data' : [ 'primary', 'secondary' ] }
+{ 'enum' : 'ReplicationMode', 'data' : [ 'primary', 'secondary', 'sync' ] }
 
 ##
 # @BlockdevOptionsReplication
