@@ -310,6 +310,7 @@ static void checkpoint_commit_done(void *opaque, int ret)
         //s->hidden_disk = NULL;
         //s->error = 0;
     } else {
+        fprintf(stderr, "checkpoint commit failed!\n");
         s->replication_state = BLOCK_REPLICATION_FAILOVER_FAILED;
         s->error = -EIO;
     }
@@ -428,7 +429,7 @@ static void replication_start(ReplicationState *rs, ReplicationMode mode,
             return;
         }
 
-        // (todo: bxli) retrieve s->hidden_disk
+        s->hidden_disk = s->active_disk->bs->file;
         if (!s->hidden_disk->bs || !s->hidden_disk->bs->backing) {
             error_setg(errp, "Hidden disk doesn't have backing file");
             aio_context_release(aio_context);
