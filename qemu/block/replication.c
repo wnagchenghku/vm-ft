@@ -110,8 +110,11 @@ static int replication_open(BlockDriverState *bs, QDict *options,
     } else if (!strcmp(mode, "sync")) {
         fprintf(stderr, "mode is sync\n");
         s->mode = REPLICATION_MODE_SYNC;
-        // (todo: bxli)
-        // get top_id here?
+        top_id = qemu_opt_get(opts, REPLICATION_TOP_ID);
+        if (!(s->top_id = g_strdup(top_id))) {
+            error_setg(&local_err, "Missing the option top-id");
+            goto fail;
+        }
     } else {
         error_setg(&local_err,
                    "The option mode's value should be primary or secondary");
@@ -133,7 +136,7 @@ static void replication_close(BlockDriverState *bs)
 {
     BDRVReplicationState *s = bs->opaque;
 
-    if (s->mode == REPLICATION_MODE_SECONDARY) {
+    if (s->mode == REPLICATION_MODE_SECONDARY || s->mode == REPLICATION_MODE_SYNC) {
         g_free(s->top_id);
     }
 
@@ -151,6 +154,7 @@ static int64_t replication_getlength(BlockDriverState *bs)
 
 static int replication_get_io_status(BDRVReplicationState *s)
 {
+    // (todo: bxli) what is this function for?
     switch (s->replication_state) {
     case BLOCK_REPLICATION_NONE:
         return -EIO;
@@ -198,6 +202,11 @@ static coroutine_fn int replication_co_readv(BlockDriverState *bs,
         return -EIO;
     }
 
+    if (s->mode == REPLICATION_MODE_SYNC) {
+        /* We only use it to receive primary write requests */
+        return -EIO;
+    }
+
     ret = replication_get_io_status(s);
     if (ret < 0) {
         return ret;
@@ -224,6 +233,12 @@ static coroutine_fn int replication_co_writev(BlockDriverState *bs,
     if (ret < 0) {
         return ret;
     }
+
+    // (todo: bxli)
+    // what does primary do in this function?
+    // suppose sync would do nothing
+    if (s->mode == REPLICATION_MODE_SYNC)
+        return ret;
 
     if (ret == 0) {
         ret = bdrv_co_writev(top->bs, sector_num,
@@ -308,13 +323,19 @@ static void secondary_do_checkpoint(BDRVReplicationState *s, Error **errp)
         error_setg(errp, "Cannot make active disk empty");
         return;
     }
+}
+
+static void sync_do_checkpoint(BlockDriverState *bs, BDRVReplicationState *s, Error **errp)
+{
+    Error *local_err = NULL;
+    int ret;
 
     // (todo: bxli) merge hidden_disk to secondary disk (block commit)
     // need to require AIO context or not?
     // how to achieve BlockDriverState bs? (bs->opaque == s)
-    //commit_active_start(s->hidden_disk->bs, s->secondary_disk->bs, 0,
-    //                BLOCKDEV_ON_ERROR_REPORT, checkpoint_commit_done,
-    //                bs, errp, true);
+    commit_active_start(s->hidden_disk->bs, s->secondary_disk->bs, 0,
+                    BLOCKDEV_ON_ERROR_REPORT, checkpoint_commit_done,
+                    bs, errp, true);
 
     ret = s->hidden_disk->bs->drv->bdrv_make_empty(s->hidden_disk->bs);
     if (ret < 0) {
@@ -545,7 +566,7 @@ static void replication_start(ReplicationState *rs, ReplicationMode mode,
     if (s->mode == REPLICATION_MODE_SECONDARY) {
         secondary_do_checkpoint(s, errp);
     } else if (s->mode == REPLCIATION_MODE_SYNC) {
-        sync_do_checkpoint(s, errp);
+        sync_do_checkpoint(bs, s, errp);
     }
 
     s->error = 0;
@@ -564,6 +585,8 @@ static void replication_do_checkpoint(ReplicationState *rs, Error **errp)
 
     if (s->mode == REPLICATION_MODE_SECONDARY) {
         secondary_do_checkpoint(s, errp);
+    } else if (s->>mode == REPLICATION_MODE_SYNC) {
+        sync_do_checkpoint(bs, s, errp);
     }
     aio_context_release(aio_context);
 }
@@ -640,9 +663,9 @@ static void replication_stop(ReplicationState *rs, bool failover, Error **errp)
              * before the BDS is closed, because we will access hidden
              * disk, secondary disk in backup_job_completed().
              */
-            if (s->secondary_disk->bs->job) {
-                block_job_cancel_sync(s->secondary_disk->bs->job);
-            }
+            //if (s->secondary_disk->bs->job) {
+            //    block_job_cancel_sync(s->secondary_disk->bs->job);
+            //}
             secondary_do_checkpoint(s, errp);
             s->replication_state = BLOCK_REPLICATION_DONE;
             aio_context_release(aio_context);
@@ -650,13 +673,17 @@ static void replication_stop(ReplicationState *rs, bool failover, Error **errp)
         }
 
         s->replication_state = BLOCK_REPLICATION_FAILOVER;
-        if (s->secondary_disk->bs->job) {
-            block_job_cancel(s->secondary_disk->bs->job);
-        }
+        //if (s->secondary_disk->bs->job) {
+        //    block_job_cancel(s->secondary_disk->bs->job);
+        //}
 
         commit_active_start(s->active_disk->bs, s->secondary_disk->bs, 0,
                             BLOCKDEV_ON_ERROR_REPORT, replication_done,
                             bs, errp, true);
+        break;
+    case REPLICATION_MODE:
+        // (todo: bxli) what state should it be?
+        s->replication_state = BLOCK_REPLICATION_FAILOVER;
         break;
     default:
         aio_context_release(aio_context);
