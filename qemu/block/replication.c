@@ -100,6 +100,7 @@ static int replication_open(BlockDriverState *bs, QDict *options,
     if (!strcmp(mode, "primary")) {
         s->mode = REPLICATION_MODE_PRIMARY;
     } else if (!strcmp(mode, "secondary")) {
+        fprintf(stderr, "mode is secondary\n");
         s->mode = REPLICATION_MODE_SECONDARY;
         top_id = qemu_opt_get(opts, REPLICATION_TOP_ID);
         if (!(s->top_id = g_strdup(top_id))) {
