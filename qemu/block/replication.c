@@ -261,6 +261,27 @@ static bool replication_recurse_is_first_non_filter(BlockDriverState *bs,
     return bdrv_recurse_is_first_non_filter(bs->file->bs, candidate);
 }
 
+static void checkpoint_commit_done(void *opaque, int ret)
+{
+    BlockDriverState *bs = opaque;
+    BDRVReplicationState *s = bs->opaque;
+
+    if (ret == 0) {
+        //s->replication_state = BLOCK_REPLICATION_DONE;
+        fprintf(stderr, "checkpoint_commit_done!\n");
+        ///* refresh top bs's filename */
+        //bdrv_refresh_filename(bs);
+        //s->active_disk = NULL;
+        //s->secondary_disk = NULL;
+        //s->hidden_disk = NULL;
+        //s->error = 0;
+    } else {
+        fprintf(stderr, "checkpoint commit failed!\n");
+        s->replication_state = BLOCK_REPLICATION_FAILOVER_FAILED;
+        s->error = -EIO;
+    }
+}
+
 static void secondary_do_checkpoint(BDRVReplicationState *s, Error **errp)
 {
     Error *local_err = NULL;
@@ -285,35 +306,15 @@ static void secondary_do_checkpoint(BDRVReplicationState *s, Error **errp)
 
     // (todo: bxli) merge hidden_disk to secondary disk (block commit)
     // need to require AIO context or not?
-    commit_active_start(s->hidden_disk->bs, s->secondary_disk->bs, 0,
-                    BLOCKDEV_ON_ERROR_REPORT, checkpoint_commit_done,
-                    bs, errp, true);
+    // how to achieve BlockDriverState bs? (bs->opaque == s)
+    //commit_active_start(s->hidden_disk->bs, s->secondary_disk->bs, 0,
+    //                BLOCKDEV_ON_ERROR_REPORT, checkpoint_commit_done,
+    //                bs, errp, true);
 
     ret = s->hidden_disk->bs->drv->bdrv_make_empty(s->hidden_disk->bs);
     if (ret < 0) {
         error_setg(errp, "Cannot make hidden disk empty");
         return;
-    }
-}
-
-static void checkpoint_commit_done(void *opaque, int ret)
-{
-    BlockDriverState *bs = opaque;
-    BDRVReplicationState *s = bs->opaque;
-
-    if (ret == 0) {
-        //s->replication_state = BLOCK_REPLICATION_DONE;
-        fprintf(stderr, "checkpoint_commit_done!\n");
-        ///* refresh top bs's filename */
-        //bdrv_refresh_filename(bs);
-        //s->active_disk = NULL;
-        //s->secondary_disk = NULL;
-        //s->hidden_disk = NULL;
-        //s->error = 0;
-    } else {
-        fprintf(stderr, "checkpoint commit failed!\n");
-        s->replication_state = BLOCK_REPLICATION_FAILOVER_FAILED;
-        s->error = -EIO;
     }
 }
 
