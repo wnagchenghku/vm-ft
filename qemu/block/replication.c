@@ -565,7 +565,7 @@ static void replication_start(ReplicationState *rs, ReplicationMode mode,
 
     if (s->mode == REPLICATION_MODE_SECONDARY) {
         secondary_do_checkpoint(s, errp);
-    } else if (s->mode == REPLCIATION_MODE_SYNC) {
+    } else if (s->mode == REPLICATION_MODE_SYNC) {
         sync_do_checkpoint(bs, s, errp);
     }
 
@@ -585,7 +585,7 @@ static void replication_do_checkpoint(ReplicationState *rs, Error **errp)
 
     if (s->mode == REPLICATION_MODE_SECONDARY) {
         secondary_do_checkpoint(s, errp);
-    } else if (s->>mode == REPLICATION_MODE_SYNC) {
+    } else if (s->mode == REPLICATION_MODE_SYNC) {
         sync_do_checkpoint(bs, s, errp);
     }
     aio_context_release(aio_context);
@@ -681,7 +681,7 @@ static void replication_stop(ReplicationState *rs, bool failover, Error **errp)
                             BLOCKDEV_ON_ERROR_REPORT, replication_done,
                             bs, errp, true);
         break;
-    case REPLICATION_MODE:
+    case REPLICATION_MODE_SYNC:
         // (todo: bxli) what state should it be?
         s->replication_state = BLOCK_REPLICATION_FAILOVER;
         break;
