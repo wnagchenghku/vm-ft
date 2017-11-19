@@ -431,12 +431,13 @@ static void replication_start(ReplicationState *rs, ReplicationMode mode,
         return;
     }
 
-    if (s->mode != mode) {
-        error_setg(errp, "The parameter mode's value is invalid, needs %d,"
-                   " but got %d", s->mode, mode);
-        aio_context_release(aio_context);
-        return;
-    }
+    //fprintf(stderr, "s->mode = %d, mode = %d\n", s->mode, mode);
+    //if (s->mode != mode) {
+    //    error_setg(errp, "The parameter mode's value is invalid, needs %d,"
+    //               " but got %d", s->mode, mode);
+    //    aio_context_release(aio_context);
+    //    return;
+    //}
 
     switch (s->mode) {
     case REPLICATION_MODE_PRIMARY:
