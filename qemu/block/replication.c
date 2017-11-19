@@ -544,6 +544,7 @@ static void replication_start(ReplicationState *rs, ReplicationMode mode,
 
         /* verify the length */
         hidden_length = bdrv_getlength(s->hidden_disk->bs);
+        disk_length = bdrv_getlength(s->secondary_disk->bs);
         if (hidden_length < 0 || disk_length < 0 || hidden_length != disk_length) {
             error_setg(errp, "SYNC MODE : hidden disk, secondary disk's length are not the same");
             aio_context_release(aio_context);
