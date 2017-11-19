@@ -476,7 +476,7 @@ static void replication_start(ReplicationState *rs, ReplicationMode mode,
         active_length = bdrv_getlength(s->active_disk->bs);
         disk_length = bdrv_getlength(s->secondary_disk->bs);
         if (active_length < 0 || disk_length < 0 || active_length != disk_length) {
-            error_setg(errp, "active disk & secondary disk's length are not the same");
+            error_setg(errp, "active_length = %d, disk_length = %d, active disk & secondary disk's length are not the same", active_length, disk_length);
             aio_context_release(aio_context);
             return;
         }
