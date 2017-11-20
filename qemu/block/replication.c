@@ -77,6 +77,7 @@ static ReplicationOps replication_ops = {
 static int replication_open(BlockDriverState *bs, QDict *options,
                             int flags, Error **errp)
 {
+    fprintf(stderr, "replication_open is called, bs = %p\n", bs);
     int ret;
     BDRVReplicationState *s = bs->opaque;
     Error *local_err = NULL;
@@ -134,6 +135,7 @@ fail:
 
 static void replication_close(BlockDriverState *bs)
 {
+    fprintf(stderr, "replication_close is called, bs= %p\n", bs);
     BDRVReplicationState *s = bs->opaque;
 
     if (s->mode == REPLICATION_MODE_SECONDARY || s->mode == REPLICATION_MODE_SYNC) {
@@ -154,6 +156,7 @@ static int64_t replication_getlength(BlockDriverState *bs)
 
 static int replication_get_io_status(BDRVReplicationState *s)
 {
+    fprintf(stderr, "replication_get_io_status is called, s = %p\n", s);
     // (todo: bxli) what is this function for?
     switch (s->replication_state) {
     case BLOCK_REPLICATION_NONE:
@@ -177,6 +180,7 @@ static int replication_get_io_status(BDRVReplicationState *s)
 
 static int replication_return_value(BDRVReplicationState *s, int ret)
 {
+    fprintf(stderr, "replication_return_value is called, s = %p\n", s);
     if (s->mode == REPLICATION_MODE_SECONDARY) {
         return ret;
     }
@@ -194,6 +198,7 @@ static coroutine_fn int replication_co_readv(BlockDriverState *bs,
                                              int remaining_sectors,
                                              QEMUIOVector *qiov)
 {
+    fprintf(stderr, "replication_co_readv is called, bs = %p, sector_num = %d\n", bs, sector_num);
     BDRVReplicationState *s = bs->opaque;
     int ret;
 
@@ -221,6 +226,7 @@ static coroutine_fn int replication_co_writev(BlockDriverState *bs,
                                               int remaining_sectors,
                                               QEMUIOVector *qiov)
 {
+    fprintf(stderr, "replication_co_writev is called, bs = %p, sector_num = %d\n", bs, sector_num);
     BDRVReplicationState *s = bs->opaque;
     QEMUIOVector hd_qiov;
     uint64_t bytes_done = 0;
@@ -414,6 +420,7 @@ static void backup_job_completed(void *opaque, int ret)
 static void replication_start(ReplicationState *rs, ReplicationMode mode,
                               Error **errp)
 {
+    fprintf(stderr, "replication_start is called, rs = %p, mode = %d\n", rs, mode);
     BlockDriverState *bs = rs->opaque;
     BDRVReplicationState *s;
     BlockDriverState *top_bs;
@@ -431,13 +438,14 @@ static void replication_start(ReplicationState *rs, ReplicationMode mode,
         return;
     }
 
-    //fprintf(stderr, "s->mode = %d, mode = %d\n", s->mode, mode);
-    //if (s->mode != mode) {
-    //    error_setg(errp, "The parameter mode's value is invalid, needs %d,"
-    //               " but got %d", s->mode, mode);
-    //    aio_context_release(aio_context);
-    //    return;
-    //}
+    fprintf(stderr, "s->mode = %d, mode = %d\n", s->mode, mode);
+    if (s->mode != mode) {
+	fprintf(stderr, "The parameter mode's value is invalid, needs %d, but got %d\n", s->mode, mode);
+        //error_setg(errp, "The parameter mode's value is invalid, needs %d,"
+        //           " but got %d", s->mode, mode);
+        aio_context_release(aio_context);
+        return;
+    }
 
     switch (s->mode) {
     case REPLICATION_MODE_PRIMARY:
@@ -546,7 +554,7 @@ static void replication_start(ReplicationState *rs, ReplicationMode mode,
         hidden_length = bdrv_getlength(s->hidden_disk->bs);
         disk_length = bdrv_getlength(s->secondary_disk->bs);
         if (hidden_length < 0 || disk_length < 0 || hidden_length != disk_length) {
-            error_setg(errp, "SYNC MODE : hidden disk, secondary disk's length are not the same");
+            error_setg(errp, "SYNC MODE : s->hidden_disk = %p, s->hidden_disk->bs = %p, s->secondary_disk = %p, s->secondary_disk->bs = %p, hidden_length = %d, disk_length = %d, hidden disk, secondary disk's length are not the same", s->hidden_disk, s->hidden_disk->bs, s->secondary_disk, s->secondary_disk->bs, hidden_length, disk_length);
             aio_context_release(aio_context);
             return;
         }
@@ -577,6 +585,7 @@ static void replication_start(ReplicationState *rs, ReplicationMode mode,
 
 static void replication_do_checkpoint(ReplicationState *rs, Error **errp)
 {
+    fprintf(stderr, "replication_do_checkpoint is called, rs = %p\n", rs);
     BlockDriverState *bs = rs->opaque;
     BDRVReplicationState *s;
     AioContext *aio_context;
@@ -639,6 +648,7 @@ static void replication_done(void *opaque, int ret)
 
 static void replication_stop(ReplicationState *rs, bool failover, Error **errp)
 {
+    fprintf(stderr, "replication_stop is called, rs = %p, failover = %d\n", rs, failover);
     BlockDriverState *bs = rs->opaque;
     BDRVReplicationState *s;
     AioContext *aio_context;
@@ -714,6 +724,7 @@ BlockDriver bdrv_replication = {
 
 static void bdrv_replication_init(void)
 {
+    fprintf(stderr, "bdrv_replication_init is called\n");
     bdrv_register(&bdrv_replication);
 }
 

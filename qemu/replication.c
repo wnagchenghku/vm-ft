@@ -42,8 +42,9 @@ void replication_remove(ReplicationState *rs)
 void replication_start_all(ReplicationMode mode, Error **errp)
 {
     ReplicationState *rs, *next;
-
+    fprintf(stderr, "replication_start_all in replication.c is called!, mode = %d\n", mode);
     QLIST_FOREACH_SAFE(rs, &replication_states, node, next) {
+	fprintf(stderr, "rs->ops = %d, rs->ops->start = %d\n", rs->ops, rs->ops->start);
         if (rs->ops && rs->ops->start) {
             rs->ops->start(rs, mode, errp);
         }
