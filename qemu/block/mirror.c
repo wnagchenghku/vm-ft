@@ -460,7 +460,10 @@ static void mirror_exit(BlockJob *job, void *opaque)
         if (bdrv_get_flags(s->target) != bdrv_get_flags(to_replace)) {
             bdrv_reopen(s->target, bdrv_get_flags(to_replace), NULL);
         }
-        bdrv_replace_in_backing_chain(to_replace, s->target);
+
+        // (todo) in our scenario, we don't want to change the backing chain
+        // what we want is merge top to bottom and top still keeps working
+        // bdrv_replace_in_backing_chain(to_replace, s->target);
     }
 
 out:
