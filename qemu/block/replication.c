@@ -157,7 +157,6 @@ static int64_t replication_getlength(BlockDriverState *bs)
 static int replication_get_io_status(BDRVReplicationState *s)
 {
     fprintf(stderr, "replication_get_io_status is called, s = %p\n", s);
-    // (todo: bxli) what is this function for?
     switch (s->replication_state) {
     case BLOCK_REPLICATION_NONE:
         return -EIO;
@@ -329,9 +328,13 @@ static void sync_do_checkpoint(BlockDriverState *bs, BDRVReplicationState *s, Er
 {
     Error *local_err = NULL;
     int ret;
+    AioContext *aio_context;
 
-    // (todo: bxli) merge hidden_disk to secondary disk (block commit)
-    // need to require AIO context or not?
+    aio_context = bdrv_get_aio_context(bs);
+    aio_context_acquire(aio_context);
+
+    // merge hidden_disk to secondary disk (block commit)
+    // (todo) need to require AIO context or not?
     // how to achieve BlockDriverState bs? (bs->opaque == s)
     commit_active_start(s->hidden_disk->bs, s->secondary_disk->bs, 0,
                     BLOCKDEV_ON_ERROR_REPORT, checkpoint_commit_done,
@@ -340,8 +343,10 @@ static void sync_do_checkpoint(BlockDriverState *bs, BDRVReplicationState *s, Er
     ret = s->hidden_disk->bs->drv->bdrv_make_empty(s->hidden_disk->bs);
     if (ret < 0) {
         error_setg(errp, "Cannot make hidden disk empty");
+        aio_context_release(aio_context);
         return;
     }
+    aio_context_release(aio_context);
 }
 
 static void reopen_backing_file(BDRVReplicationState *s, bool writable,
