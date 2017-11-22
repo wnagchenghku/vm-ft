@@ -240,12 +240,6 @@ static coroutine_fn int replication_co_writev(BlockDriverState *bs,
         return ret;
     }
 
-    // (todo: bxli)
-    // what does primary do in this function?
-    // suppose sync would do nothing
-    if (s->mode == REPLICATION_MODE_SYNC)
-        return ret;
-
     if (ret == 0) {
         ret = bdrv_co_writev(top->bs, sector_num,
                              remaining_sectors, qiov);
