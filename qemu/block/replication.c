@@ -20,6 +20,15 @@
 #include "qapi/error.h"
 #include "replication.h"
 
+#define DEBUG_IO_LATENCY
+
+#ifdef DEBUG_IO_LATENCY
+static float timedifference_msec(struct timeval t0, struct timeval t1) {
+    return (t1.tv_sec - t0.tv_sec) * 1000.0f
+           + (t1.tv_usec - t0.tv_usec) / 1000.0f;
+}
+#endif
+
 typedef struct BDRVReplicationState {
     ReplicationMode mode;
     int replication_state;
@@ -317,7 +326,17 @@ static void secondary_do_checkpoint(BDRVReplicationState *s, Error **errp)
     //    return;
     //}
 
+    #ifdef DEBUG_IO_LATENCY
+    FILE *fp = fopen("IO_latency.log", "a+");
+    struct timeval start, stop;
+    gettimeofday(&start, NULL);
+    #endif
     ret = s->active_disk->bs->drv->bdrv_make_empty(s->active_disk->bs);
+    #ifdef DEBUG_IO_LATENCY
+    gettimeofday(&stop, NULL);
+    fprintf(fp, "make active disk empty took %f msec\n", timedifference_msec(start, stop));
+    fclose(fp);
+    #endif
     if (ret < 0) {
         error_setg(errp, "Cannot make active disk empty");
         return;
@@ -339,8 +358,19 @@ static void sync_do_checkpoint(BlockDriverState *bs, BDRVReplicationState *s, Er
     commit_active_start(s->hidden_disk->bs, s->secondary_disk->bs, 0,
                     BLOCKDEV_ON_ERROR_REPORT, checkpoint_commit_done,
                     bs, errp, true);
-
+    
+    #ifdef DEBUG_IO_LATENCY
+    FILE *fp = fopen("IO_latency.log", "a+");
+    struct timeval start, stop;
+    gettimeofday(&start, NULL);
+    #endif
     ret = s->hidden_disk->bs->drv->bdrv_make_empty(s->hidden_disk->bs);
+    #ifdef DEBUG_IO_LATENCY
+    gettimeofday(&stop, NULL);
+    fprintf(fp, "make hidden disk empty took %f msec\n", timedifference_msec(start, stop));
+    fclose(fp);
+    #endif
+
     if (ret < 0) {
         error_setg(errp, "Cannot make hidden disk empty");
         aio_context_release(aio_context);
