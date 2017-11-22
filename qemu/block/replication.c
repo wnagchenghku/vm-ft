@@ -433,13 +433,14 @@ static void replication_start(ReplicationState *rs, ReplicationMode mode,
     }
 
     fprintf(stderr, "s->mode = %d, mode = %d\n", s->mode, mode);
-    if (s->mode != mode) {
-	fprintf(stderr, "The parameter mode's value is invalid, needs %d, but got %d\n", s->mode, mode);
-        //error_setg(errp, "The parameter mode's value is invalid, needs %d,"
-        //           " but got %d", s->mode, mode);
-        aio_context_release(aio_context);
-        return;
-    }
+    // (todo) comment this part temporarily, otherwise error occurs
+    // the problem is, the driver is in sync mode while the argument of function has mode of secondary
+    //if (s->mode != mode) {
+    //    error_setg(errp, "The parameter mode's value is invalid, needs %d,"
+    //               " but got %d", s->mode, mode);
+    //    aio_context_release(aio_context);
+    //    return;
+    //}
 
     switch (s->mode) {
     case REPLICATION_MODE_PRIMARY:
