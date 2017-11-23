@@ -354,14 +354,21 @@ static void sync_do_checkpoint(BlockDriverState *bs, BDRVReplicationState *s, Er
 
     // merge hidden_disk to secondary disk (block commit)
     // (todo) need to require AIO context or not?
-    // how to achieve BlockDriverState bs? (bs->opaque == s)
-    commit_active_start(s->hidden_disk->bs, s->secondary_disk->bs, 0,
-                    BLOCKDEV_ON_ERROR_REPORT, checkpoint_commit_done,
-                    bs, errp, true);
-    
+
     #ifdef DEBUG_IO_LATENCY
     FILE *fp = fopen("IO_latency.log", "a+");
     struct timeval start, stop;
+    gettimeofday(&start, NULL);
+    #endif
+    commit_active_start(s->hidden_disk->bs, s->secondary_disk->bs, 0,
+                    BLOCKDEV_ON_ERROR_REPORT, checkpoint_commit_done,
+                    bs, errp, true);
+    #ifdef DEBUG_IO_LATENCY
+    gettimeofday(&stop, NULL);
+    fprintf(fp, "merge hidden disk to secondary disk took %f msec\n", timedifference_msec(start, stop));
+    #endif
+   
+    #ifdef DEBUG_IO_LATENCY
     gettimeofday(&start, NULL);
     #endif
     ret = s->hidden_disk->bs->drv->bdrv_make_empty(s->hidden_disk->bs);
