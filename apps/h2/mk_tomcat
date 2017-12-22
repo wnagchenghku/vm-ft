@@ -1,6 +1,0 @@
-#!/bin/bash
-#wget http://apache.website-solution.net/tomcat/tomcat-7/v7.0.75/bin/apache-tomcat-7.0.75.tar.gz
-tar zxvf apache-tomcat-7.0.75.tar.gz
-cd apache-tomcat-7.0.75
-sed -i '/<\/Host>/ i <Context docBase="tpcw1.0" path="\/tpcw1.0" reloadable="true"\/>' conf/server.xml
-

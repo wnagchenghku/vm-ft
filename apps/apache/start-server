@@ -1,3 +1,0 @@
-#!/bin/bash
-APP_ROOT=`pwd`
-$APP_ROOT/install/bin/apachectl -f $APP_ROOT/install/conf/httpd.conf -k start
