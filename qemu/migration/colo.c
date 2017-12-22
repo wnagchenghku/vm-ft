@@ -399,17 +399,19 @@ static uint64_t checkpoint_cnt;
 static int sync_type;
 
 
-
+#define BACKUP_END_IDLE 4
 static void wait_guest_finish(MigrationState *s, bool is_primary)
 {
     struct timeval t1, t2;
     if (colo_debug) {
         gettimeofday(&t1, NULL);
     }
+    int backup_counter = 0;
 
     int idle_counter = 0;
     do
     {
+	backup_counter++;
         if (check_cpu_usage()) { // 1 means working, 0 means idle
             idle_counter = 0;
         } else {
@@ -427,6 +429,8 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
                 } 
             }
         }
+	if(is_primary == false && backup_counter > BACKUP_END_IDLE)
+		break;
     } while (idle_counter < recheck_count);
 
     checkpoint_cnt++;
@@ -603,10 +607,10 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
     // colo_receive_check_message(s->rp_state.from_dst_file,
     //                     COLO_MESSAGE_VMSTATE_LOADED, &local_err);
 
-    mc_receive_check_message(COLO_MESSAGE_VMSTATE_LOADED, &local_err);
-    if (local_err) {
-        goto out;
-    }
+    //mc_receive_check_message(COLO_MESSAGE_VMSTATE_LOADED, &local_err);
+    //if (local_err) {
+    //    goto out;
+    //}
 
     if (colo_gettime) {
         int64_t vmstate_loaded_time = qemu_clock_get_ms(QEMU_CLOCK_REALTIME) - vmstate_loaded_start;
@@ -1157,10 +1161,10 @@ void *colo_process_incoming_thread(void *opaque)
 
         // colo_send_message(mis->to_src_file, COLO_MESSAGE_VMSTATE_LOADED,
         //               &local_err);
-        mc_send_message(COLO_MESSAGE_VMSTATE_LOADED,&local_err);
-        if (local_err) {
-            goto out;
-        }
+        //mc_send_message(COLO_MESSAGE_VMSTATE_LOADED,&local_err);
+        //if (local_err) {
+        //    goto out;
+        //}
 
         control_clock = true;
         vm_start();
