@@ -278,8 +278,8 @@ err:
 	return ret;
 }
 
-#define disk_sleep_time 1000
-#define disk_threshold 100
+#define disk_sleep_time 100
+#define disk_threshold 10
 
 int check_disk_usage(void)
 {
@@ -293,8 +293,8 @@ int check_disk_usage(void)
     if(colo_gettime==-1)
         proxy_get_colo_gettime();
 
-    if (colo_gettime)
-        fprintf(stderr, "DISK: %llu\n", end - start);
+    //if (colo_gettime)
+    //    fprintf(stderr, "DISK: %llu\n", end - start);
 
     if (end - start > disk_threshold) {
     	return 1;
@@ -317,8 +317,8 @@ int check_cpu_usage(void)
     if(colo_gettime==-1)
 	proxy_get_colo_gettime();
 
-    if (colo_gettime)
-        fprintf(stderr, "CPU: %d\n", (int)(end-start));
+    //if (colo_gettime)
+    //    fprintf(stderr, "CPU: %d\n", (int)(end-start));
     if ((end - start) > cpu_threshold) {
     	return 1;
     }
