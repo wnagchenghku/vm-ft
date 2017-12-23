@@ -399,7 +399,7 @@ static uint64_t checkpoint_cnt;
 static int sync_type;
 
 
-#define BACKUP_END_IDLE 4
+#define BACKUP_END_IDLE 6
 static void wait_guest_finish(MigrationState *s, bool is_primary)
 {
     struct timeval t1, t2;
@@ -429,8 +429,8 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
                 } 
             }
         }
-	if(is_primary == false && backup_counter > BACKUP_END_IDLE)
-		break;
+	//if(is_primary == false && backup_counter > BACKUP_END_IDLE)
+		//break;
     } while (idle_counter < recheck_count);
 
     checkpoint_cnt++;
