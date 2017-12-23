@@ -281,16 +281,72 @@ static void do_action_send(size_t data_size,void* data,void* arg)
 {
     proxy_node* proxy = arg;
     uint32_t len = htonl(data_size);
+    int batching = proxy_get_batching();
+    //int dbg = 0; 
 
-    int n = send(proxy->mirror_clientfd, &len, sizeof(len), 0);
-    if (n < 0)
-        fprintf(stderr, "ERROR writing to socket!\n");
+    if (batching)
+    {
+        ssize_t npackets; 
+        memcpy(&npackets, data, sizeof(npackets));
+        //printf("[%d], Received %ld consensued packets\n\n", dbg++, npackets);
 
-    n = send(proxy->mirror_clientfd, data, data_size, 0);
-    if (n < 0)
-        fprintf(stderr, "ERROR writing to socket!\n");
+        ssize_t offset = (npackets+1) * sizeof(ssize_t);
 
+
+        ssize_t *length = (ssize_t*) malloc(npackets * sizeof(ssize_t));
+
+        memcpy (length, data+sizeof(ssize_t),npackets * sizeof(ssize_t));
+
+        int i, n; 
+        for (i = 0; i<npackets; i++){
+            //xs: seems need to in network order
+            uint32_t len = htonl(length[i]); 
+            n = send(proxy->mirror_clientfd, &len, sizeof(len), 0);
+            if (n < 0)
+                fprintf(stderr, "ERROR writing to socket! A\n");
+
+            n = send(proxy->mirror_clientfd, &data[offset], length[i], 0);
+            if (n < 0)
+                fprintf(stderr, "ERROR writing to socket! B\n");
+            offset += length[i]; 
+        }
+    }
+    else{
+        int n = send(proxy->mirror_clientfd, &len, sizeof(len), 0);
+        if (n < 0)
+            fprintf(stderr, "ERROR writing to socket!\n");
+
+        n = send(proxy->mirror_clientfd, data, data_size, 0);
+        if (n < 0)
+            fprintf(stderr, "ERROR writing to socket!\n");
+
+    }
     proxy->sync_req_id++;
+}
+
+static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,void* data,void*arg)
+{
+    proxy_node* proxy = arg;
+    FILE* output = NULL;
+    if(proxy->req_log){
+        output = proxy->req_log_file;
+    }
+
+    switch(type) {
+        case MIRROR:
+        {
+            do_action_send(data_size, data, arg);
+            break;
+        }
+        case CHECKPOINT:
+        {
+            checkpoint_req_status = CHECKPOINT_REQ_READY;
+            break;
+        }
+    }
+
+    return;
+}
 }
 
 static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,void* data,void*arg)
