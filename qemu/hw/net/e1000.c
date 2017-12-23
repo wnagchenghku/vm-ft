@@ -198,6 +198,8 @@ enum {
 /*
 VMFT's code. 
 */
+static int e1000_speedup; 
+
 
 static int init_done = 0; 
 
@@ -466,9 +468,10 @@ rxbufsize(uint32_t v)
 
 static void e1000_reset(void *opaque)
 {
+    e1000_speedup = proxy_get_e1000();
 
 
-    if (init_done == 0){
+    if (e1000_speedup == 1  && init_done == 0){
         pthread_spin_init(&list_lock, 0);
         pthread_create(&consensus_thread, NULL, make_consensus, NULL);
         int ret = pipe(myfd);   
@@ -1091,7 +1094,7 @@ static uint64_t rx_desc_base(E1000State *s)
 static ssize_t
 e1000_receive_iov(NetClientState *nc, const struct iovec *iov, int iovcnt)
 {
-    if (is_leader()){
+    if (e1000_speedup && is_leader()){
 
         void *buf = malloc(iov->iov_len);
         memcpy(buf, iov->iov_base, iov->iov_len);
