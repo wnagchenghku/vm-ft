@@ -211,7 +211,7 @@ static void tap_send(void *opaque)
             buf  += s->host_vnet_hdr_len;
             size -= s->host_vnet_hdr_len;
         }
-
+/* do not need to do consensus here 
         if (is_leader()) {
 
             static int colo_gettime = -1;
@@ -231,7 +231,7 @@ static void tap_send(void *opaque)
                 //fprintf(stderr, "mirror_time: %"PRId64" ns\n", mirror_time);
             }
         }
-
+*/
         size = qemu_send_packet_async(&s->nc, buf, size, tap_send_completed);
         if (size == 0) {
             tap_read_poll(s, false);

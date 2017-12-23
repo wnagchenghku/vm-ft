@@ -304,7 +304,7 @@ int check_disk_usage(void)
 }
 
 #define cpu_sleep_time 100
-#define cpu_threshold 150
+#define cpu_threshold 250 //add 100 for the consensus thread
 
 int check_cpu_usage(void)
 {
