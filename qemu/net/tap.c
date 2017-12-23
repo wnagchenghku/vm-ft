@@ -228,7 +228,7 @@ static void tap_send(void *opaque)
 
             if (colo_gettime) {
                 int64_t mirror_time = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) - mirror_start;
-                fprintf(stderr, "mirror_time: %"PRId64" ns\n", mirror_time);
+                //fprintf(stderr, "mirror_time: %"PRId64" ns\n", mirror_time);
             }
         }
 
