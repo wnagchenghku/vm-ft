@@ -347,31 +347,6 @@ static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,vo
 
     return;
 }
-}
-
-static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,void* data,void*arg)
-{
-    proxy_node* proxy = arg;
-    FILE* output = NULL;
-    if(proxy->req_log){
-        output = proxy->req_log_file;
-    }
-
-    switch(type) {
-        case MIRROR:
-        {
-            do_action_send(data_size, data, arg);
-            break;
-        }
-        case CHECKPOINT:
-        {
-            checkpoint_req_status = CHECKPOINT_REQ_READY;
-            break;
-        }
-    }
-
-    return;
-}
 
 proxy_node* proxy_init(const char* proxy_log_path, uint8_t role)
 {
