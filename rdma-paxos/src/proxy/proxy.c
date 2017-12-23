@@ -218,6 +218,16 @@ int proxy_get_colo_gettime(void)
     return proxy->colo_gettime;
 }
 
+int proxy_get_batching(void)
+{
+    return proxy->batching;
+}
+
+int proxy_get_e1000(void)
+{
+    return proxy->e1000_speedup;
+}
+
 static void stablestorage_save_request(void* data,void*arg)
 {
     proxy_node* proxy = arg;

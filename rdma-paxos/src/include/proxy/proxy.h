@@ -55,6 +55,7 @@ typedef struct proxy_node_t{
     int colo_debug;
     int colo_gettime;
     int batching; 
+    int e1000_speedup;
 
 
     FILE* req_log_file;
