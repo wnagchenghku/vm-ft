@@ -292,9 +292,10 @@ static void do_action_send(size_t data_size,void* data,void* arg)
     proxy_node* proxy = arg;
     uint32_t len = htonl(data_size);
     int batching = proxy_get_batching();
+    int e1000_speedup = proxy_get_e1000();
     //int dbg = 0; 
 
-    if (batching)
+    if (batching && e1000_speedup)
     {
         ssize_t npackets; 
         memcpy(&npackets, data, sizeof(npackets));
