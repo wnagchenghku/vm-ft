@@ -414,12 +414,12 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
     }
     do
     {
+        start_counter = get_output_counter();
 	    backup_counter++;
         if (check_cpu_usage()) { // 1 means working, 0 means idle
             idle_counter = 0;
         } else {
             uint64_t start_counter, end_counter;
-            start_counter = get_output_counter();
             if (check_disk_usage()) {
                 idle_counter = 0;
             } else {
