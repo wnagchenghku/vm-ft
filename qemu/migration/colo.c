@@ -407,11 +407,11 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
         gettimeofday(&t1, NULL);
     }
     int backup_counter = 0;
-
+    bool received_sync_req = false; 
     int idle_counter = 0;
     do
     {
-	backup_counter++;
+	    backup_counter++;
         if (check_cpu_usage()) { // 1 means working, 0 means idle
             idle_counter = 0;
         } else {
@@ -429,9 +429,18 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
                 } 
             }
         }
-	//if(is_primary == false && backup_counter > BACKUP_END_IDLE)
-		//break;
+        if (is_primary == false && proxy_wait_checkpoint_req() == 1 && received_sync_req == false){
+            backup_counter = 0;
+            received_sync_req = true; 
+            fprintf(stderr, "primary finishes first !!\n"); 
+        }
+	    if(is_primary == false && received_sync_req == true && backup_counter > BACKUP_END_IDLE)
+		    break;
     } while (idle_counter < recheck_count);
+    if (is_primary == false && received_sync_req == false){
+        while(proxy_wait_checkpoint_req() == 0); 
+        fprintf(stderr, "secondary finishes first !!\n");
+    }
 
     checkpoint_cnt++;
     if (colo_debug) {
@@ -982,7 +991,16 @@ void *colo_process_incoming_thread(void *opaque)
         int request;
         // colo_wait_handle_message(mis->from_src_file, &request, &local_err);
 
-        proxy_wait_checkpoint_req();
+        
+        
+        
+        if (sync_type != CHECK_IDLE_SYNC){
+            proxy_wait_checkpoint_req();
+        }
+        if (sync_type == CHECK_IDLE_SYNC) {
+            wait_guest_finish(NULL, false);
+        }
+        
         request = 1;
         disable_apply_committed_entries();
 
@@ -993,10 +1011,6 @@ void *colo_process_incoming_thread(void *opaque)
         if (failover_request_is_active()) {
             error_report("failover request");
             goto out;
-        }
-
-        if (sync_type == CHECK_IDLE_SYNC) {
-            wait_guest_finish(NULL, false);
         }
 
         qemu_mutex_lock_iothread();

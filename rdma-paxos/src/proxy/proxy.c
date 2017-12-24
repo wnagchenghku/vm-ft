@@ -174,11 +174,14 @@ void proxy_on_checkpoint_req(void)
     return;
 }
 
-void proxy_wait_checkpoint_req(void)
+int proxy_wait_checkpoint_req(void)
 {
-    while (checkpoint_req_status != CHECKPOINT_REQ_READY);
-    checkpoint_req_status = CHECKPOINT_REQ_WAIT;
-    return;
+    if (checkpoint_req_status != CHECKPOINT_REQ_READY)
+        return 0; 
+    else{
+        checkpoint_req_status = CHECKPOINT_REQ_WAIT;
+        return 1;
+    }
 }
 
 static void update_highest_rec(void*arg)
