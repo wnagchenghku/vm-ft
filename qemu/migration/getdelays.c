@@ -309,6 +309,9 @@ int check_disk_usage(void)
 int check_cpu_usage(void)
 {
 	clock_t start, end;
+    int cpu_threshold;
+
+    cpu_threshold = proxy_get_e1000() ? 220 : 140; 
 
     int cpu_threshold; 
     cpu_threshold = proxy_get_e1000()?220: 240; 
@@ -321,7 +324,7 @@ int check_cpu_usage(void)
 	proxy_get_colo_gettime();
 
     //if (colo_gettime)
-    //    fprintf(stderr, "CPU: %d\n", (int)(end-start));
+        //fprintf(stderr, "CPU: %d\n", (int)(end-start));
     if ((end - start) > cpu_threshold) {
     	return 1;
     }
