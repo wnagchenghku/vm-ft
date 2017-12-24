@@ -313,8 +313,6 @@ int check_cpu_usage(void)
 
     cpu_threshold = proxy_get_e1000() ? 220 : 140; 
 
-    int cpu_threshold; 
-    cpu_threshold = proxy_get_e1000()?220: 240; 
 
     start = clock();
     g_usleep(cpu_sleep_time);
