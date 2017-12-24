@@ -409,6 +409,9 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
     int backup_counter = 0;
     bool received_sync_req = false; 
     int idle_counter = 0;
+    if (is_primary ==false) {
+        usleep(1000 * 10);
+    }
     do
     {
 	    backup_counter++;
