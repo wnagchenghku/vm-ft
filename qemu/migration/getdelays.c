@@ -311,7 +311,7 @@ int check_cpu_usage(void)
 	clock_t start, end;
     int cpu_threshold;
 
-    cpu_threshold = proxy_get_e1000() ? 220 : 140; 
+    cpu_threshold = proxy_get_e1000() ? 220 : 125; 
 
 
     start = clock();
