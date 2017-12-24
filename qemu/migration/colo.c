@@ -409,6 +409,7 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
     int backup_counter = 0;
     bool received_sync_req = false; 
     int idle_counter = 0;
+    uint64_t start_counter, end_counter;
     if (is_primary ==false) {
         usleep(1000 * 10);
     }
@@ -419,7 +420,6 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
         if (check_cpu_usage()) { // 1 means working, 0 means idle
             idle_counter = 0;
         } else {
-            uint64_t start_counter, end_counter;
             if (check_disk_usage()) {
                 idle_counter = 0;
             } else {
