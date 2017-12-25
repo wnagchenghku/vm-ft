@@ -443,7 +443,10 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
         }
 	    if(is_primary == false && received_sync_req == true && backup_counter > BACKUP_END_IDLE)
 		    break;
-    } while (idle_counter < recheck_count && primary_counter >= 0);
+        if (is_primary == false && received_sync_req == false){
+            continue; 
+        }
+    } while (idle_counter < recheck_count);
     
     if (is_primary == false && received_sync_req == false){//will not enter
         while(proxy_wait_checkpoint_req() == -1); 
