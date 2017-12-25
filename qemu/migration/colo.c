@@ -438,7 +438,7 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
             if (primary_counter >= 0){
                 backup_counter = 0;
                 received_sync_req = true; 
-                fprintf(stderr, "primary finishes first !!\n"); 
+                fprintf(stderr, "primary finishes first !!, output counter = %"PRId64"\n", primary_counter); 
             }
         }
 	    if(is_primary == false && received_sync_req == true && backup_counter > BACKUP_END_IDLE)
@@ -449,8 +449,9 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
         while(proxy_wait_checkpoint_req() == -1); 
         fprintf(stderr, "secondary finishes first !!\n");
     }
-
-    while(get_output_counter()<primary_counter);
+    if (is_primary == false){
+        while(get_output_counter()<primary_counter);
+    }
 
     checkpoint_cnt++;
     int64_t output_counter; 
