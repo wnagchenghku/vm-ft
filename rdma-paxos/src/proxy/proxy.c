@@ -177,7 +177,7 @@ void proxy_on_checkpoint_req(int64_t output_counter)
 int64_t proxy_wait_checkpoint_req(void)
 {
     if (checkpoint_req_status == CHECKPOINT_REQ_WAIT)
-        return 0; 
+        return -1; 
     else{
         int64_t tmp = checkpoint_req_status;
         checkpoint_req_status = CHECKPOINT_REQ_WAIT;
