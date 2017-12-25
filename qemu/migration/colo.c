@@ -643,6 +643,8 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
         /* Fix me: Just let the colo thread exit ? */
         qemu_thread_exit(0);
     }
+#else
+    usleep(7*1000);
 #endif
     ret = 0;
     //trace_colo_vm_state_change("stop", "run");
