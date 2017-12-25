@@ -452,8 +452,11 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
         while(proxy_wait_checkpoint_req() == -1); 
         fprintf(stderr, "secondary finishes first !!\n");
     }
+    int wait_output_count = 0; 
     if (is_primary == false){
         while(get_output_counter()<primary_counter);
+        usleep(100);   
+        wait_output_count++; 
     }
 
     checkpoint_cnt++;
@@ -465,6 +468,7 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
         output_counter = get_output_counter();
         reset_output_counter();
         fprintf(stderr, "[%s %"PRIu64"] output_counter %"PRIu64", %fms\n", is_primary == true ? "LEADER" : "BACKUP", checkpoint_cnt, output_counter, elapsedTime);
+        fprintf("waited %d us for output\n\n", 100 * wait_output_count);
     }
 
     return output_counter;
