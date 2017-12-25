@@ -414,7 +414,7 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
     if (is_primary ==false) {
         usleep(1000 * 10);
     }
-    do
+    while (1)
     {
         start_counter = get_output_counter();
 	    backup_counter++;
@@ -446,7 +446,10 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
         if (is_primary == false && received_sync_req == false){
             continue; 
         }
-    } while (idle_counter < recheck_count);
+        if (idle_counter >= recheck_count){
+            break;
+        }
+    } 
     
     if (is_primary == false && received_sync_req == false){//will not enter
         while(proxy_wait_checkpoint_req() == -1); 
