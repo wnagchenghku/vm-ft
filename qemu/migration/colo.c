@@ -459,7 +459,8 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
             wait_output_count++; 
 
             if (wait_output_count > 1000){
-                fprintf(stderr, "failed to wait for output counter!!!!\n");
+                fprintf(stderr, "failed to wait for output counter!!!!, received %"PRId64", mine = %"PRIu64"\n",
+                primary_counter, get_output_counter());
                 break;
             }
         }
