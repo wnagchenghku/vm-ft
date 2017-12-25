@@ -16,8 +16,8 @@ extern "C" {
 	struct proxy_node_t* proxy_init(const char* proxy_log_path, uint8_t role);
 	void proxy_on_mirror(uint8_t *buf, int len);
 	int is_leader(void);
-	int proxy_wait_checkpoint_req(void);
-	void proxy_on_checkpoint_req(int);
+	int64_t proxy_wait_checkpoint_req(void);
+	void proxy_on_checkpoint_req(int64_t);
 	int control_tsc(void);
 	void disable_apply_committed_entries(void);
 	void resume_apply_committed_entries(void);

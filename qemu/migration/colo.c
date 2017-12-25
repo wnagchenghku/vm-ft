@@ -400,7 +400,7 @@ static int sync_type;
 
 
 #define BACKUP_END_IDLE 6
-static void wait_guest_finish(MigrationState *s, bool is_primary)
+static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
 {
     struct timeval t1, t2;
     if (colo_debug) {
@@ -409,7 +409,7 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
     int backup_counter = 0;
     bool received_sync_req = false; 
     int idle_counter = 0;
-    int primary_counter = -1; 
+    int64_t primary_counter = -1; 
     uint64_t start_counter, end_counter;
     if (is_primary ==false) {
         usleep(1000 * 10);
@@ -449,20 +449,21 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
         while(proxy_wait_checkpoint_req() == -1); 
         fprintf(stderr, "secondary finishes first !!\n");
     }
-    
+
     while(get_output_counter()<primary_counter);
 
     checkpoint_cnt++;
+    int64_t output_counter; 
     if (colo_debug) {
         gettimeofday(&t2, NULL);
         double elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;
         elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;
-        uint64_t output_counter = get_output_counter();
+        output_counter = get_output_counter();
         reset_output_counter();
         fprintf(stderr, "[%s %"PRIu64"] output_counter %"PRIu64", %fms\n", is_primary == true ? "LEADER" : "BACKUP", checkpoint_cnt, output_counter, elapsedTime);
     }
 
-    return;
+    return output_counter;
 }
 
 static void static_timing_sync(MigrationState *s)
@@ -484,14 +485,14 @@ static int colo_do_checkpoint_transaction(MigrationState *s,
 
     // colo_send_message(s->to_dst_file, COLO_MESSAGE_CHECKPOINT_REQUEST,
     //                   &local_err);
-
+    int64_t output_counter; 
     if (sync_type == CHECK_IDLE_SYNC) {
-        wait_guest_finish(s, true);
+        output_counter = wait_guest_finish(s, true);
     } else if (sync_type == STATIC_TIME_SYNC) {
         static_timing_sync(s);
     }
     
-    proxy_on_checkpoint_req();
+    proxy_on_checkpoint_req(output_counter);
 
     if (local_err) {
         goto out;

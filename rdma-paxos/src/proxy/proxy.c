@@ -168,18 +168,18 @@ void proxy_on_mirror(uint8_t *buf, int len)
     return;
 }
 
-void proxy_on_checkpoint_req(int output_counter)
+void proxy_on_checkpoint_req(int64_t output_counter)
 {
     leader_handle_submit_req(&output_counter, sizeof(output_counter), CHECKPOINT);
     return;
 }
 
-int proxy_wait_checkpoint_req(void)
+int64_t proxy_wait_checkpoint_req(void)
 {
     if (checkpoint_req_status == CHECKPOINT_REQ_WAIT)
         return 0; 
     else{
-        int tmp = checkpoint_req_status;
+        int64_t tmp = checkpoint_req_status;
         checkpoint_req_status = CHECKPOINT_REQ_WAIT;
         return tmp;
     }
@@ -355,7 +355,7 @@ static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,vo
         }
         case CHECKPOINT:
         {
-            checkpoint_req_status = *(int*)data;
+            checkpoint_req_status = *(int64_t*)data;
             break;
         }
     }
