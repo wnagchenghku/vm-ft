@@ -17,7 +17,7 @@ extern "C" {
 	void proxy_on_mirror(uint8_t *buf, int len);
 	int is_leader(void);
 	int proxy_wait_checkpoint_req(void);
-	void proxy_on_checkpoint_req(void);
+	void proxy_on_checkpoint_req(int);
 	int control_tsc(void);
 	void disable_apply_committed_entries(void);
 	void resume_apply_committed_entries(void);

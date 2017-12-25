@@ -409,6 +409,7 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
     int backup_counter = 0;
     bool received_sync_req = false; 
     int idle_counter = 0;
+    int primary_counter = -1; 
     uint64_t start_counter, end_counter;
     if (is_primary ==false) {
         usleep(1000 * 10);
@@ -432,18 +433,24 @@ static void wait_guest_finish(MigrationState *s, bool is_primary)
                 } 
             }
         }
-        if (is_primary == false && proxy_wait_checkpoint_req() == 1 && received_sync_req == false){
-            backup_counter = 0;
-            received_sync_req = true; 
-            fprintf(stderr, "primary finishes first !!\n"); 
+        if (is_primary == false && received_sync_req == false){
+            primary_counter = proxy_wait_checkpoint_req();
+            if (primary_counter >= 0){
+                backup_counter = 0;
+                received_sync_req = true; 
+                fprintf(stderr, "primary finishes first !!\n"); 
+            }
         }
 	    if(is_primary == false && received_sync_req == true && backup_counter > BACKUP_END_IDLE)
 		    break;
-    } while (idle_counter < recheck_count);
-    if (is_primary == false && received_sync_req == false){
-        while(proxy_wait_checkpoint_req() == 0); 
+    } while (idle_counter < recheck_count && primary_counter >= 0);
+    
+    if (is_primary == false && received_sync_req == false){//will not enter
+        while(proxy_wait_checkpoint_req() == -1); 
         fprintf(stderr, "secondary finishes first !!\n");
     }
+    
+    while(get_output_counter()<primary_counter);
 
     checkpoint_cnt++;
     if (colo_debug) {

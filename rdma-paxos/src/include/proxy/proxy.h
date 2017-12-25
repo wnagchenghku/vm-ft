@@ -13,8 +13,8 @@
 #define MIRROR_CONNECTION 13
 #define CHECKPOINT_CTRL_CONNECTION 14
 
-#define CHECKPOINT_REQ_READY (0)
-#define CHECKPOINT_REQ_WAIT (1)
+//#define CHECKPOINT_REQ_READY (0)
+#define CHECKPOINT_REQ_WAIT -1
 
 typedef uint16_t hk_t;
 typedef uint8_t nc_t;
