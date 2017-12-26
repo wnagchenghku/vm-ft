@@ -414,7 +414,7 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
     if (is_primary ==false) {
         usleep(1000 * 10);
     }
-    do
+    while (1)
     {
         start_counter = get_output_counter();
 	    backup_counter++;
@@ -446,14 +446,27 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
         if (is_primary == false && received_sync_req == false){
             continue; 
         }
-    } while (idle_counter < recheck_count);
+        if (idle_counter >= recheck_count){
+            break;
+        }
+    } 
     
     if (is_primary == false && received_sync_req == false){//will not enter
         while(proxy_wait_checkpoint_req() == -1); 
         fprintf(stderr, "secondary finishes first !!\n");
     }
+    int wait_output_count = 0; 
     if (is_primary == false){
-        while(get_output_counter()<primary_counter);
+        while(get_output_counter()<primary_counter){
+            usleep(100);   
+            wait_output_count++; 
+
+            if (wait_output_count > 1000){
+                fprintf(stderr, "failed to wait for output counter!!!!, received %"PRId64", mine = %"PRIu64"\n",
+                primary_counter, get_output_counter());
+                break;
+            }
+        }
     }
 
     checkpoint_cnt++;
@@ -465,6 +478,7 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
         output_counter = get_output_counter();
         reset_output_counter();
         fprintf(stderr, "[%s %"PRIu64"] output_counter %"PRIu64", %fms\n", is_primary == true ? "LEADER" : "BACKUP", checkpoint_cnt, output_counter, elapsedTime);
+        fprintf(stderr,"waited %d us for output\n\n", 100 * wait_output_count);
     }
 
     return output_counter;
