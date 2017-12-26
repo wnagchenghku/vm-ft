@@ -170,6 +170,7 @@ void proxy_on_mirror(uint8_t *buf, int len)
 
 void proxy_on_checkpoint_req(int64_t output_counter)
 {
+    //fprintf(stderr, "!!!!checkpoint request for counter %"PRId64"\n", output_counter);
     leader_handle_submit_req(&output_counter, sizeof(output_counter), CHECKPOINT);
     return;
 }

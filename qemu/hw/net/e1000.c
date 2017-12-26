@@ -1514,7 +1514,7 @@ static void *make_consensus(void *foo){
     ssize_t cur_consensus_head;  
     ssize_t cur_buffer_head; 
     int batching = proxy_get_batching();
-    int dbg = 0; 
+    static long dbg = 0; 
     while(1){   
         if (!is_leader()){
             printf("I am not leader\n");
@@ -1535,7 +1535,12 @@ static void *make_consensus(void *foo){
             //Use the two saved values. 
             if(batching){
                 ssize_t count = cur_buffer_head - cur_consensus_head; 
-
+                if (count < 0){
+                    count = iov_list_maxlen - cur_consensus_head;
+                }
+                if (count > 20){
+                    count = 20;
+                }
                 /**
                 
                 | # of packets | len1, len2, ..., lenx | pkt1, pkt2, ... , pktx |
@@ -1561,12 +1566,17 @@ static void *make_consensus(void *foo){
 
                 //printf("[%d] make consensus on %ld packets\n", dbg++, count);
                 proxy_on_mirror(buf, (count+1) * sizeof(ssize_t) + length);
-
+                //fprintf(stderr, "[%ld]:made consensus on len =  %d message, total [%d] packets :\n", dbg++, (count+1) * sizeof(ssize_t) +
+                //length, count);
+                //for (i = 0; i<count; i++){
+                //    fprintf(stderr, "packet[%d]: len = %d\n", i, header[i+1]);
+               // }
 
                 free(buf); 
                 free(header);
 
                 pthread_spin_lock(&list_lock);
+
 
                 consensus_head += count; 
 
