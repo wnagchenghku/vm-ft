@@ -293,40 +293,43 @@ static int stablestorage_load_records(void*buf,uint32_t size,void*arg)
 
 static void do_action_send(size_t data_size,void* data,void* arg)
 {
+    fprintf(stderr, "do send\n");
     proxy_node* proxy = arg;
-    uint32_t len = htonl(data_size);
     int batching = proxy_get_batching();
     int e1000_speedup = proxy_get_e1000();
-    //int dbg = 0; 
+    static long dbg = 0; 
 
     if (batching && e1000_speedup)
     {
         ssize_t npackets; 
         memcpy(&npackets, data, sizeof(npackets));
-        //printf("[%d], Received %ld consensued packets\n\n", dbg++, npackets);
-
+        
         ssize_t offset = (npackets+1) * sizeof(ssize_t);
-
 
         ssize_t *length = (ssize_t*) malloc(npackets * sizeof(ssize_t));
 
         memcpy (length, data+sizeof(ssize_t),npackets * sizeof(ssize_t));
+        //fprintf(stderr, "[%ld] received consens on , data_size = %zd, tototal %d packets:\n", dbg++,
+        //data_size, npackets);
 
+    
         int i, n; 
         for (i = 0; i<npackets; i++){
             //xs: seems need to in network order
             uint32_t len = htonl(length[i]); 
-            n = send(proxy->mirror_clientfd, &len, sizeof(len), 0);
+            fprintf(stderr, "packet [%d]: ,length = %zd\n", i, length[i]);
+            n = send(proxy->mirror_clientfd, &len, sizeof(len),MSG_DONTWAIT);
             if (n < 0)
                 fprintf(stderr, "ERROR writing to socket! A\n");
 
-            n = send(proxy->mirror_clientfd, &data[offset], length[i], 0);
+            n = send(proxy->mirror_clientfd, &data[offset], length[i], MSG_DONTWAIT);
             if (n < 0)
                 fprintf(stderr, "ERROR writing to socket! B\n");
             offset += length[i]; 
         }
     }
     else{
+        uint32_t len = htonl(data_size);
         int n = send(proxy->mirror_clientfd, &len, sizeof(len), 0);
         if (n < 0)
             fprintf(stderr, "ERROR writing to socket!\n");
@@ -337,6 +340,7 @@ static void do_action_send(size_t data_size,void* data,void* arg)
 
     }
     proxy->sync_req_id++;
+    fprintf(stderr,"before return\n");
 }
 
 static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,void* data,void*arg)
@@ -346,7 +350,7 @@ static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,vo
     if(proxy->req_log){
         output = proxy->req_log_file;
     }
-
+    fprintf(stderr, "received consensus, type =%d\n", type);
     switch(type) {
         case MIRROR:
         {
@@ -355,7 +359,9 @@ static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,vo
         }
         case CHECKPOINT:
         {
+            //printf("!!!!received checkpoint status %"PRId64"\n", *(int64_t*)data);
             checkpoint_req_status = *(int64_t*)data;
+            
             break;
         }
     }

@@ -435,10 +435,13 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
         }
         if (is_primary == false && received_sync_req == false){
             primary_counter = proxy_wait_checkpoint_req();
+            //fprintf(stderr, "counter = %"PRId64"\n", primary_counter);
             if (primary_counter >= 0){
                 backup_counter = 0;
                 received_sync_req = true; 
                 fprintf(stderr, "primary finishes first !!, output counter = %"PRId64"\n", primary_counter); 
+            }else{
+                usleep(100);
             }
         }
 	    if(is_primary == false && received_sync_req == true && backup_counter > BACKUP_END_IDLE)
@@ -451,10 +454,10 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
         }
     } 
     
-    if (is_primary == false && received_sync_req == false){//will not enter
-        while(proxy_wait_checkpoint_req() == -1); 
-        fprintf(stderr, "secondary finishes first !!\n");
-    }
+    //if (is_primary == false && received_sync_req == false){//will not enter
+     //   while(proxy_wait_checkpoint_req() == -1); 
+      //  fprintf(stderr, "secondary finishes first !!\n");
+   // }
     int wait_output_count = 0; 
     if (is_primary == false){
         while(get_output_counter()<primary_counter){
