@@ -1535,7 +1535,9 @@ static void *make_consensus(void *foo){
             //Use the two saved values. 
             if(batching){
                 ssize_t count = cur_buffer_head - cur_consensus_head; 
-
+                if (count < 0){
+                    count = iov_list_maxlen - cur_consensus_head;
+                }
                 /**
                 
                 | # of packets | len1, len2, ..., lenx | pkt1, pkt2, ... , pktx |
