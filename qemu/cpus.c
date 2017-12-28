@@ -175,7 +175,7 @@ int get_pcpu_num(bool pin_auto, int *pcpu_id_array)
 #endif
 }
 
-+/* *
+/* *
 + * pcpu_id_array: content the host processor's id array to pin
 + * pcpu_id_array[0]: the processor count
 + * pcpu_id_array[1...]: the processor id to pin
