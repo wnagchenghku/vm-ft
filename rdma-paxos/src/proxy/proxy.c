@@ -294,7 +294,7 @@ static int stablestorage_load_records(void*buf,uint32_t size,void*arg)
 
 static void do_action_send(size_t data_size,void* data,void* arg)
 {
-    fprintf(stderr, "do send\n");
+    //fprintf(stderr, "do send\n");
     proxy_node* proxy = arg;
     int batching = proxy_get_batching();
     int e1000_speedup = proxy_get_e1000();
@@ -318,7 +318,7 @@ static void do_action_send(size_t data_size,void* data,void* arg)
         for (i = 0; i<npackets; i++){
             //xs: seems need to in network order
             uint32_t len = htonl(length[i]); 
-            fprintf(stderr, "packet [%d]: ,length = %zd\n", i, length[i]);
+            //fprintf(stderr, "packet [%d]: ,length = %zd\n", i, length[i]);
             n = send(proxy->mirror_clientfd, &len, sizeof(len),MSG_DONTWAIT);
             if (n < 0)
                 fprintf(stderr, "ERROR writing to socket! A\n");
@@ -341,7 +341,7 @@ static void do_action_send(size_t data_size,void* data,void* arg)
 
     }
     proxy->sync_req_id++;
-    fprintf(stderr,"before return\n");
+    //fprintf(stderr,"before return\n");
 }
 
 static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,void* data,void*arg)
@@ -351,7 +351,7 @@ static void do_action_to_server(uint16_t clt_id,uint8_t type,size_t data_size,vo
     if(proxy->req_log){
         output = proxy->req_log_file;
     }
-    fprintf(stderr, "received consensus, type =%d\n", type);
+    //fprintf(stderr, "received consensus, type =%d\n", type);
     switch(type) {
         case MIRROR:
         {

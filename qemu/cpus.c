@@ -1349,8 +1349,14 @@ static void qemu_tcg_init_vcpu(CPUState *cpu)
 
 static void qemu_kvm_start_vcpu(CPUState *cpu)
 {
-    char thread_name[VCPU_THREAD_NAME_SIZE];
+    /*int vcpu_affinity[100];
+    int i;
+    for (i = 0 ; i < 100; i ++) {
+        vcpu_affinity[i] = -1;
+    }*/
 
+    char thread_name[VCPU_THREAD_NAME_SIZE];
+    cpu_set_t cpuset;
     cpu->thread = g_malloc0(sizeof(QemuThread));
     cpu->halt_cond = g_malloc0(sizeof(QemuCond));
     qemu_cond_init(cpu->halt_cond);
@@ -1358,6 +1364,12 @@ static void qemu_kvm_start_vcpu(CPUState *cpu)
              cpu->cpu_index);
     qemu_thread_create(cpu->thread, thread_name, qemu_kvm_cpu_thread_fn,
                        cpu, QEMU_THREAD_JOINABLE);
+    /*if (vcpu_affinity[cpu->cpu_index] != -1) {
+        printf("QEMU INFO:: Pinning vcpu %d to Physical CPU %d\n",cpu->cpu_index, vcpu_affinity[cpu->cpu_index]);
+        CPU_ZERO(&cpuset);
+        CPU_SET(vcpu_affinity[cpu->cpu_index], &cpuset); 
+        pthread_setaffinity_np((cpu->thread)->thread, sizeof(cpu_set_t), &cpuset);
+    }*/
     while (!cpu->created) {
         qemu_cond_wait(&qemu_cpu_cond, &qemu_global_mutex);
     }
