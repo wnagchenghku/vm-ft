@@ -4559,9 +4559,12 @@ int main(int argc, char **argv, char **envp)
     machine_class->init(current_machine);
 
     int host_cpu_num = get_pcpu_num(false, pcpu_id_array);
-    pcpu_id_array[0] = 2; 
-    pcpu_id_array[1] = 0; 
-    pcpu_id_array[2] = 2; 
+    pcpu_id_array[0] = host_cpu_num; 
+    pcpu_id_array[1] = 1; 
+    pcpu_id_array[2] = 3; 
+    pcpu_id_array[3] = 5; 
+    pcpu_id_array[4] = 7;
+
 
     pin_all_vcpus(smp_cpus, pcpu_id_array, &err);
     if (err) {
