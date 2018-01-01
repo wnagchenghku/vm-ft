@@ -460,11 +460,11 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
    // }
     int wait_output_count = 0; 
     if (is_primary == false){
-        while(get_output_counter()<primary_counter * 0.9){
+        while(get_output_counter()<primary_counter * 0.98){
             usleep(100);   
             wait_output_count++; 
 
-            if (wait_output_count > 1000){
+            if (wait_output_count > 100){
                 fprintf(stderr, "failed to wait for output counter!!!!, received %"PRId64", mine = %"PRIu64"\n",
                 primary_counter, get_output_counter());
                 break;
@@ -481,7 +481,7 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
         output_counter = get_output_counter();
         reset_output_counter();
         fprintf(stderr, "[%s %"PRIu64"] output_counter %"PRIu64", %fms\n", is_primary == true ? "LEADER" : "BACKUP", checkpoint_cnt, output_counter, elapsedTime);
-        fprintf(stderr,"waited %d us for output\n\n", 100 * wait_output_count);
+        fprintf(stderr,"waited %d ms for output\n\n", wait_output_count/10);
     }
 
     return output_counter;
