@@ -192,12 +192,6 @@ static void update_highest_rec(void*arg)
     proxy->highest_rec++;   
 }
 
-static void set_filter_mirror_fd(void*arg, int fd)
-{
-    proxy_node* proxy = arg;
-    proxy->mirror_clientfd = fd;
-}
-
 static void get_socket_buffer_size(int sockfd)
 {
     socklen_t i;
@@ -222,6 +216,13 @@ static void set_socket_buffer_size(int sockfd, int size)
     if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size)) < 0) {
         perror(": setsockopt");
     }
+}
+
+static void set_filter_mirror_fd(void*arg, int fd)
+{
+        proxy_node* proxy = arg;
+            proxy->mirror_clientfd = fd;
+                get_socket_buffer_size(fd);
 }
 
 int control_tsc(void)
