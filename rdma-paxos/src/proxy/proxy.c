@@ -198,6 +198,32 @@ static void set_filter_mirror_fd(void*arg, int fd)
     proxy->mirror_clientfd = fd;
 }
 
+static void get_socket_buffer_size(int sockfd)
+{
+    socklen_t i;
+    size_t len;
+
+    i = sizeof(len);
+    if (getsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &len, &i) < 0) {
+        perror(": getsockopt");
+    }
+
+    printf("receive buffer size = %d\n", len);
+
+    if (getsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &len, &i) < 0) {
+        perror(": getsockopt");
+    }
+
+    printf("send buffer size = %d\n", len);
+}
+
+static void set_socket_buffer_size(int sockfd, int size)
+{
+    if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size)) < 0) {
+        perror(": setsockopt");
+    }
+}
+
 int control_tsc(void)
 {
     return proxy->control_tsc;
