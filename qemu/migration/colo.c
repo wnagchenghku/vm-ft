@@ -412,6 +412,8 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
     int64_t primary_counter = -1; 
     uint64_t start_counter, end_counter;
     if (is_primary ==false) {
+        // This is only used for intensive workloads.
+        // When test for iperf, comment it.
         usleep(1000 * 10);
     }
     while (1)
@@ -435,7 +437,6 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
         }
         if (is_primary == false && received_sync_req == false){
             primary_counter = proxy_wait_checkpoint_req();
-            //fprintf(stderr, "counter = %"PRId64"\n", primary_counter);
             if (primary_counter >= 0){
                 backup_counter = 0;
                 received_sync_req = true; 
@@ -454,10 +455,6 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
         }
     } 
     
-    //if (is_primary == false && received_sync_req == false){//will not enter
-     //   while(proxy_wait_checkpoint_req() == -1); 
-      //  fprintf(stderr, "secondary finishes first !!\n");
-   // }
     int wait_output_count = 0; 
     if (is_primary == false){
         while(get_output_counter()<primary_counter * 0.98){
