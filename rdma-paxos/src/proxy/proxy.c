@@ -221,8 +221,10 @@ static void set_socket_buffer_size(int sockfd, int size)
 static void set_filter_mirror_fd(void*arg, int fd)
 {
         proxy_node* proxy = arg;
-            proxy->mirror_clientfd = fd;
-                get_socket_buffer_size(fd);
+        proxy->mirror_clientfd = fd;
+        get_socket_buffer_size(fd);
+        set_socket_buffer_size(fd, 10649600);
+        get_socket_buffer_size(fd);
 }
 
 int control_tsc(void)

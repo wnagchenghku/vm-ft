@@ -457,7 +457,7 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
     
     int wait_output_count = 0; 
     if (is_primary == false){
-        while(get_output_counter()<primary_counter * 0.98){
+        while(get_output_counter()<primary_counter * 0.8){
             usleep(100);   
             wait_output_count++; 
 
