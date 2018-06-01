@@ -479,6 +479,8 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
         reset_output_counter();
         fprintf(stderr, "[%s %"PRIu64"] output_counter %"PRIu64", %fms\n", is_primary == true ? "LEADER" : "BACKUP", checkpoint_cnt, output_counter, elapsedTime);
         fprintf(stderr,"waited %d ms for output\n\n", wait_output_count/10);
+        if (is_primary == true && checkpoint_cnt == 2000)
+            exit(0);
     }
 
     return output_counter;
@@ -1022,14 +1024,17 @@ void *colo_process_incoming_thread(void *opaque)
         int request;
         // colo_wait_handle_message(mis->from_src_file, &request, &local_err);
 
-        
-        
-        
         if (sync_type != CHECK_IDLE_SYNC){
             proxy_wait_checkpoint_req();
         }
         if (sync_type == CHECK_IDLE_SYNC) {
             wait_guest_finish(NULL, false);
+        }
+        if (checkpoint_cnt == 1000){
+            fprintf(stderr, "COLO: FAILOVER_STATUS_RELAUNCH" );
+            failover_set_state(FAILOVER_STATUS_RELAUNCH, FAILOVER_STATUS_NONE);
+            failover_request_active(NULL);
+            goto out;
         }
         
         request = 1;
