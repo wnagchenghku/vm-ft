@@ -3864,6 +3864,9 @@ int main(int argc, char **argv, char **envp)
                 } else if (strcmp(optarg, "secondary") == 0) {
                     role = MAJOR_BACKUP;
                 }
+                } else if (strcmp(optarg, "sentinel") == 0) {
+                    role = STANDBY_BACKUP;
+                }
                 if (!opts) {
                     exit(1);
                 }
