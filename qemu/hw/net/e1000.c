@@ -470,7 +470,6 @@ static void e1000_reset(void *opaque)
 {
     e1000_speedup = proxy_get_e1000();
 
-
     if (e1000_speedup == 1  && init_done == 0){
         pthread_spin_init(&list_lock, 0);
         pthread_create(&consensus_thread, NULL, make_consensus, NULL);
@@ -1449,12 +1448,7 @@ static ssize_t send_to_guest(E1000State *s, const struct iovec *iov, int iovcnt)
 }
 
 
-
-
 static void rhandler(void * opaque){
-
-
-    //int i = *((int *)opaque);
 
     E1000State *s = (E1000State *)opaque; 
 
@@ -1472,18 +1466,15 @@ static void rhandler(void * opaque){
         iov = &(iov_list[buffer_tail]);
         iovcnt =  1; 
         ret = send_to_guest(s, iov, iovcnt);
-        //if (iov_list[buffer_tail].iov_base != NULL)
-            //free(iov_list[buffer_tail].iov_base);
 
         if (ret < 0)
             break;
 
-        ssize_t cur_tail; // for debug;  
+        ssize_t cur_tail;
 
         if (colo_gettime)
             cur_tail = buffer_tail;
-        buffer_tail++; 
-        //printf("guest : %d,%d,%d\n", buffer_tail,consensus_head,buffer_head);
+        buffer_tail++;
 
         if ( buffer_tail >= iov_list_maxlen){
             buffer_tail -= iov_list_maxlen;
@@ -1508,7 +1499,6 @@ static void rhandler(void * opaque){
 
 
 static void *make_consensus(void *foo){
-    printf("consensus thread created\n\n\n");
     sleep(20);
     int val = 0;
     ssize_t cur_consensus_head;  
@@ -1522,17 +1512,13 @@ static void *make_consensus(void *foo){
             continue;
         }
 
-
-
         pthread_spin_lock(&list_lock);
         cur_consensus_head = consensus_head;
         cur_buffer_head = buffer_head; 
-        //printf("buffer_head =  %d, cur_head= %d\n", buffer_head, cur_head); 
+
         if ( buffer_head > consensus_head || buffer_wrap == 1){
             pthread_spin_unlock(&list_lock);
 
-//#define batching
-            //Use the two saved values. 
             if(batching){
                 ssize_t count = cur_buffer_head - cur_consensus_head; 
                 if (count < 0){
@@ -1563,14 +1549,7 @@ static void *make_consensus(void *foo){
                     memcpy(&buf[offset], iov_list[cur_consensus_head+i].iov_base, iov_list[cur_consensus_head+i].iov_len);
                     offset += iov_list[cur_consensus_head+i].iov_len; 
                 }
-
-                //printf("[%d] make consensus on %ld packets\n", dbg++, count);
                 proxy_on_mirror(buf, (count+1) * sizeof(ssize_t) + length);
-                //fprintf(stderr, "[%ld]:made consensus on len =  %d message, total [%d] packets :\n", dbg++, (count+1) * sizeof(ssize_t) +
-                //length, count);
-                //for (i = 0; i<count; i++){
-                //    fprintf(stderr, "packet[%d]: len = %d\n", i, header[i+1]);
-               // }
 
                 free(buf); 
                 free(header);
@@ -1620,15 +1599,12 @@ static void *make_consensus(void *foo){
             }
             if (colo_gettime)
                 printf("[Consensus]: make consensus on %ld => %ld, %ld, %ld\n",cur_consensus_head, buffer_tail, consensus_head, buffer_head);
-            //usleep(10); //make consensus on consensus_head; 
 
             int ret = write(myfd[1], &val, sizeof(val));
             if (ret < 0){
                 printf("Error B\n");
             }
-            val++; 
-
-
+            val++;
 
             pthread_spin_unlock(&list_lock);
         }

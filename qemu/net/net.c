@@ -101,12 +101,9 @@ static void count_payload_length(const uint8_t* buf, int len, int dir, unsigned 
                 struct in_addr srcad;
                 srcad.s_addr = ip_header-> ip_src.s_addr;
 
-
                 struct in_addr dstad;
-                dstad.s_addr = ip_header-> ip_dst.s_addr; 
+                dstad.s_addr = ip_header-> ip_dst.s_addr;
 
-                // fprintf(stderr, "payload_length = %d, src_ip = %s:%d  ", payload_length, inet_ntoa(srcad), htons(tcp_header->th_sport));
-                // fprintf(stderr, "dst_ip = %s:%d, dir = %d, flags = %u, sedner.name =%s \n", inet_ntoa(dstad),htons(tcp_header->th_dport), dir, flags, sender_name);
                 pthread_spin_lock(&counter_lock);
                 output_counter = output_counter + payload_length;
                 pthread_spin_unlock(&counter_lock);                
@@ -114,10 +111,6 @@ static void count_payload_length(const uint8_t* buf, int len, int dir, unsigned 
         }
     }
 }
-
-
-
-
 
 
 /* Net bridge is currently not supported for W32. */
@@ -615,15 +608,6 @@ int qemu_can_send_packet(NetClientState *sender)
     return 1;
 }
 
-
-
-
-
-
-
-
-
-
 static ssize_t filter_receive_iov(NetClientState *nc,
                                   NetFilterDirection direction,
                                   NetClientState *sender,
@@ -636,17 +620,6 @@ static ssize_t filter_receive_iov(NetClientState *nc,
     NetFilterState *nf = NULL;
 
     if (direction == NET_FILTER_DIRECTION_TX) {
-
-        // if (is_leader())
-        // {
-        //     ssize_t size = 0;
-        //     size = iov_size(iov, iovcnt);
-        //     char *buf;
-        //     buf = g_malloc(size);
-        //     iov_to_buf(iov, iovcnt, 0, buf, size);
-        //     proxy_on_mirror((uint8_t *)buf, size);
-        //     g_free(buf);
-        // }
 
         QTAILQ_FOREACH(nf, &nc->filters, next) {
             ret = qemu_netfilter_receive(nf, direction, sender, flags, iov,
