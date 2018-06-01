@@ -1178,17 +1178,17 @@ void *colo_process_incoming_thread(void *opaque)
             goto out;
         }
 
-        if (checkpoint_cnt == (EXIT_COUNT -1)){
-            fprintf(stderr, "COLO: FAILOVER_STATUS_RELAUNCH" );
-            failover_set_state(FAILOVER_STATUS_RELAUNCH, FAILOVER_STATUS_NONE);
-            failover_request_active(NULL);
-            goto out;
-        }
-
         // colo_send_message(mis->to_src_file, COLO_MESSAGE_VMSTATE_LOADED,
         //               &local_err);
         mc_send_message(COLO_MESSAGE_VMSTATE_LOADED,&local_err);
         if (local_err) {
+            goto out;
+        }
+
+        if (checkpoint_cnt == (EXIT_COUNT -1)){
+            fprintf(stderr, "COLO: FAILOVER_STATUS_RELAUNCH" );
+            failover_set_state(FAILOVER_STATUS_RELAUNCH, FAILOVER_STATUS_NONE);
+            failover_request_active(NULL);
             goto out;
         }
 
