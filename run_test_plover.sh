@@ -1,6 +1,8 @@
 #!/bin/bash
-vm_ip=10.22.1.88
+vm_ip=10.22.1.55
 client_ip=10.22.1.1
+secondary_ip=10.22.1.1
+
 #set -e # exit when error
 #set -x # debug mode
 set_libnl=true
@@ -63,6 +65,12 @@ echo "please make sure two machines have been started and election finished"
 # some settings for libnl
 # it is a must if you want to retrieve accurate test data
 if [ "$set_libnl" = true ] ; then
+    # libnl setting for secondary
+    ssh hkucs@$secondary_ip "sudo modprobe ifb numifbs=100"
+    ssh hkucs@$secondary_ip "sudo ip link set up ifb0"
+    ssh hkucs@$secondary_ip "sudo tc qdisc add dev tap0 ingress"
+    ssh hkucs@$secondary_ip "sudo tc filter add dev tap0 parent ffff: proto ip pref 10 u32 match u32 0 0 action mirred egress redirect dev ifb0"
+    # libnl setting for primary
     sudo modprobe ifb numifbs=100  # (or some large number)
     sudo ip link set up ifb0  # <= corresponds to tap device 'tap0'
     sudo tc qdisc add dev tap0 ingress
@@ -72,7 +80,7 @@ fi
 
 # some settings in secondary machine qemu monitor
 if [ "$set_secondary" = true ] ; then
-    ssh hkucs@10.22.1.9 "\
+    ssh hkucs@$secondary_ip "\
     (\
     echo {\'execute\':\'qmp_capabilities\'};\
     echo {\'execute\': \'nbd-server-start\', \'arguments\': {\'addr\': {\'type\': \'inet\', \'data\': {\'host\': \'10.22.1.9\', \'port\': \'8889\'} } }};\
