@@ -356,6 +356,7 @@ static uint64_t mc_receive_message_value(uint32_t expect_msg, Error **errp)
 static int idle_clock_rate_min, idle_clock_rate_max, idle_clock_rate_avg;
 
 #define USE_ESTIMATED_IDLE_CLOCK_RATE
+#define EXIT_COUNT 2000
 
 static void learn_idle_clock_rate(void)
 {
@@ -479,7 +480,7 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
         reset_output_counter();
         fprintf(stderr, "[%s %"PRIu64"] output_counter %"PRIu64", %fms\n", is_primary == true ? "LEADER" : "BACKUP", checkpoint_cnt, output_counter, elapsedTime);
         fprintf(stderr,"waited %d ms for output\n\n", wait_output_count/10);
-        if (is_primary == true && checkpoint_cnt == 2000)
+        if (is_primary == true && checkpoint_cnt == EXIT_COUNT)
             exit(0);
     }
 
@@ -1030,7 +1031,7 @@ void *colo_process_incoming_thread(void *opaque)
         if (sync_type == CHECK_IDLE_SYNC) {
             wait_guest_finish(NULL, false);
         }
-        if (checkpoint_cnt == 2000){
+        if (checkpoint_cnt == (EXIT_COUNT - 1)){
             fprintf(stderr, "COLO: FAILOVER_STATUS_RELAUNCH" );
             failover_set_state(FAILOVER_STATUS_RELAUNCH, FAILOVER_STATUS_NONE);
             failover_request_active(NULL);
