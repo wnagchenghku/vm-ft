@@ -1031,12 +1031,6 @@ void *colo_process_incoming_thread(void *opaque)
         if (sync_type == CHECK_IDLE_SYNC) {
             wait_guest_finish(NULL, false);
         }
-        if (checkpoint_cnt == (EXIT_COUNT - 1)){
-            fprintf(stderr, "COLO: FAILOVER_STATUS_RELAUNCH" );
-            failover_set_state(FAILOVER_STATUS_RELAUNCH, FAILOVER_STATUS_NONE);
-            failover_request_active(NULL);
-            goto out;
-        }
         
         request = 1;
         disable_apply_committed_entries();
@@ -1179,6 +1173,13 @@ void *colo_process_incoming_thread(void *opaque)
         vmstate_loading = false;
 
         if (failover_get_state() == FAILOVER_STATUS_RELAUNCH) {
+            failover_set_state(FAILOVER_STATUS_RELAUNCH, FAILOVER_STATUS_NONE);
+            failover_request_active(NULL);
+            goto out;
+        }
+
+        if (checkpoint_cnt == (EXIT_COUNT -1)){
+            fprintf(stderr, "COLO: FAILOVER_STATUS_RELAUNCH" );
             failover_set_state(FAILOVER_STATUS_RELAUNCH, FAILOVER_STATUS_NONE);
             failover_request_active(NULL);
             goto out;
