@@ -83,7 +83,7 @@ if [ "$set_secondary" = true ] ; then
     ssh hkucs@$secondary_ip "\
     (\
     echo {\'execute\':\'qmp_capabilities\'};\
-    echo {\'execute\': \'nbd-server-start\', \'arguments\': {\'addr\': {\'type\': \'inet\', \'data\': {\'host\': \'10.22.1.9\', \'port\': \'8889\'} } }};\
+    echo {\'execute\': \'nbd-server-start\', \'arguments\': {\'addr\': {\'type\': \'inet\', \'data\': {\'host\': \'10.22.1.1\', \'port\': \'8889\'} } }};\
     echo {\'execute\': \'nbd-server-add\', \'arguments\': {\'device\': \'colo-disk0\', \'writable\': true } };\
     sleep 10;\
     ) | telnet localhost 4444"
@@ -93,10 +93,10 @@ fi
 if [ "$set_primary" = true ] ; then
     (
     echo "{'execute':'qmp_capabilities'}"
-    echo "{ 'execute': 'human-monitor-command','arguments': {'command-line': 'drive_add -n buddy driver=replication,mode=primary,file.driver=nbd,file.host=10.22.1.9,file.port=8889,file.export=colo-disk0,node-name=node0'}}"
+    echo "{ 'execute': 'human-monitor-command','arguments': {'command-line': 'drive_add -n buddy driver=replication,mode=primary,file.driver=nbd,file.host=10.22.1.1,file.port=8889,file.export=colo-disk0,node-name=node0'}}"
     echo "{ 'execute':'x-blockdev-change', 'arguments':{'parent': 'colo-disk0', 'node': 'node0' } }"
     echo "{ 'execute': 'migrate-set-capabilities', 'arguments': {'capabilities': [ {'capability': 'x-colo', 'state': true } ] } }"
-    echo "{ 'execute': 'migrate', 'arguments': {'uri': 'tcp:10.22.1.9:8888' } }"
+    echo "{ 'execute': 'migrate', 'arguments': {'uri': 'tcp:10.22.1.1:8888' } }"
     #debug mode
     #echo "{ 'execute': 'migrate-set-parameters' , 'arguments': { 'x-checkpoint-delay': 20000 } }"
     sleep 10;
