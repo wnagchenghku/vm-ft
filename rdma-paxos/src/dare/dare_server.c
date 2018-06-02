@@ -331,7 +331,7 @@ init_server_data()
     data.sm->proxy_set_qemu_chardev = data.input->set_qemu_chardev;
 
     /* Set up the configuration */
-    dare_read_config(data.input->config_path);
+    dare_read_config(data.input->config_path, data.input->server_idx);
     data.config.idx = data.input->server_idx;
     data.config.len = MAX_SERVER_COUNT;
     if (data.config.len < data.input->group_size) {

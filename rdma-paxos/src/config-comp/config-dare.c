@@ -9,7 +9,7 @@ double rc_info_period;
 double retransmit_period;
 double log_pruning_period;
 
-int dare_read_config(const char* config_path){
+int dare_read_config(const char* config_path, uint8_t role){
     config_t config_file;
     config_init(&config_file);
 
@@ -24,6 +24,12 @@ int dare_read_config(const char* config_path){
         double temp_float;
         if(config_setting_lookup_float(dare_global_config,"hb_period",&temp_float)){
             hb_period = temp_float;
+            if (role == 1) { // secondary
+                hb_period = hb_period * 2;
+            }
+            if (role == 0) { // sentinel
+                hb_period = hb_period * 3;
+            }
         }
         if(config_setting_lookup_float(dare_global_config,"rc_info_period",&temp_float)){
             rc_info_period = temp_float;
