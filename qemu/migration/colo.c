@@ -357,6 +357,7 @@ static int idle_clock_rate_min, idle_clock_rate_max, idle_clock_rate_avg;
 
 #define USE_ESTIMATED_IDLE_CLOCK_RATE
 #define EXIT_COUNT 2000
+static int failover_count;
 
 static void learn_idle_clock_rate(void)
 {
@@ -480,7 +481,7 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
         reset_output_counter();
         fprintf(stderr, "[%s %"PRIu64"] output_counter %"PRIu64", %fms\n", is_primary == true ? "LEADER" : "BACKUP", checkpoint_cnt, output_counter, elapsedTime);
         fprintf(stderr,"waited %d ms for output\n\n", wait_output_count/10);
-        if (is_primary == true && checkpoint_cnt == EXIT_COUNT)
+        if (is_primary == true && checkpoint_cnt == EXIT_COUNT && failover_count == 1)
             exit(0);
     }
 
@@ -722,6 +723,7 @@ static void colo_process_checkpoint(MigrationState *s)
     hash_init();
 
     colo_primary_transfer = false;
+    failover_count++;
 
     QEMUSizedBuffer *buffer = NULL;
     int64_t current_time, checkpoint_time = qemu_clock_get_ms(QEMU_CLOCK_HOST);
@@ -771,13 +773,17 @@ static void colo_process_checkpoint(MigrationState *s)
 
     qemu_mutex_lock_iothread();
     /* start block replication */
-    replication_start_all(REPLICATION_MODE_PRIMARY, &local_err);
-    if (local_err) {
-        qemu_mutex_unlock_iothread();
-        goto out;
+
+    if (failover_count == 1) // secondary takes over
+    {
+        replication_start_all(REPLICATION_MODE_PRIMARY, &local_err);
+        if (local_err) {
+            qemu_mutex_unlock_iothread();
+            goto out;
+        }
+        vm_start();
     }
 
-    vm_start();
     qemu_mutex_unlock_iothread();
     trace_colo_vm_state_change("stop", "run");
 
@@ -944,6 +950,7 @@ static int colo_prepare_before_load(QEMUFile *f)
 void *colo_process_incoming_thread(void *opaque)
 {
     hash_init();
+    failover_count++;
 
     MigrationIncomingState *mis = opaque;
     QEMUFile *fb = NULL;
@@ -1032,7 +1039,7 @@ void *colo_process_incoming_thread(void *opaque)
             wait_guest_finish(NULL, false);
         }
 
-        if((checkpoint_cnt + 1) == EXIT_COUNT)
+        if((checkpoint_cnt + 1) == EXIT_COUNT && failover_count == 1)
         {
             failover_set_state(FAILOVER_STATUS_RELAUNCH, FAILOVER_STATUS_NONE);
             failover_request_active(NULL);
