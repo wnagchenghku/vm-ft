@@ -331,7 +331,7 @@ init_server_data()
     data.sm->proxy_set_qemu_chardev = data.input->set_qemu_chardev;
 
     /* Set up the configuration */
-    dare_read_config(data.input->config_path, data.input->server_idx);
+    dare_read_config(data.input->config_path);
     data.config.idx = data.input->server_idx;
     data.config.len = MAX_SERVER_COUNT;
     if (data.config.len < data.input->group_size) {
@@ -1295,6 +1295,7 @@ random_election_timeout()
                         + elec_timeout_low;
 //info(log_fp, "election to in sec: %lf\n", (double)timeout * 1e-6);
     /* Return time in seconds */
+    printf("election to in sec: %lf\n", (double)timeout * 1e-6);
     return (double)timeout * 1e-6;
 }
 
