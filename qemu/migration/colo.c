@@ -72,6 +72,7 @@ static bool colo_runstate_is_stopped(void)
 
 static void secondary_vm_do_failover(void)
 {
+    fprintf(stderr, "\n\n===== secondary starts to do failover =====\n\n");
     int old_state;
     MigrationIncomingState *mis = migration_incoming_get_current();
     Error *local_err = NULL;
@@ -132,6 +133,7 @@ static void secondary_vm_do_failover(void)
 
 static void primary_vm_do_failover(void)
 {
+    fprintf(stderr, "\n\n===== primary starts to do failover =====\n\n");
     MigrationState *s = migrate_get_current();
     int old_state;
     Error *local_err = NULL;
