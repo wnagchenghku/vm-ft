@@ -1055,6 +1055,9 @@ void qmp_migrate(const char *uri, bool has_blk, bool blk,
                  bool has_inc, bool inc, bool has_detach, bool detach,
                  Error **errp)
 {
+    printf("\n\n\nqmp_migrate!! uri=%s, has_blk=%d, blk=%d, has_inc=%d, inc=%d, has_detach=%d, detach=%d",
+            uri, has_blk, blk, has_inc, inc, has_detach, detach);
+    usleep(5000);
     Error *local_err = NULL;
     MigrationState *s = migrate_get_current();
     MigrationParams params;
@@ -1709,6 +1712,12 @@ static void *migration_thread(void *opaque)
     enum MigrationStatus current_active_state = MIGRATION_STATUS_ACTIVE;
     bool enable_colo = migrate_colo_enabled();
 
+    if (enable_colo) {
+        printf("\ncolo migration is enabled\n");
+    } else {
+        printf("\ncolo mgiration is NOT enabled\n");
+    }
+
     rcu_register_thread();
 
     qemu_savevm_state_header(s->to_dst_file);
@@ -1836,6 +1845,7 @@ static void *migration_thread(void *opaque)
         runstate_set(RUN_STATE_POSTMIGRATE);
     } else {
         if (s->state == MIGRATION_STATUS_ACTIVE && enable_colo) {
+            printf("\nstart colo migrate process\n");
             migrate_start_colo_process(s);
             qemu_savevm_state_cleanup();
             /*
