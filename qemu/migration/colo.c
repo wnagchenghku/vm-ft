@@ -492,7 +492,8 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
 
 static void static_timing_sync(MigrationState *s)
 {
-    g_usleep(s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * 1000);
+    g_usleep(1000 * 1000); /* 1000 ms */
+    //g_usleep(s->parameters[MIGRATION_PARAMETER_X_CHECKPOINT_DELAY] * 1000);
 }
 
 static int colo_gettime;
