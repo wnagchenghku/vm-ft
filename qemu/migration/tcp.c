@@ -55,6 +55,8 @@ void tcp_start_outgoing_migration(MigrationState *s, const char *host_port, Erro
 
 static void tcp_accept_incoming_migration(void *opaque)
 {
+    printf("\ntcp_accept_incoming_migration, opaque=%d\n\n", (intptr_t) opaque);
+    usleep(5000);
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
     int s = (intptr_t)opaque;
@@ -90,6 +92,8 @@ out:
 
 void tcp_start_incoming_migration(const char *host_port, Error **errp)
 {
+    printf("tcp_start_incoming_migration: host_port=%s\n", host_port);
+    usleep(1000);
     int s;
 
     s = inet_listen(host_port, NULL, 256, SOCK_STREAM, 0, errp);

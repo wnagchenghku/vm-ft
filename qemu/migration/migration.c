@@ -1030,6 +1030,7 @@ void migrate_del_blocker(Error *reason)
 
 void qmp_migrate_incoming(const char *uri, Error **errp)
 {
+    printf("migration.c:1033  qmp_migrate_incoming, uri=%s\n\n", uri);
     Error *local_err = NULL;
     static bool once = true;
 
