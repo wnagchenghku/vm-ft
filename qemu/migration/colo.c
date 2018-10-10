@@ -420,8 +420,6 @@ static int64_t wait_guest_finish(MigrationState *s, bool is_primary)
         // When test for iperf, comment it.
         usleep(1000 * 10);
     }
-    // bxli: usleep to slow down idle sync interval
-    g_usleep(100 * 1000); /* 100 ms */
     while (1)
     {
         start_counter = get_output_counter();
